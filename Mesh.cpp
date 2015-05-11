@@ -1,0 +1,1149 @@
+#include "Mesh.hpp"
+#include<string>
+#include<iostream>
+#include<iomanip>
+#include<limits>
+#include<fstream>
+#include<sstream>
+#include<stdio.h>
+#include<cstdlib>
+#include<cmath>
+#include<map>
+#include<set>
+
+#ifndef HEADER_SIZE
+#define HEADER_SIZE 1024
+#endif
+
+Mesh::Mesh()
+:consistentState(false),
+outwardNormOnBoundary(false),
+points(0),
+triangles(0),
+tetrahedra(0),
+triaToTet(0)
+{
+
+}
+
+
+Mesh::Mesh(const  std::string & inputFileame)
+:consistentState(false),
+outwardNormOnBoundary(false),
+points(0),
+triangles(0),
+tetrahedra(0),
+triaToTet(0)
+{
+  readFromFile(inputFileame);
+}
+
+
+Mesh::Mesh(const  Mesh & srcMesh)
+:consistentState(false),
+outwardNormOnBoundary(false)
+{
+    
+  points.resize(srcMesh.nPt());
+  triangles.resize(srcMesh.nTri());
+  triaToTet.resize(srcMesh.nTri());
+  tetrahedra.resize(srcMesh.nTet());
+  
+  for(short int jdim=0; jdim<3; jdim++)
+  {
+    info.baricenter[jdim]=srcMesh.Info().baricenter[jdim];
+    for(short int ib=0; ib<2; ib++)
+    {
+      (info.bbox[jdim])[ib]=(srcMesh.Info().bbox[jdim])[ib];
+    }
+  }
+  
+  for(size_t iPt=0; iPt<this->nPt(); iPt++)
+  {
+    for(short int ic=0; ic<3; ic++)
+    {
+      points[iPt].coord[ic]=srcMesh.Pt(iPt).coord[ic];
+    }
+  }
+
+  for(size_t iTri=0; iTri<this->nTri(); iTri++)
+  {
+    triangles[iTri].vertex[0]=srcMesh.Tri(iTri).vertex[0];
+    triangles[iTri].vertex[1]=srcMesh.Tri(iTri).vertex[1];
+    triangles[iTri].vertex[2]=srcMesh.Tri(iTri).vertex[2];
+    triangles[iTri].regionLabel=srcMesh.Tri(iTri).regionLabel;
+    triaToTet[iTri]=srcMesh.triaToTetMap(iTri);
+  }
+
+  for(size_t iTet=0; iTet<this->nTet(); iTet++)
+  {
+    tetrahedra[iTet].vertex[0]=srcMesh.Tet(iTet).vertex[0];
+    tetrahedra[iTet].vertex[1]=srcMesh.Tet(iTet).vertex[1];
+    tetrahedra[iTet].vertex[2]=srcMesh.Tet(iTet).vertex[2];
+    tetrahedra[iTet].vertex[3]=srcMesh.Tet(iTet).vertex[3];
+    tetrahedra[iTet].regionLabel=srcMesh.Tet(iTet).regionLabel;
+  }
+  consistentState=true;
+}
+
+
+void Mesh::readFromFile(const  std::string & inputFileame)
+{
+  std::string nodeFileName = inputFileame + ".pts";
+  std::string elemFileName = inputFileame + ".elem";
+  std::ifstream fnode(nodeFileName.c_str());
+  if(!fnode)
+  {
+    std::cerr<<"ERROR: FILE "<<nodeFileName<<" DOES NOT EXIST OR IS CORRUPTED"<<std::endl;
+    exit(1);
+  }
+  else
+  {
+    std::cout<<"Reading nodes"<<std::endl;
+    size_t nbPt=0;
+    fnode>>nbPt;
+    points.resize(nbPt);
+    for(size_t iPt=0; iPt<nbPt; iPt++)
+    {
+      for(short int ic=0; ic<3; ic++)
+      {
+        fnode>>points[iPt].coord[ic];
+        info.baricenter[ic]=info.baricenter[ic]+(points[iPt].coord[ic]);
+        if(info.bbox[ic][0]>points[iPt].coord[ic])
+        {
+          info.bbox[ic][0]=points[iPt].coord[ic];
+        }
+        if(info.bbox[ic][1]<points[iPt].coord[ic])
+        {
+          info.bbox[ic][1]=points[iPt].coord[ic];
+        }
+      }
+    }
+    for(short int ic=0; ic<3; ic++)
+    {
+      info.baricenter[ic]=info.baricenter[ic]/nbPt;
+    }
+  }
+  fnode.close();
+  
+  std::ifstream felem(elemFileName.c_str());
+  if(felem)
+  {
+    std::cout<<"Reading elements"<<std::endl;
+    typedef std::pair <mapfacetype::iterator, mapfacetype::iterator> range_iter_type;
+    size_t nbTri=0;
+    size_t nbTet=0;
+    size_t nbElem=0;
+    felem>>nbElem;
+    triangles.resize(nbElem);
+    tetrahedra.resize(nbElem);
+    
+    std::vector<short int * > permutation;
+    permutation.resize(4);
+    for(short int jface=0; jface<4; jface++)
+    {
+      permutation[jface] = new short int [3];
+      for(short int jf=0; jf<3; jf++)
+      {
+        short int asum=jface+jf;
+        short int rem= asum%4;
+        permutation[jface][jf]=rem;
+      }
+    }
+    
+    mapfacetype bound_faces;
+    for(size_t iElem=0; iElem<nbElem; iElem++)
+    {
+      std::string TypeOfElem;
+      felem>>TypeOfElem;
+      if(TypeOfElem=="Tt")
+      {
+        nbTet=nbTet+1;
+        
+        std::vector<facetype> ordered_faces;
+        ordered_faces.resize(4);
+        for(short int iv=0; iv<4; iv++)
+        {
+          felem>>tetrahedra.at(nbTet-1).vertex[iv];
+        }
+        felem>>tetrahedra.at(nbTet-1).regionLabel;
+
+        //ordered_faces: the 4 faces with nodes ordered
+        for(short int jface=0; jface<4; jface++)
+        {
+          for(short int jf=0; jf<3; jf++)
+          {
+            ordered_faces[jface].insert(tetrahedra[nbTet-1].vertex[permutation[jface][jf]]);
+          }
+        }
+        // now I use as key the value of the first node
+        // if the face is inside bound_faces, I delete it
+        // if the face is not inside bound_faces I add it
+        //bound_faces
+        for(short int jface=0; jface<4; jface++)
+        {
+          size_t key=*(ordered_faces[jface].begin());
+          bool value_to_insert=true;
+          if(bound_faces.count(key))          
+          {
+              // range of elements having the same key
+              range_iter_type itmapRange=bound_faces.equal_range(key);
+              // scroll on faces having the same key 
+              for(mapfacetype::iterator itmap=itmapRange.first; itmap!=itmapRange.second; ++itmap)
+              {
+                if(ordered_faces[jface]==(itmap->second).second)
+                {
+                  value_to_insert=false;
+                  bound_faces.erase(itmap);
+                  break;                
+                }
+              }
+          }
+          if(value_to_insert)
+          {
+            facetype face=ordered_faces[jface];
+            faceLabtype labeledFace=std::make_pair(nbTet-1,face);
+            bound_faces.insert(std::pair<size_t, faceLabtype > (key,labeledFace) );
+          }
+        }//end loop on jface
+      }
+      else
+      {
+        if(TypeOfElem=="Tr")
+        {
+          nbTri=nbTri+1;
+          for(short int iv=0; iv<3; iv++)
+          {
+            felem>>triangles.at(nbTri-1).vertex[iv];
+          }
+          felem>>triangles.at(nbTri-1).regionLabel;
+        }
+        else
+        {
+          std::cout<<"element type "<<TypeOfElem<<"ignored"<<std::endl;
+          felem.ignore(std::numeric_limits<std::streamsize>::max(), '\n' );
+        }
+      }
+    }
+    felem.close();
+    if(nbTet<nbElem)
+    {
+      size_t delta=nbElem-nbTet;
+      tetrahedra.erase(tetrahedra.begin()+nbTet,tetrahedra.begin()+nbTet+delta);
+    }
+    
+    if(nbTri==0)
+    {
+      evalTriangles(bound_faces,  nbTri);
+    }
+    else
+    {
+      if(nbTri<nbElem)
+      {
+        size_t delta=nbElem-nbTri;
+        triangles.erase(triangles.begin()+nbTri,triangles.begin()+nbTri+delta);
+      }
+    }
+  
+    for(short int jface=0; jface<4; jface++)
+    {
+      delete[] permutation[jface];
+      permutation[jface] = NULL;
+    }
+    permutation.clear();
+    
+  }
+  else
+  {
+    std::cerr<<"ERROR: FILE "<<elemFileName<<" DOES NOT EXIST OR IS CORRUPTED"<<std::endl;
+    exit(1);
+  }
+  consistentState=true;
+}
+
+
+void Mesh::evalTriangles(mapfacetype bound_faces, size_t & nbTri)
+{
+  nbTri=bound_faces.size();
+  triangles.resize(nbTri);
+  triaToTet.resize(nbTri);
+  mapfacetype::iterator itmap;
+  size_t jcount=0;  
+  for(itmap=bound_faces.begin();itmap!=bound_faces.end();++itmap)
+  {
+    //extract the tetrahedra owners of the triangle
+    Tetrahedron Tet=tetrahedra[itmap->second.first];
+    facetype_iter fiter;
+    // extract triangle node labels
+    Triangle Tria;
+    short int ivertex=0;
+    for(fiter=itmap->second.second.begin();fiter!=itmap->second.second.end();++fiter)
+    {
+      Tria.vertex[ivertex]=*fiter;
+      ivertex=ivertex+1;
+    }
+    Tria.regionLabel=Tet.regionLabel;
+    
+    if(outwardNormOnBoundary)        
+    {
+      short int notInTriaIndex=-1;
+      for(short int ivTe=0; ivTe<4; ivTe++)
+      {
+            notInTriaIndex=ivTe;
+            for(short int ivTr=0; ivTe<3; ivTr++)
+            {
+              if(Tria.vertex[ivTr]==Tet.vertex[ivTe])
+              {
+                notInTriaIndex=-1;
+                break;
+              }
+            }
+            if(!(notInTriaIndex<0))
+            {
+              break;
+            }
+      }
+      //tetVertex: [0,1,2] on triangle; 3 external to triangle
+      std::vector<Point> teVertex(4);
+      for(short int ivTr=0; ivTr<3; ivTr++)
+      {
+        for(short int jcoord=0;jcoord<3;jcoord++)
+        {
+          (teVertex[ivTr]).coord[jcoord]=(points[Tria.vertex[ivTr]]).coord[jcoord];
+        }
+      }
+      std::vector<double> v1(3,0),v2(3,0),v3(3,0);
+      for(short int jcoord=0;jcoord<3;jcoord++)
+      {
+        (teVertex[3]).coord[jcoord]=(points[notInTriaIndex]).coord[jcoord];
+        v1[jcoord] = teVertex[1].coord[jcoord]-teVertex[0].coord[jcoord];
+        v2[jcoord] = teVertex[2].coord[jcoord]-teVertex[0].coord[jcoord];
+        v3[jcoord] = teVertex[3].coord[jcoord]-teVertex[0].coord[jcoord];
+      }
+      std::vector<double> normal(3,0);
+      normal[0]=v1[1]*v2[2]-v1[2]*v2[1];
+      normal[1]=-1.0*(v1[0]*v2[2]-v1[2]*v2[0]);
+      normal[2]=v1[0]*v2[1]-v1[1]*v2[0];
+      for(short int jcoord=0;jcoord<3;jcoord++)
+      {
+        normal[jcoord]=normal[jcoord]/sqrt(normal[0]*normal[0]+normal[1]*normal[1]+normal[2]*normal[2]);
+      }
+      //now evaluate the projection onto normal.
+      // if projection>0, inward normal -> change point order
+      double proj=normal[0]*v3[0]+normal[2]*v3[1]+normal[2]*v3[2];
+      if(proj>0)
+      {
+        size_t tmp= Tria.vertex[0];
+        Tria.vertex[0]=Tria.vertex[1];
+        Tria.vertex[1]=tmp;
+      }
+    }
+    triaToTet[jcount]=itmap->second.first;
+    //copy into triangle vector
+    for(ivertex=0;ivertex<3;ivertex++)
+    {
+      triangles[jcount].vertex[ivertex]=Tria.vertex[ivertex];
+    }
+    triangles[jcount].regionLabel=Tria.regionLabel;
+    jcount=jcount+1;        
+  }
+
+}
+
+
+double Mesh::hTri(size_t iTri )
+{
+  //! returns the diameter of the circumscribed circle
+  double h=0.0;
+  if(consistentState && nTri())
+  {
+    double area=AreaTri(iTri);
+    Triangle & Tria=triangles[iTri];
+    std::vector<Point> TriaPts(3);
+    for(short int iPt=0; iPt<3; iPt++)
+    {
+      for(short int ic=0; ic<3; ic++)
+      {
+        TriaPts[iPt].coord[ic]=points[Tria.vertex[iPt]].coord[ic];
+      }
+      //TriaPts[iPt].x=points[Tria.vertex[iPt]].x;
+      //TriaPts[iPt].y=points[Tria.vertex[iPt]].y;
+      //TriaPts[iPt].z=points[Tria.vertex[iPt]].z;
+    }
+    short int * permutation = new short int[3];
+    permutation[0]=1;
+    permutation[1]=2;
+    permutation[2]=0;
+    double egdgeproduct=1.0;
+    for(short int iEdge=0; iEdge<3; iEdge++)
+    {
+      double dx=(TriaPts[iEdge].x()-TriaPts[permutation[iEdge]].x());
+      double dy=(TriaPts[iEdge].y()-TriaPts[permutation[iEdge]].y());
+      double dz=(TriaPts[iEdge].z()-TriaPts[permutation[iEdge]].z());
+      egdgeproduct=egdgeproduct*sqrt(dx*dx+dy*dy+dz*dz);
+    }
+    delete [] permutation;  
+    h=0.5*egdgeproduct/area;
+  }
+  return(h);
+
+}
+
+
+double Mesh::rhoTri(size_t iTri)
+{
+  //! returns the radius of the inscribed circle
+  double rho=0.0;
+  if(consistentState && nTri())
+  {
+    double area=AreaTri(iTri);
+    Triangle & Tria=triangles[iTri];
+    std::vector<Point> TriaPts(3);
+    for(short int iPt=0; iPt<3; iPt++)
+    {
+      for(short int ic=0; ic<3; ic++)
+      {
+        TriaPts[iPt].coord[ic]=points[Tria.vertex[iPt]].coord[ic];
+      }
+    }
+  
+    short int * permutation = new short int[3];
+    permutation[0]=1;
+    permutation[1]=2;
+    permutation[2]=0;
+    double perimeter=0.0;
+    for(short int iEdge=0; iEdge<3; iEdge++)
+    {
+      double dx=(TriaPts[iEdge].x()-TriaPts[permutation[iEdge]].x());
+      double dy=(TriaPts[iEdge].y()-TriaPts[permutation[iEdge]].y());
+      double dz=(TriaPts[iEdge].z()-TriaPts[permutation[iEdge]].z());
+      perimeter=perimeter+sqrt(dx*dx+dy*dy+dz*dz);
+    }
+    delete [] permutation;
+    rho=area/perimeter;
+  }
+  return(rho);
+}
+
+
+double Mesh::qTri(size_t iTri)
+{
+  double quality=0.0;
+  if(consistentState && nTri())
+  {
+    quality=0.5*hTri(iTri)/rhoTri(iTri);  
+  }
+  
+  return(quality);
+}
+
+double Mesh::AreaTri(size_t iTri)
+{
+  //! returns the area of a triangle
+  double area=0.0;
+  if(consistentState && nTri())
+  {
+    Triangle & Tria=triangles[iTri];
+    std::vector<Point> TriaPts(3);
+    for(short int iPt=0; iPt<3; iPt++)
+    {
+      for(short int ic=0; ic<3; ic++)
+      {
+        TriaPts[iPt].coord[ic]=points[Tria.vertex[iPt]].coord[ic];
+      }
+    }
+    std::vector<double> v1(3,0), v2(3,0),vprod(3,0);
+    for(short int ic=0; ic<3; ic++)
+    {
+      v1[ic]=TriaPts[1].coord[ic]-TriaPts[0].coord[ic];
+      v2[ic]=TriaPts[2].coord[ic]-TriaPts[0].coord[ic];        
+    }
+    vprod[0]=v1[1]*v2[2]-v2[1]*v1[2];
+    vprod[1]=v1[2]*v2[0]-v2[2]*v1[0];
+    vprod[2]=v1[0]*v2[1]-v2[0]*v1[1];
+  
+    area=0.5*sqrt(vprod[0]*vprod[0]+vprod[1]*vprod[1]+vprod[2]*vprod[2]);
+  }
+  return(area);
+}
+
+double Mesh::hTet(size_t iTet)
+{
+
+  double h=0.0;
+  /*if(consistentState && nTet())
+  {
+    double volume=VolTet(iTet);
+    Tetrahedron Tet=tetrahedra[iTet];
+  }*/
+  return(h);
+}
+
+
+double Mesh::rhoTet(size_t iTet)
+{
+  double rho=0.0;
+  if(consistentState && nTet())
+  {
+    double volume=VolTet(iTet);
+    double area=AreaTet(iTet);
+    rho=3.0*volume/area;
+  }
+  return(rho);
+}
+
+
+double Mesh::AreaTet(size_t iTet)
+{
+  double area=0.0;
+  if(consistentState && nTet())
+  {
+    Tetrahedron Tet=tetrahedra[iTet];
+    std::vector<Point> TetPts(4);
+    for(short int iPt=0; iPt<4; iPt++)
+    {
+      for(short int ic=0; ic<3; ic++)
+      {
+        TetPts[iPt].coord[ic]=points[Tet.vertex[iPt]].coord[ic];
+      }
+    }
+    std::vector<double> v1(3,0), v2(3,0),v3(3,0);
+    std::vector<double> v4(3,0), v5(3,0);
+    std::vector<double> vprod1(3,0), vprod2(3,0),vprod3(3,0),vprod4(3,0);
+    
+    for(short int ic=0; ic<3; ic++)
+    {
+      v1[ic]=TetPts[1].coord[ic]-TetPts[0].coord[ic];
+      v2[ic]=TetPts[2].coord[ic]-TetPts[0].coord[ic];
+      v3[ic]=TetPts[3].coord[ic]-TetPts[0].coord[ic];
+
+      v4[ic]=TetPts[2].coord[ic]-TetPts[1].coord[ic];
+      v5[ic]=TetPts[3].coord[ic]-TetPts[1].coord[ic];
+    }
+
+    vprod1[0]=v1[1]*v2[2]-v2[1]*v1[2];
+    vprod1[1]=v1[2]*v2[0]-v2[2]*v1[0];
+    vprod1[2]=v1[0]*v2[1]-v2[0]*v1[1];
+    double area1=0.5*sqrt(vprod1[0]*vprod1[0]+vprod1[1]*vprod1[1]+vprod1[2]*vprod1[2]);
+  
+    vprod2[0]=v1[1]*v3[2]-v3[1]*v1[2];
+    vprod2[1]=v1[2]*v3[0]-v3[2]*v1[0];
+    vprod2[2]=v1[0]*v3[1]-v3[0]*v1[1];
+    double area2=0.5*sqrt(vprod2[0]*vprod2[0]+vprod2[1]*vprod2[1]+vprod2[2]*vprod2[2]);
+
+    vprod3[0]=v2[1]*v3[2]-v3[1]*v2[2];
+    vprod3[1]=v2[2]*v3[0]-v3[2]*v2[0];
+    vprod3[2]=v2[0]*v3[1]-v3[0]*v2[1];
+    double area3=0.5*sqrt(vprod3[0]*vprod3[0]+vprod3[1]*vprod3[1]+vprod3[2]*vprod3[2]);
+
+    vprod4[0]=v4[1]*v5[2]-v5[1]*v4[2];
+    vprod4[1]=v4[2]*v5[0]-v5[2]*v4[0];
+    vprod4[2]=v4[0]*v5[1]-v5[0]*v4[1];
+    double area4=0.5*sqrt(vprod4[0]*vprod4[0]+vprod4[1]*vprod4[1]+vprod4[2]*vprod4[2]);
+
+    area=area1+area2+area3+area4;
+  }
+  return(area);
+}
+
+
+double Mesh::VolTet(size_t iTet)
+{
+  //! returns the volume of a tetra
+  double volume=0.0;
+  if(consistentState && nTet())
+  {
+    Tetrahedron Tet=tetrahedra[iTet];
+    std::vector<Point> TetPts(4);
+    for(short int iPt=0; iPt<4; iPt++)
+    {
+      for(short int ic=0; ic<3; ic++)
+      {
+        TetPts[iPt].coord[ic]=points[Tet.vertex[iPt]].coord[ic];
+      }
+    }
+    std::vector<double> v1(3,0), v2(3,0),v3(3,0),vprod(3,0);
+    for(short int ic=0; ic<3; ic++)
+    {
+      v1[ic]=TetPts[1].coord[ic]-TetPts[0].coord[ic];
+      v2[ic]=TetPts[2].coord[ic]-TetPts[0].coord[ic];
+      v3[ic]=TetPts[3].coord[ic]-TetPts[0].coord[ic];                
+    }
+    //2*face area normal
+    vprod[0]=v1[1]*v2[2]-v2[1]*v1[2];
+    vprod[1]=v1[2]*v2[0]-v2[2]*v1[0];
+    vprod[2]=v1[0]*v2[1]-v2[0]*v1[1];
+    volume=(vprod[0]*v3[0]+vprod[1]*v3[1]+vprod[2]*v3[2])/6.0;
+    // this to have a positive volume
+    bool sign(volume>=0);
+    volume=volume*(sign-1.0*(!sign));
+    
+  }
+  return(volume);
+}
+
+void Mesh::evalBoundaryLabels()
+{
+  if(consistentState && nTri())
+  {
+
+    pointRegions.clear();
+    regionLabels.clear();
+    typedef std::map<size_t, regionSetType > nodeToRegionMapType;
+    typedef std::map<size_t, connectSetType> connectivityType;
+        
+    connectivityType connectivity;
+    nodeToRegionMapType NodeToregionMap;
+    
+    for(size_t iTri=0; iTri<nTri(); iTri++)
+    {
+      int labOfRegion=triangles[iTri].regionLabel;
+      regionLabels.insert(labOfRegion);
+      for(short int iv=0; iv<3; iv++)
+      {
+          size_t p0=triangles[iTri].vertex[iv];
+          pointRegions[labOfRegion].insert(p0);
+          NodeToregionMap[p0].insert(labOfRegion);
+          for(short int jv=iv+1; jv<3; jv++)
+          {
+            size_t p1=triangles[iTri].vertex[jv];
+            connectivity[p0].insert(p1);
+            connectivity[p1].insert(p0);
+          }
+      }
+    }
+
+    //algo on divisions starts
+    regionSubdivisionTypeIterator itRegToNodeMap;
+    for(itRegToNodeMap=pointRegions.begin(); itRegToNodeMap!=pointRegions.end(); ++itRegToNodeMap)
+    {
+      int labelOfRegions=itRegToNodeMap->first;
+      // iterate on points belonging to the region labelOfRegions
+      // extract the local connectivity of the region
+      connectivityType regionconnect;
+      connectSetTypeIterator cRegIt;
+      for(cRegIt=(itRegToNodeMap->second).begin(); cRegIt!=(itRegToNodeMap->second).end(); ++cRegIt)
+      {
+        // node belonging to region
+        size_t node=*cRegIt;
+        // explore connectivity of node; extract only connections belonging to the same region
+        connectSetType connections;
+
+        connectSetTypeIterator connectiter;        
+        for(connectiter=connectivity[node].begin(); connectiter!=connectivity[node].end(); ++connectiter)
+        {
+          //NodeToregionMap[*connectiter]: set<int> of region labels
+          // connectiter belongs to the region under study
+          if((NodeToregionMap[*connectiter].find(labelOfRegions))!=(NodeToregionMap[*connectiter].end()))
+          {
+            connections.insert(*connectiter);
+          }
+        }
+        regionconnect.insert(std::pair<size_t, connectSetType> (node,connections) );
+      }
+      connectSetTypeIterator seedIter;
+      //first: determine a seed point
+      size_t seed= *(itRegToNodeMap->second.begin());
+      size_t count=0;
+      for(seedIter=itRegToNodeMap->second.begin(); seedIter!=itRegToNodeMap->second.end(); ++seedIter)
+      {
+        count=count+1;
+        seed=*seedIter;
+        if(NodeToregionMap[seed].size()==1)
+        {
+          break;
+        }
+      }
+      std::set<size_t> RegionNodes, Queue;
+      Queue.insert(seed);
+      RegionNodes.insert(seed);
+      while(!Queue.empty())
+      {
+        size_t candidate= *(Queue.begin());
+        Queue.erase(candidate);
+        connectSetTypeIterator countNode;
+        //regionconnect : map<size_t, connectSetType>
+        for(countNode=regionconnect[candidate].begin(); countNode!=regionconnect[candidate].end(); ++countNode)
+        {
+          //check that countNode is inside the region
+          if(RegionNodes.find(*countNode)==RegionNodes.end())
+          {
+            //if not member of nodesRegion, add it
+            RegionNodes.insert(*countNode);
+            Queue.insert(*countNode);
+          }
+        }
+      }
+      //RegionNodes: nodes of the connected region with label itRegToNodeMap->first
+      //check if ... itRegToNodeMap->second : list of points belonging to (set)
+      //if is the case, there are some point to move
+      if((itRegToNodeMap->second).size() !=RegionNodes.size()  )
+      {
+        int newRegionLabel=*(regionLabels.rbegin())+1;
+        regionLabels.insert(newRegionLabel);
+        
+        connectSetType newSet=itRegToNodeMap->second;
+        connectSetTypeIterator reg_iter;
+        for(reg_iter=RegionNodes.begin();reg_iter!=RegionNodes.end(); ++reg_iter)
+        {
+          newSet.erase(*reg_iter);
+        }
+        pointRegions.insert(std::pair<int, connectSetType>(newRegionLabel,newSet) );
+        
+        //nodeToRegionMapType = <size_t, set<int> >
+         for(reg_iter=newSet.begin();reg_iter!=newSet.end(); ++reg_iter)
+         {
+          NodeToregionMap[*reg_iter].erase(labelOfRegions);
+          NodeToregionMap[*reg_iter].insert(newRegionLabel);
+         }
+      }// end if on size
+    }//algo on divisions ends
+    //now re-labeling of triangles
+    for(size_t iTri=0; iTri<nTri(); iTri++)
+    {
+      for(short int iv=0; iv<3; iv++)
+      {
+        size_t p0=triangles[iTri].vertex[iv];
+        if(NodeToregionMap[p0].size()==1)
+        {
+          triangles[iTri].regionLabel=*(NodeToregionMap[p0].begin());
+          break;
+        }
+      }
+    }
+  }// end if on consistence of mesh
+}
+
+
+
+void Mesh::writeBoundaryLabels(std::string & fileDir, std::string & FileName)
+{
+    regionSubdivisionTypeIterator regIter;
+    for(regIter=pointRegions.begin();regIter!=pointRegions.end();++regIter)
+    {
+        std::ostringstream regionLabel;
+        regionLabel << regIter->first;
+        std::string SurfLabelFilename=fileDir+ "/"+FileName+"_"+regionLabel.str()+".vtx";
+        std::ofstream surfLabFile(SurfLabelFilename.c_str());
+        surfLabFile<<(regIter->second).size()<<std::endl;
+        connectSetTypeIterator pointSetIter;
+        for(pointSetIter=(regIter->second).begin(); pointSetIter !=(regIter->second).end(); ++pointSetIter )
+        {
+          surfLabFile<<*pointSetIter<<std::endl;
+        }
+        surfLabFile.close();
+    }
+}
+
+void Mesh::initializePtVector(size_t dim)
+{
+  points.clear();
+  points.resize(dim);
+  if(consistentState==false && tetrahedra.size())
+  {
+    consistentState=true;
+  }
+}
+
+
+void Mesh::initializeTetraVector(size_t dim)
+{
+  tetrahedra.clear();
+  tetrahedra.resize(dim);
+  if(consistentState==false && points.size())
+  {
+    consistentState=true;
+  }
+}
+
+void Mesh::writeCarpMesh(std::string outputFileName, double rescaling, bool binary)
+{
+  writePoints(outputFileName,rescaling, binary);  
+  writeElements(outputFileName, binary);
+
+}
+
+void Mesh::writePoints(std::string outputFileName, double rescaling, bool binary)
+{
+  short int precision=12;
+  short int width=11;
+
+  std::string pfileName=outputFileName+".pts";
+  size_t nPt=points.size();
+  std::ofstream ptFile;
+  if(binary)
+  {
+    ptFile.open(pfileName.c_str(),std::ios::out | std::ios::binary);
+    char * header = new char[HEADER_SIZE];
+    sprintf(header,"%zu",nPt);
+    ptFile.write((char*) &header,HEADER_SIZE*sizeof(char));
+    delete [] header;
+    header=NULL;
+  }
+  else
+  {
+    ptFile.open(pfileName.c_str(),std::ios::out );
+    ptFile<<nPt<<std::endl;
+  }
+  
+  for(size_t iPt=0; iPt<nPt; iPt++)
+  {
+    Point  Pt=points[iPt];
+    Pt.x()=Pt.x()*rescaling;
+    Pt.y()=Pt.y()*rescaling;
+    Pt.z()=Pt.z()*rescaling;
+    if(binary)
+    {
+      ptFile.write((char*) &(Pt.x()),sizeof(double));
+      ptFile.write((char*) &(Pt.y()),sizeof(double));
+      ptFile.write((char*) &(Pt.z()),sizeof(double));
+    }
+    else
+    {
+      ptFile<<" "<<std::setw(width)<<std::setprecision(precision)<<std::left << std::setfill('0')<<Pt.x()<<" "
+                 <<std::setw(width)<<std::setprecision(precision)<<std::left << std::setfill('0')<<Pt.y()<<" "
+                 <<std::setw(width)<<std::setprecision(precision)<<std::left << std::setfill('0')<<Pt.z()<<std::endl;
+    }
+  }
+  ptFile.close();
+}
+
+
+void Mesh::writeElements(std::string outputFileName, bool binary)
+{
+  std::string elfileName=outputFileName+".elem";
+  size_t nElem=0;
+  bool is_3D=false;
+  std::string elType;
+  size_t * vertex=NULL;
+  short int nbV=0;
+  
+  if(this->nTet()>0)
+  {
+    nElem=this->nTet();
+    is_3D=true;
+    elType="Tt";
+    nbV=4;
+  }
+  else
+  {
+    nElem=this->nTri();
+    elType="Tr";
+    is_3D=false;
+    nbV=3;
+  }
+  vertex= new size_t[nbV];
+  std::ofstream elFile;
+  
+  if(binary)
+  {
+    elFile.open(elfileName.c_str(),std::ios::out | std::ios::binary);
+    elFile.write((char*) &nElem,sizeof(size_t));
+  }
+  else
+  {
+    elFile.open(elfileName.c_str(),std::ios::out );
+    elFile<<nElem<<std::endl;
+  }
+  
+  
+  
+  for(size_t iElem=0; iElem<nElem; iElem++)
+  {
+    int regionLabel=0;
+    for(short int iV=0; iV<nbV; iV++ )
+    {
+      if(is_3D)
+      {
+        vertex[iV]=tetrahedra[iElem].vertex[iV];
+        regionLabel=tetrahedra[iElem].regionLabel;
+      }
+      else
+      {
+        vertex[iV]=triangles[iElem].vertex[iV];
+        regionLabel=triangles[iElem].regionLabel;
+      }
+    }
+    
+  
+    if(binary) 
+    {
+      elFile.write((char*) (elType.c_str()),3*sizeof(char));
+      for(short int iV=0; iV<nbV; iV++ )
+      {
+        elFile.write((char*) &vertex[iV],sizeof(size_t));
+      }
+      elFile.write((char*) &regionLabel,sizeof(int));
+      
+    }
+    else
+    {
+      elFile<<elType;
+      for(short int iV=0; iV<nbV; iV++)
+      {
+        elFile<<" "<<vertex[iV];
+      }
+      elFile<<" "<<regionLabel<<std::endl;
+    }
+  }
+  delete [] vertex;
+  vertex=NULL;
+  elFile.close();
+}
+
+
+void Mesh::writeVTKMesh(std::string outputFileName, double rescaling, bool binary)
+{
+  std::string fileName=outputFileName+".vtk";
+
+  short int precision=12;
+  short int width=11;
+
+
+  size_t nPt=this->nPt();
+  size_t nElem=0;
+  bool is_3D=false;
+  size_t * vertex=NULL;
+  short int nbV=0;
+  int typeCell=0;
+  
+  if(this->nTet()>0)
+  {
+    nElem=this->nTet();
+    is_3D=true;
+    nbV=4;
+    typeCell=10;
+  }
+  else
+  {
+    nElem=this->nTri();
+    is_3D=false;
+    nbV=3;
+    typeCell=5;
+  }
+  vertex= new size_t[nbV];
+  std::ofstream VTKFile;
+  
+  if(binary)
+  {
+    VTKFile.open(fileName.c_str(),std::ios::out | std::ios::binary);
+  }
+  else
+  {
+    VTKFile.open(fileName.c_str(),std::ios::out );
+  }
+  
+  VTKFile<<"# vtk DataFile Version 4.2"<<std::endl;
+  VTKFile<<"Visualization of specified geometry"<<std::endl;
+  if(binary)
+  {
+    VTKFile<<"BINARY"<<std::endl;
+  }
+  else
+  {
+    VTKFile<<"ASCII"<<std::endl;
+  }
+  
+  VTKFile<<"DATASET UNSTRUCTURED_GRID"<<std::endl;
+  
+  VTKFile<<"POINTS "<<nPt<<" float"<<std::endl;
+  if(binary)
+  {
+    for(size_t iPt=0; iPt<nPt; iPt++)
+    {
+      Point  Pt=points[iPt];
+      Pt.x()=Pt.x()*rescaling;
+      Pt.y()=Pt.y()*rescaling;
+      Pt.z()=Pt.z()*rescaling;
+      VTKFile.write((char*) &Pt.x(),sizeof(float));
+      VTKFile.write((char*) &Pt.y(),sizeof(float));
+      VTKFile.write((char*) &Pt.z(),sizeof(float));
+    }
+    VTKFile<<std::endl;
+    VTKFile<<"CELLS "<<nElem<<" "<<(nbV+1)*nElem<<std::endl;
+
+    
+    for(size_t iElem=0; iElem<nElem; iElem++)
+    {
+      int regionLabel=0;
+      for(short int iV=0; iV<nbV; iV++ )
+      {
+        if(is_3D)
+        {
+          vertex[iV]=tetrahedra[iElem].vertex[iV];
+          regionLabel=tetrahedra[iElem].regionLabel;
+        }
+        else
+        {
+          vertex[iV]=triangles[iElem].vertex[iV];
+          regionLabel=triangles[iElem].regionLabel;
+        }
+      }
+      
+      VTKFile.write((char*) &nbV,sizeof(int)); 
+      for(short int iV=0; iV<nbV; iV++ )
+      {
+        VTKFile.write((char*) &vertex[iV],sizeof(int)); 
+      }
+    }
+    VTKFile<<std::endl;
+    VTKFile<<"CELL_TYPES "<<nElem<<std::endl;
+    
+    for(size_t iElem=0; iElem<nElem; iElem++)
+    {
+      VTKFile.write((char*) &typeCell,sizeof(int)); 
+    }
+    VTKFile<<std::endl;
+  }
+  else
+  {
+    for(size_t iPt=0; iPt<nPt; iPt++)
+    {
+      Point Pt=points[iPt];
+      Pt.x()=Pt.x()*rescaling;
+      Pt.y()=Pt.y()*rescaling;
+      Pt.z()=Pt.z()*rescaling;
+      
+      VTKFile<<std::setw(width)<<std::setprecision(precision)<<std::left<<std::setfill('0')<<Pt.x()<<" ";
+      VTKFile<<std::setw(width)<<std::setprecision(precision)<<std::left<<std::setfill('0')<<Pt.y()<<" ";
+      VTKFile<<std::setw(width)<<std::setprecision(precision)<<std::left<<std::setfill('0')<<Pt.z()<<std::endl;
+    }
+
+    VTKFile<<"CELLS "<<nElem<<" "<<(nbV+1)*nElem<<std::endl;
+    for(size_t iElem=0; iElem<nElem; iElem++)
+    {
+      int regionLabel=0;
+      for(short int iV=0; iV<nbV; iV++ )
+      {
+        if(is_3D)
+        {
+          vertex[iV]=tetrahedra[iElem].vertex[iV];
+          regionLabel=tetrahedra[iElem].regionLabel;
+        }
+        else
+        {
+          vertex[iV]=triangles[iElem].vertex[iV];
+          regionLabel=triangles[iElem].regionLabel;
+        }
+      }
+      
+      VTKFile<<nbV;
+      for(short int iV=0; iV<nbV; iV++ )
+      {
+        VTKFile<<"   "<<vertex[iV];
+      }
+      VTKFile<<std::endl;
+    }
+    VTKFile<<"CELL_TYPES "<<nElem<<std::endl;
+    for(size_t iElem=0; iElem<nElem; iElem++)
+    {
+      VTKFile<<typeCell<<std::endl;
+    }
+  }  
+  delete [] vertex;
+  vertex=NULL;
+  
+  
+  VTKFile.close();
+}
+
+
+
+void Mesh::clear()
+{
+  info.clear();
+  points.clear();
+  triangles.clear();
+  tetrahedra.clear();
+  triaToTet.clear();
+  pointRegions.clear();
+  regionLabels.clear();
+  outwardNormOnBoundary=false;
+  consistentState=false;
+}
+
+
+Mesh::~Mesh()
+{
+  clear();
+}
+
+
+void Mesh::extractBoundary()
+{
+  typedef std::pair <mapfacetype::iterator, mapfacetype::iterator> range_iter_type;
+  if(consistentState)
+  { 
+    size_t nbTri=0;
+    size_t nTet=tetrahedra.size();
+    std::vector<short int * > permutation;
+    permutation.resize(4);
+    for(short int jface=0; jface<4; jface++)
+    {
+      permutation[jface] = new short int [3];
+      for(short int jf=0; jf<3; jf++)
+      {
+        short int asum=jface+jf;
+        short int rem= asum%4;
+        permutation[jface][jf]=rem;
+      }
+    }
+    
+    mapfacetype bound_faces;  
+
+    for(size_t iTet=0; iTet<nTet; iTet++)
+    {
+      std::vector<facetype> ordered_faces;    
+      ordered_faces.resize(4);
+      //ordered_faces: the 4 faces with nodes ordered
+      for(short int jface=0; jface<4; jface++)
+      {
+        for(short int jf=0; jf<3; jf++)
+        {
+          ordered_faces[jface].insert(tetrahedra[iTet].vertex[permutation[jface][jf]]);
+        }
+      }
+      // now I use as key the value of the first node
+      // if the face is inside bound_faces, I delete it
+      // if the face is not inside bound_faces I add it
+      for(short int jface=0; jface<4; jface++)
+      {
+        size_t key=*(ordered_faces[jface].begin());
+        bool value_to_insert=true;
+        if(bound_faces.count(key))          
+        {
+            // range of elements having the same key
+            range_iter_type itmapRange=bound_faces.equal_range(key);
+            // scroll on faces having the same key 
+            for(mapfacetype::iterator itmap=itmapRange.first; itmap!=itmapRange.second; ++itmap)
+            {
+              if(ordered_faces[jface]==(itmap->second).second)
+              {
+                value_to_insert=false;
+                bound_faces.erase(itmap);
+                break;                
+              }
+            }
+        }
+        if(value_to_insert)
+        {
+          facetype face=ordered_faces[jface];
+          faceLabtype labeledFace=std::make_pair(iTet-1,face);
+          bound_faces.insert(std::pair<size_t, faceLabtype > (key,labeledFace) );
+        }
+      }//end loop on jface
+    }
+
+    for(short int jface=0; jface<4; jface++)
+    {
+      delete[] permutation[jface];
+      permutation[jface] = NULL;
+    }
+    permutation.clear();
+    evalTriangles(bound_faces, nbTri);
+  }//end if on consistent state
+
+}
+
+
+
