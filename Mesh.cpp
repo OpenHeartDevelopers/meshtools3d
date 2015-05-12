@@ -1202,6 +1202,84 @@ void Mesh::SwapBytes(void *pv, size_t n)
 }
 
 
+void Mesh::checkConnectivity()
+{
+  if(consistentState)
+  {
+    //first extract all the vertex labels within tetrahedra and triangles
+    std::set<size_t> connected_vertices;
+    
 
+    for(size_t iTet=0; iTet<(this->nTet()); iTet++)
+    {
+      for(short int iv=0; iv<4; iv++)
+      {
+        connected_vertices.insert(tetrahedra[iTet].vertex[iv]);
+      }
+    }
+  
+    for(size_t iTri=0; iTri<(this->nTri()); iTri++)
+    {
+      for(short int iv=0; iv<3; iv++)
+      {
+        connected_vertices.insert(triangles[iTri].vertex[iv]);
+      }
+    }
+    //if there are not connected points
+    if((this->nPt())!=connected_vertices.size() )
+    {
+      size_t count=0;
+      std::set<size_t>::iterator it;
+      std::map<size_t,size_t> renumbering;
+      std::vector<bool> is_connected(false,this->nPt());
+      //I creeate a mapping between the connected nodes and the new reordering
+      for(it=connected_vertices.begin();it!=connected_vertices.end(); ++it)
+      {
+        renumbering.insert(std::pair<size_t,size_t>(*it,count));
+        count++;
+      }
+      //First I renumber the Tetra Vertices
+      for(size_t iTet=0; iTet<(this->nTet()); iTet++)
+      {
+        for(short int iv=0; iv<4; iv++)
+        {
+          size_t old_index=tetrahedra[iTet].vertex[iv];
+          is_connected[old_index]=true;
+          size_t new_index=(renumbering[old_index]);
+          tetrahedra[iTet].vertex[iv]=new_index;
+        }
+      }
+      //After I renumber Tria Vertex
+      for(size_t iTri=0; iTri<(this->nTri()); iTri++)
+      {
+        for(short int iv=0; iv<3; iv++)
+        {
+          size_t old_index=triangles[iTri].vertex[iv];
+          is_connected[old_index]=true;
+          size_t new_index=(renumbering[old_index]);
+          triangles[iTri].vertex[iv]=new_index;
+        }
+      }
+      
+      //extract not connected indices
+      std::set<size_t> not_connected;
+      for(size_t iPt=0; iPt<is_connected.size(); iPt++)
+      {
+        if(!is_connected[iPt])
+        {
+          not_connected.insert(iPt);
+        }
+      }
+      //now i can delete unconnected vertices, starting by the end
+      std::set<size_t>::reverse_iterator rit;
+      for(rit=not_connected.rbegin(); rit!=not_connected.rend(); ++rit)
+      {
+        size_t index_to_remove=*rit;
+        points.erase(points.begin()+index_to_remove);
+      }
+      
+    }//end if not connected
+  }
+}
 
 

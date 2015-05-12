@@ -146,6 +146,7 @@ class Mesh
 
 
   private:
+    void checkConnectivity();
     void evalTriangles(mapfacetype bound_faces, size_t & nbTri);
     void writePoints(std::string outputFileName,double rescaling=1.0, bool binary=false);
     void writeElements(std::string outputFileName, bool binary=false);
