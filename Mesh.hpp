@@ -149,6 +149,7 @@ class Mesh
     void evalTriangles(mapfacetype bound_faces, size_t & nbTri);
     void writePoints(std::string outputFileName,double rescaling=1.0, bool binary=false);
     void writeElements(std::string outputFileName, bool binary=false);
+    void SwapBytes(void *pv, size_t n);
     bool consistentState;
     bool outwardNormOnBoundary;
     std::vector<Point> points;

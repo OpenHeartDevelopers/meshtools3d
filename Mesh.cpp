@@ -894,19 +894,44 @@ void Mesh::writeElements(std::string outputFileName, bool binary)
 
 void Mesh::writeVTKMesh(std::string outputFileName, double rescaling, bool binary)
 {
+  
+  // These types are defined for the binary output
+  // I suppose that paraview look for float floating point
+  // and int integers; with this type definition is easier to
+  // change the output type
+   
+  typedef int vtkIntType;
+  typedef float vtkFloatType;
+  
+  
+  // For an unknown idiots reason (or perhaps because network uses always big endian), 
+  // paraview needs output in big endian. So, first 
+  // I determine the endianness of the current machine
+  
+  bool littleEndianMachine=true;
+  int x = 1;
+	if(*(char *)&x == 1)
+	{
+	  littleEndianMachine=true;
+	}
+	else
+	{
+	  littleEndianMachine=false;
+	}
+
+  
   std::string fileName=outputFileName+".vtk";
 
   short int precision=12;
   short int width=11;
 
-
   size_t nPt=this->nPt();
   size_t nElem=0;
   bool is_3D=false;
-  size_t * vertex=NULL;
+  vtkIntType * vertex=NULL;
   short int nbV=0;
-  int typeCell=0;
-  
+  vtkIntType typeCell=0;
+  vtkIntType nbVoutput=0;
   if(this->nTet()>0)
   {
     nElem=this->nTet();
@@ -921,7 +946,20 @@ void Mesh::writeVTKMesh(std::string outputFileName, double rescaling, bool binar
     nbV=3;
     typeCell=5;
   }
-  vertex= new size_t[nbV];
+  nbVoutput=static_cast<vtkIntType>(nbV);
+  if(littleEndianMachine)
+  {
+    SwapBytes(&nbVoutput, sizeof(nbVoutput));
+  }
+
+  if(binary && littleEndianMachine )
+  {
+    SwapBytes(&typeCell, sizeof(typeCell));
+  }
+
+
+  
+  vertex= new vtkIntType[nbV];
   std::ofstream VTKFile;
   
   if(binary)
@@ -943,107 +981,111 @@ void Mesh::writeVTKMesh(std::string outputFileName, double rescaling, bool binar
   {
     VTKFile<<"ASCII"<<std::endl;
   }
-  
   VTKFile<<"DATASET UNSTRUCTURED_GRID"<<std::endl;
   
+  //Points
   VTKFile<<"POINTS "<<nPt<<" float"<<std::endl;
+  for(size_t iPt=0; iPt<nPt; iPt++)
+  {
+    Point  & Pt=points[iPt];
+    for(short int jc=0; jc<3; jc++)
+    {
+        vtkFloatType pcoord=rescaling*static_cast<vtkFloatType>(Pt.coord[jc]);
+        if(binary)
+        {
+          if(littleEndianMachine)
+          {
+            SwapBytes(&pcoord, sizeof(pcoord));
+          }
+          VTKFile.write((char*) &pcoord,sizeof(vtkFloatType));
+        }
+        else
+        {
+          VTKFile<<std::setw(width)<<std::setprecision(precision)<<std::left<<std::setfill('0')<<pcoord;
+          if(jc==2)
+          {
+            VTKFile<<std::endl;
+          }
+          else
+          {
+            VTKFile<<" ";
+          }
+        }
+    }
+  }//end loop on points
+    
   if(binary)
   {
-    for(size_t iPt=0; iPt<nPt; iPt++)
-    {
-      Point  Pt=points[iPt];
-      Pt.x()=Pt.x()*rescaling;
-      Pt.y()=Pt.y()*rescaling;
-      Pt.z()=Pt.z()*rescaling;
-      VTKFile.write((char*) &Pt.x(),sizeof(float));
-      VTKFile.write((char*) &Pt.y(),sizeof(float));
-      VTKFile.write((char*) &Pt.z(),sizeof(float));
-    }
-    VTKFile<<std::endl;
-    VTKFile<<"CELLS "<<nElem<<" "<<(nbV+1)*nElem<<std::endl;
-
-    
-    for(size_t iElem=0; iElem<nElem; iElem++)
-    {
-      int regionLabel=0;
-      for(short int iV=0; iV<nbV; iV++ )
-      {
-        if(is_3D)
-        {
-          vertex[iV]=tetrahedra[iElem].vertex[iV];
-          regionLabel=tetrahedra[iElem].regionLabel;
-        }
-        else
-        {
-          vertex[iV]=triangles[iElem].vertex[iV];
-          regionLabel=triangles[iElem].regionLabel;
-        }
-      }
-      
-      VTKFile.write((char*) &nbV,sizeof(int)); 
-      for(short int iV=0; iV<nbV; iV++ )
-      {
-        VTKFile.write((char*) &vertex[iV],sizeof(int)); 
-      }
-    }
-    VTKFile<<std::endl;
-    VTKFile<<"CELL_TYPES "<<nElem<<std::endl;
-    
-    for(size_t iElem=0; iElem<nElem; iElem++)
-    {
-      VTKFile.write((char*) &typeCell,sizeof(int)); 
-    }
     VTKFile<<std::endl;
   }
-  else
+  
+  // Elements 
+  VTKFile<<"CELLS "<<nElem<<" "<<(nbV+1)*nElem<<std::endl;
+  for(size_t iElem=0; iElem<nElem; iElem++)
   {
-    for(size_t iPt=0; iPt<nPt; iPt++)
+    for(vtkIntType iV=0; iV<nbV; iV++ )
     {
-      Point Pt=points[iPt];
-      Pt.x()=Pt.x()*rescaling;
-      Pt.y()=Pt.y()*rescaling;
-      Pt.z()=Pt.z()*rescaling;
-      
-      VTKFile<<std::setw(width)<<std::setprecision(precision)<<std::left<<std::setfill('0')<<Pt.x()<<" ";
-      VTKFile<<std::setw(width)<<std::setprecision(precision)<<std::left<<std::setfill('0')<<Pt.y()<<" ";
-      VTKFile<<std::setw(width)<<std::setprecision(precision)<<std::left<<std::setfill('0')<<Pt.z()<<std::endl;
-    }
-
-    VTKFile<<"CELLS "<<nElem<<" "<<(nbV+1)*nElem<<std::endl;
-    for(size_t iElem=0; iElem<nElem; iElem++)
-    {
-      int regionLabel=0;
-      for(short int iV=0; iV<nbV; iV++ )
+      if(is_3D)
       {
-        if(is_3D)
-        {
-          vertex[iV]=tetrahedra[iElem].vertex[iV];
-          regionLabel=tetrahedra[iElem].regionLabel;
-        }
-        else
-        {
-          vertex[iV]=triangles[iElem].vertex[iV];
-          regionLabel=triangles[iElem].regionLabel;
-        }
+        vertex[iV]=static_cast<vtkIntType>(tetrahedra[iElem].vertex[iV]);
       }
-      
-      VTKFile<<nbV;
+      else
+      {
+        vertex[iV]=static_cast<vtkIntType>(triangles[iElem].vertex[iV]);
+      }
+    }
+    if(binary)
+    {
+      VTKFile.write((char*) &nbVoutput,sizeof(vtkIntType)); 
       for(short int iV=0; iV<nbV; iV++ )
       {
-        VTKFile<<"   "<<vertex[iV];
+          vtkIntType VertexCP=vertex[iV];
+          if(littleEndianMachine)
+          {
+            SwapBytes(&VertexCP, sizeof(VertexCP));
+          }
+
+        
+        VTKFile.write((char*) &VertexCP,sizeof(vtkIntType)); 
+      }
+    }
+    else
+    {
+      VTKFile<<nbV;
+      for(vtkIntType iV=0; iV<nbV; iV++ )
+      {
+        VTKFile<<" "<<vertex[iV];
       }
       VTKFile<<std::endl;
     }
-    VTKFile<<"CELL_TYPES "<<nElem<<std::endl;
-    for(size_t iElem=0; iElem<nElem; iElem++)
+  }//end loop on elements
+
+  delete [] vertex;
+  vertex=NULL;
+
+
+  if(binary)
+  {
+    VTKFile<<std::endl;
+  }
+
+  //Cell types
+  VTKFile<<"CELL_TYPES "<<nElem<<std::endl;
+  for(size_t iElem=0; iElem<nElem; iElem++)
+  {
+    if(binary)
+    {
+      VTKFile.write((char*) &typeCell,sizeof(vtkIntType)); 
+    }
+    else
     {
       VTKFile<<typeCell<<std::endl;
     }
-  }  
-  delete [] vertex;
-  vertex=NULL;
-  
-  
+  }
+  if(binary)
+  {
+    VTKFile<<std::endl;
+  }
   VTKFile.close();
 }
 
@@ -1144,6 +1186,22 @@ void Mesh::extractBoundary()
   }//end if on consistent state
 
 }
+
+
+//used to convert to big endian
+void Mesh::SwapBytes(void *pv, size_t n)
+{
+    char *p = static_cast<char*>(pv);
+    size_t lo, hi;
+    for(lo=0, hi=n-1; hi>lo; lo++, hi--)
+    {
+        char tmp=p[lo];
+        p[lo] = p[hi];
+        p[hi] = tmp;
+    }
+}
+
+
 
 
 
