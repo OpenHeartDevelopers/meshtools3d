@@ -6,7 +6,7 @@
 #include <sstream>
 #include <string>
 #include <cmath>
-#include <time.h>
+#include "Chrono.hpp"
 #include "Mesh.hpp"
 #include "GetPot.hpp"
 #include<CGALDataType.hpp>
@@ -51,28 +51,15 @@ int main(int argc,char **argv)
     // Set mesh criteria
     Mesh_criteria criteria(facet_criteria, cell_criteria);
     std::cout<<"MESHING...";
-    time_t t_start,t_end, t_diff;
-    time(&t_start);
+    
+    Chrono chrono;
+    chrono.start();
+
     C3t3 c3t3 = CGAL::make_mesh_3<C3t3>(domain, criteria, 
                                            CGAL::parameters::lloyd(), CGAL::parameters::odt(), 
                                            CGAL::parameters::perturb(), CGAL::parameters::exude());
-    time(&t_end);
-    t_diff=t_end-t_start;
-    unsigned hours=0, minutes=0,seconds=0;
-    if(t_diff>=3600)
-    {
-      hours=t_diff/3600;
-      t_diff=t_diff-hours*3600;
-    }
-    
-    if(t_diff>=60)
-    {
-      minutes=t_diff/60;
-      t_diff=t_diff-minutes*60;
-    }
-    seconds=t_diff;
-    std::cout<<" done in "<<hours<<":"<<std::setw(2)<<std::right<<std::setfill('0')<<minutes<<":"<<std::setw(2)<<std::right<<std::setfill('0')<<seconds<<std::endl;
-
+    chrono.stop();
+    std::cout<<" done in "<<chrono<<std::endl;
     if(out_medit)
     {
       std::string mfileoutName=out_dir+"/"+out_name+".mesh";
