@@ -10,7 +10,7 @@ a segmentation in .inr file is required. Possible outputs are:
 Some functionality are implemented but not used; in particular:
 
 * evaluation and output of surface region points
-* output in binary formats (CARP, vtk)
+* output in binary formats (CARP)
 * triangle re-orientation with outward normals (when boudary is extracted)
 
 ### Surface region points
@@ -40,3 +40,8 @@ where input is located; meshing section the mesh generation parameters (rescaleF
 * implement output for .mesh file also in Mesh class (could be useful?)
 * implement output also for triangles (boundary elements)
 
+## what's new
+
+12 may 2015
+* added a class "Chrono" for time profiling
+* binary output for vtk (with correct endianess)
