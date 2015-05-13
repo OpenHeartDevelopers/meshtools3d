@@ -1283,3 +1283,9 @@ void Mesh::checkConnectivity()
 }
 
 
+
+void Mesh::preprocessingOperations()
+{
+  this->checkConnectivity();
+
+}

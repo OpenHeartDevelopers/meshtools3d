@@ -101,6 +101,7 @@ class Mesh
     void readFromFile(const  std::string & inputFileame);
     void initializePtVector(size_t dim);
     void initializeTetraVector(size_t dim);
+    void preprocessingOperations();
     void extractBoundary();
     void clear();
     void writeCarpMesh(std::string outputFileName, double rescaling=1.0, bool binary=false);

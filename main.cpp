@@ -129,7 +129,9 @@ int main(int argc,char **argv)
     exit(1);
   }
  
+  CarpMesh.preprocessingOperations();
   CarpMesh.extractBoundary();
+  
   //CarpMesh.evalBoundaryLabels();
   //CarpMesh.writeBoundaryLabels(out_dir, out_name);
 
