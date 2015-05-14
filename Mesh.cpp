@@ -164,9 +164,17 @@ void Mesh::readFromFile(const  std::string & inputFileame)
         ordered_faces.resize(4);
         for(short int iv=0; iv<4; iv++)
         {
+#ifndef NDEBUG
           felem>>tetrahedra.at(nbTet-1).vertex[iv];
+#else
+          felem>>tetrahedra[nbTet-1].vertex[iv];
+#endif          
         }
+#ifndef NDEBUG        
         felem>>tetrahedra.at(nbTet-1).regionLabel;
+#else
+        felem>>tetrahedra[nbTet-1].regionLabel;
+#endif        
 
         //ordered_faces: the 4 faces with nodes ordered
         for(short int jface=0; jface<4; jface++)
@@ -214,9 +222,17 @@ void Mesh::readFromFile(const  std::string & inputFileame)
           nbTri=nbTri+1;
           for(short int iv=0; iv<3; iv++)
           {
+#ifndef NDEBUG
             felem>>triangles.at(nbTri-1).vertex[iv];
+#else            
+            felem>>triangles[nbTri-1].vertex[iv];
+#endif
           }
+#ifndef NDEBUG
           felem>>triangles.at(nbTri-1).regionLabel;
+#else            
+          felem>>triangles[nbTri-1].regionLabel;
+#endif          
         }
         else
         {
@@ -760,7 +776,6 @@ void Mesh::writeCarpMesh(std::string outputFileName, double rescaling, bool bina
 {
   writePoints(outputFileName,rescaling, binary);  
   writeElements(outputFileName, binary);
-
 }
 
 void Mesh::writePoints(std::string outputFileName, double rescaling, bool binary)
@@ -1130,9 +1145,7 @@ void Mesh::extractBoundary()
         permutation[jface][jf]=rem;
       }
     }
-    
     mapfacetype bound_faces;  
-
     for(size_t iTet=0; iTet<nTet; iTet++)
     {
       std::vector<facetype> ordered_faces;    
@@ -1142,7 +1155,7 @@ void Mesh::extractBoundary()
       {
         for(short int jf=0; jf<3; jf++)
         {
-          ordered_faces[jface].insert(tetrahedra[iTet].vertex[permutation[jface][jf]]);
+          ordered_faces[jface].insert(tetrahedra[iTet].vertex[(permutation[jface][jf])] );
         }
       }
       // now I use as key the value of the first node
@@ -1167,13 +1180,15 @@ void Mesh::extractBoundary()
               }
             }
         }
+        
         if(value_to_insert)
         {
           facetype face=ordered_faces[jface];
-          faceLabtype labeledFace=std::make_pair(iTet-1,face);
+          faceLabtype labeledFace=std::make_pair(iTet,face);
           bound_faces.insert(std::pair<size_t, faceLabtype > (key,labeledFace) );
         }
       }//end loop on jface
+
     }
 
     for(short int jface=0; jface<4; jface++)
@@ -1208,8 +1223,6 @@ void Mesh::checkConnectivity()
   {
     //first extract all the vertex labels within tetrahedra and triangles
     std::set<size_t> connected_vertices;
-    
-
     for(size_t iTet=0; iTet<(this->nTet()); iTet++)
     {
       for(short int iv=0; iv<4; iv++)
@@ -1231,7 +1244,7 @@ void Mesh::checkConnectivity()
       size_t count=0;
       std::set<size_t>::iterator it;
       std::map<size_t,size_t> renumbering;
-      std::vector<bool> is_connected(false,this->nPt());
+      std::vector<bool> is_connected(this->nPt(),false);
       //I creeate a mapping between the connected nodes and the new reordering
       for(it=connected_vertices.begin();it!=connected_vertices.end(); ++it)
       {
@@ -1244,8 +1257,13 @@ void Mesh::checkConnectivity()
         for(short int iv=0; iv<4; iv++)
         {
           size_t old_index=tetrahedra[iTet].vertex[iv];
+#ifndef NDEBUG
+          is_connected.at(old_index)=true;
+          size_t new_index=(renumbering.at(old_index));          
+#else
           is_connected[old_index]=true;
-          size_t new_index=(renumbering[old_index]);
+          size_t new_index=(renumbering[old_index]);          
+#endif
           tetrahedra[iTet].vertex[iv]=new_index;
         }
       }
@@ -1255,12 +1273,16 @@ void Mesh::checkConnectivity()
         for(short int iv=0; iv<3; iv++)
         {
           size_t old_index=triangles[iTri].vertex[iv];
+#ifndef NDEBUG
+          is_connected.at(old_index)=true;
+          size_t new_index=(renumbering.at(old_index));
+#else
           is_connected[old_index]=true;
           size_t new_index=(renumbering[old_index]);
+#endif
           triangles[iTri].vertex[iv]=new_index;
         }
       }
-      
       //extract not connected indices
       std::set<size_t> not_connected;
       for(size_t iPt=0; iPt<is_connected.size(); iPt++)
@@ -1277,7 +1299,6 @@ void Mesh::checkConnectivity()
         size_t index_to_remove=*rit;
         points.erase(points.begin()+index_to_remove);
       }
-      
     }//end if not connected
   }
 }

@@ -12,11 +12,11 @@ nrrd_file='wallthickness3SD.nrrd';
 %File for ahortic valv
 nrrd_valv='mvlayer2vox.nrrd';
 
-npix=3; %number of voxels to take for delimiting PVs
+npix=5; %number of voxels to take for delimiting PVs
 
 %output dir and file name
 out_dir='/home/cc14/Desktop/wallthicknessMaps/wallthicknessMaps/901001';
-out_file='LA.inr';
+out_file='LA2.inr';
 
 
 
@@ -30,5 +30,5 @@ new_img=labeling(thickMap,Valv,npix);
 spacing = arrayfun(@str2double,strsplit(meta.spacings,' '));
 convertMat2Inr(new_img,spacing,[out_dir,'/',out_file]);
 
-clear('out_dir','out_file');
+clear('out_dir','out_file','npix','spacing');
 

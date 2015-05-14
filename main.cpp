@@ -61,6 +61,9 @@ int main(int argc,char **argv)
                                            CGAL::parameters::perturb(), CGAL::parameters::exude());
     chrono.stop();
     std::cout<<" done in "<<chrono<<std::endl;
+    chrono.reset();
+    
+
     if(out_medit)
     {
       std::string mfileoutName=out_dir+"/"+out_name+".mesh";
@@ -129,13 +132,30 @@ int main(int argc,char **argv)
     exit(1);
   }
  
+  std::cout<<"pre-processing..."<<std::flush;
+  Chrono chrono2;
+  chrono2.start();
   CarpMesh.preprocessingOperations();
-  CarpMesh.extractBoundary();
+  chrono2.stop();
+  std::cout<<" done in "<<chrono2<<std::endl;
+  chrono2.reset();
   
-  //CarpMesh.evalBoundaryLabels();
-  //CarpMesh.writeBoundaryLabels(out_dir, out_name);
+  std::cout<<"boundary extraction..."<<std::flush;
+  chrono2.start();
+  CarpMesh.extractBoundary();
+  chrono2.stop();
+  std::cout<<" done in "<<chrono2<<std::endl;
+  chrono2.reset();
 
+  std::cout<<"boundary re-labeling..."<<std::flush;
+  chrono2.start();
+  CarpMesh.evalBoundaryLabels();
+  chrono2.stop();
+  std::cout<<" done in "<<chrono2<<std::endl;
+  chrono2.reset();
 
+  CarpMesh.writeBoundaryLabels(out_dir, out_name);
+  
   if(out_carp)
   {
       std::string cfileoutName=out_dir+"/"+out_name;
@@ -145,6 +165,7 @@ int main(int argc,char **argv)
   {
       std::string cfileoutName=out_dir+"/"+out_name;
       CarpMesh.writeVTKMesh(cfileoutName,rescaling,out_binary);
+
   }
   return 0;
   
