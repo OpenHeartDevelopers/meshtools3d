@@ -34,10 +34,11 @@ int main(int argc,char **argv)
 
   std::string out_dir        = param_file("output/outdir","."); 
   std::string out_name       = param_file("output/name","imgmesh"); 
-  bool out_binary            = param_file("output/out_binary",false);
   bool out_medit             = param_file("output/out_medit",false);
   bool out_carp              = param_file("output/out_carp",false);  
+  bool out_carp_binary       = param_file("output/out_carp_binary",false);
   bool out_vtk               = param_file("output/out_vtk",false);
+  bool out_vtk_binary        = param_file("output/out_vtk_binary",false);
   double rescaling           = param_file("meshing/rescaleFactor",1.0);
   
 
@@ -172,12 +173,12 @@ int main(int argc,char **argv)
   if(out_carp)
   {
       std::string cfileoutName=out_dir+"/"+out_name;
-      CarpMesh.writeCarpMesh(cfileoutName,rescaling,out_binary);
+      CarpMesh.writeCarpMesh(cfileoutName,rescaling,out_carp_binary);
   }
   if(out_vtk)
   {
       std::string cfileoutName=out_dir+"/"+out_name;
-      CarpMesh.writeVTKMesh(cfileoutName,rescaling,out_binary);
+      CarpMesh.writeVTKMesh(cfileoutName,rescaling,out_vtk_binary);
 
   }
   return 0;
