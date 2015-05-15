@@ -40,6 +40,18 @@ int main(int argc,char **argv)
   bool out_vtk               = param_file("output/out_vtk",false);
   double rescaling           = param_file("meshing/rescaleFactor",1.0);
   
+
+//create the output dir
+  
+  std::string command="mkdir -p "+out_dir;
+  int ierr=system(command.c_str());
+  if(!ierr==0)
+  {
+    std::cerr<<"Problem in creating the directory "<<out_dir<<std::endl;
+    exit(1);
+  }
+
+
   Facet_criteria facet_criteria(fangle, fsize, fapprox); 
   Cell_criteria cell_criteria(cR_E_ratio, csize); 
   
