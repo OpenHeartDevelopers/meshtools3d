@@ -48,10 +48,10 @@ outwardNormOnBoundary(false)
   triangles.resize(srcMesh.nTri());
   triaToTet.resize(srcMesh.nTri());
   tetrahedra.resize(srcMesh.nTet());
-  
   for(short int jdim=0; jdim<3; jdim++)
   {
     info.baricenter[jdim]=srcMesh.Info().baricenter[jdim];
+    info.checksum[jdim]=srcMesh.Info().checksum[jdim];
     for(short int ib=0; ib<2; ib++)
     {
       (info.bbox[jdim])[ib]=(srcMesh.Info().bbox[jdim])[ib];
@@ -109,6 +109,7 @@ void Mesh::readFromFile(const  std::string & inputFileame)
       {
         fnode>>points[iPt].coord[ic];
         info.baricenter[ic]=info.baricenter[ic]+(points[iPt].coord[ic]);
+        info.checksum[ic]=info.checksum[ic]+static_cast<float>(points[iPt].coord[ic]);
         if(info.bbox[ic][0]>points[iPt].coord[ic])
         {
           info.bbox[ic][0]=points[iPt].coord[ic];
@@ -782,42 +783,50 @@ void Mesh::writePoints(std::string outputFileName, double rescaling, bool binary
 {
   short int precision=12;
   short int width=11;
-
-  std::string pfileName=outputFileName+".pts";
+  typedef float binaryPtsReal;
+  
   size_t nPt=points.size();
   std::ofstream ptFile;
   if(binary)
   {
+    std::string pfileName=outputFileName+".bpts";
     ptFile.open(pfileName.c_str(),std::ios::out | std::ios::binary);
+    int npInt= static_cast<int>(nPt);
+    int is_big_endian=static_cast<int>(!isLittleEndian());
+    float chksum_pts = static_cast<float>(rescaling)*(info.chksum_pts());
     char * header = new char[HEADER_SIZE];
-    sprintf(header,"%zu",nPt);
-    ptFile.write((char*) &header,HEADER_SIZE*sizeof(char));
+    sprintf(header,"%d %d %g # npts is_big chksum\n",npInt,is_big_endian,chksum_pts);
+    //ptFile.write((char*) &header,HEADER_SIZE*sizeof(char));
+    ptFile<<header;
     delete [] header;
     header=NULL;
   }
   else
   {
+    std::string pfileName=outputFileName+".pts";
     ptFile.open(pfileName.c_str(),std::ios::out );
     ptFile<<nPt<<std::endl;
   }
   
   for(size_t iPt=0; iPt<nPt; iPt++)
   {
-    Point  Pt=points[iPt];
-    Pt.x()=Pt.x()*rescaling;
-    Pt.y()=Pt.y()*rescaling;
-    Pt.z()=Pt.z()*rescaling;
+    Point  & Pt=points[iPt];
     if(binary)
     {
-      ptFile.write((char*) &(Pt.x()),sizeof(double));
-      ptFile.write((char*) &(Pt.y()),sizeof(double));
-      ptFile.write((char*) &(Pt.z()),sizeof(double));
+      binaryPtsReal x=static_cast<binaryPtsReal>(Pt.x()*rescaling);
+      binaryPtsReal y=static_cast<binaryPtsReal>(Pt.y()*rescaling);
+      binaryPtsReal z=static_cast<binaryPtsReal>(Pt.z()*rescaling);
+
+      
+      ptFile.write((char*) &x,sizeof(binaryPtsReal));
+      ptFile.write((char*) &y,sizeof(binaryPtsReal));
+      ptFile.write((char*) &z,sizeof(binaryPtsReal));
     }
     else
     {
-      ptFile<<" "<<std::setw(width)<<std::setprecision(precision)<<std::left << std::setfill('0')<<Pt.x()<<" "
-                 <<std::setw(width)<<std::setprecision(precision)<<std::left << std::setfill('0')<<Pt.y()<<" "
-                 <<std::setw(width)<<std::setprecision(precision)<<std::left << std::setfill('0')<<Pt.z()<<std::endl;
+      ptFile<<" "<<std::setw(width)<<std::setprecision(precision)<<std::left << std::setfill('0')<<rescaling*Pt.x()<<" "
+                 <<std::setw(width)<<std::setprecision(precision)<<std::left << std::setfill('0')<<rescaling*Pt.y()<<" "
+                 <<std::setw(width)<<std::setprecision(precision)<<std::left << std::setfill('0')<<rescaling*Pt.z()<<std::endl;
     }
   }
   ptFile.close();
@@ -826,7 +835,8 @@ void Mesh::writePoints(std::string outputFileName, double rescaling, bool binary
 
 void Mesh::writeElements(std::string outputFileName, bool binary)
 {
-  std::string elfileName=outputFileName+".elem";
+  typedef enum elem_t {Tetra, Hexa, Octa, Pyramid, Prism, Quad, Tri, Line} Elem_t;
+  Elem_t elemType;
   size_t nElem=0;
   bool is_3D=false;
   std::string elType;
@@ -838,25 +848,41 @@ void Mesh::writeElements(std::string outputFileName, bool binary)
     nElem=this->nTet();
     is_3D=true;
     elType="Tt";
+    elemType=Tetra;
     nbV=4;
   }
   else
   {
     nElem=this->nTri();
     elType="Tr";
+    elemType=Tri;
     is_3D=false;
     nbV=3;
   }
   vertex= new size_t[nbV];
   std::ofstream elFile;
-  
+
+  long int chksum_elems = 0;
+  long int chksum_types = static_cast<long int>((elemType)*nElem);
+  long int chksum_tags  = 0;
+  long int chksum=chksum_elems+chksum_types+chksum_tags;
+
   if(binary)
   {
+    std::string elfileName=outputFileName+".belem";
     elFile.open(elfileName.c_str(),std::ios::out | std::ios::binary);
-    elFile.write((char*) &nElem,sizeof(size_t));
+    int nelInt= static_cast<int>(nElem);
+    int is_big_endian=static_cast<int>(!isLittleEndian());
+    char * header = new char[HEADER_SIZE];
+    sprintf(header, "%d %d %ld # nelems is_big chksum\n",nelInt,is_big_endian,chksum);
+    //elFile.write((char*) &header,HEADER_SIZE*sizeof(char));
+    elFile<<header;
+    delete [] header;
+    header=NULL;
   }
   else
   {
+    std::string elfileName=outputFileName+".elem";
     elFile.open(elfileName.c_str(),std::ios::out );
     elFile<<nElem<<std::endl;
   }
@@ -883,10 +909,14 @@ void Mesh::writeElements(std::string outputFileName, bool binary)
   
     if(binary) 
     {
-      elFile.write((char*) (elType.c_str()),3*sizeof(char));
+      
+      chksum_tags=chksum_tags+regionLabel;
+      elFile.write((char*) &elemType, sizeof(int));
       for(short int iV=0; iV<nbV; iV++ )
       {
-        elFile.write((char*) &vertex[iV],sizeof(size_t));
+        chksum_elems=chksum_elems+vertex[iV];
+        int iVertex=static_cast<int>(vertex[iV]);
+        elFile.write((char*) &iVertex,sizeof(int));
       }
       elFile.write((char*) &regionLabel,sizeof(int));
       
@@ -903,6 +933,20 @@ void Mesh::writeElements(std::string outputFileName, bool binary)
   }
   delete [] vertex;
   vertex=NULL;
+  if(binary) 
+  {
+    chksum=chksum_elems+chksum_types+chksum_tags;
+    int nelInt= static_cast<int>(nElem);
+    int is_big_endian=static_cast<int>(!isLittleEndian());
+    char * header = new char[HEADER_SIZE];
+    sprintf(header, "%d %d %ld # nelems is_big chksum\n",nelInt,is_big_endian,chksum);
+    elFile.seekp (0);
+    //elFile.write((char*) &header,HEADER_SIZE*sizeof(char));
+    elFile<<header;
+    delete [] header;
+    header=NULL;
+
+  }
   elFile.close();
 }
 
@@ -923,17 +967,8 @@ void Mesh::writeVTKMesh(std::string outputFileName, double rescaling, bool binar
   // paraview needs output in big endian. So, first 
   // I determine the endianness of the current machine
   
-  bool littleEndianMachine=true;
-  int x = 1;
-	if(*(char *)&x == 1)
-	{
-	  littleEndianMachine=true;
-	}
-	else
-	{
-	  littleEndianMachine=false;
-	}
 
+  bool littleEndianMachine=isLittleEndian();
   
   std::string fileName=outputFileName+".vtk";
 
@@ -1203,6 +1238,23 @@ void Mesh::extractBoundary()
 }
 
 
+//used to evaluate endianess
+bool Mesh::isLittleEndian()
+{
+  bool littleEndianMachine=true;
+  int x = 1;
+	if(*(char *)&x == 1)
+	{
+	  littleEndianMachine=true;
+	}
+	else
+	{
+	  littleEndianMachine=false;
+	}
+  return(littleEndianMachine);
+}
+
+
 //used to convert to big endian
 void Mesh::SwapBytes(void *pv, size_t n)
 {
@@ -1308,5 +1360,4 @@ void Mesh::checkConnectivity()
 void Mesh::preprocessingOperations()
 {
   this->checkConnectivity();
-
 }

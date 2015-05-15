@@ -92,6 +92,7 @@ int main(int argc,char **argv)
       for(short int ic=0; ic<3; ic++)
       {
         CarpMesh.Info().baricenter[ic]=CarpMesh.Info().baricenter[ic]+(CarpMesh.Pt(icount).coord[ic]);
+        CarpMesh.Info().checksum[ic]=CarpMesh.Info().checksum[ic]+static_cast<float>(CarpMesh.Pt(icount).coord[ic]);
 
         if(CarpMesh.Info().bbox[ic][0]>CarpMesh.Pt(icount).coord[ic])
         {
@@ -159,7 +160,7 @@ int main(int argc,char **argv)
   if(out_carp)
   {
       std::string cfileoutName=out_dir+"/"+out_name;
-      CarpMesh.writeCarpMesh(cfileoutName,rescaling);
+      CarpMesh.writeCarpMesh(cfileoutName,rescaling,out_binary);
   }
   if(out_vtk)
   {

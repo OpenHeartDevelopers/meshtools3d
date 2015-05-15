@@ -13,9 +13,11 @@
 struct MeshInfo{
   std::vector<double> baricenter;
   std::vector<std::vector<double> > bbox;
+  std::vector<float> checksum;
   MeshInfo()
-  :baricenter(3,0),
-  bbox(3)
+  :baricenter(3,0.0),
+  bbox(3),
+  checksum(3,0.0)
   {
     bbox[0].resize(2);
     bbox[1].resize(2);
@@ -33,11 +35,17 @@ struct MeshInfo{
         (bbox[jdim])[0]= DBL_MAX;
         (bbox[jdim])[1]=-DBL_MAX;
         baricenter[jdim]=0.0;
+        checksum[jdim]=0.0;
     }
   }
   inline double & bx(){return baricenter[0];};
   inline double & by(){return baricenter[1];};
   inline double & bz(){return baricenter[2];};
+
+  inline float chksum_x(){return checksum[0];};
+  inline float chksum_y(){return checksum[1];};
+  inline float chksum_z(){return checksum[2];};
+  inline float chksum_pts(){return(checksum[0]+checksum[1]+checksum[2]); };
 };
 
 struct Point{
@@ -151,6 +159,7 @@ class Mesh
     void evalTriangles(mapfacetype bound_faces, size_t & nbTri);
     void writePoints(std::string outputFileName,double rescaling=1.0, bool binary=false);
     void writeElements(std::string outputFileName, bool binary=false);
+    bool isLittleEndian();
     void SwapBytes(void *pv, size_t n);
     bool consistentState;
     bool outwardNormOnBoundary;
