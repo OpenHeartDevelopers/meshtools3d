@@ -57,6 +57,51 @@ verbose(0)
 }
 
 
+void LaplaceSolver::eval_pattern()
+{
+  _Matrix._pattern.I.resize(1+_ptrmesh->nPt());
+  std::vector<std::set<long int> > labelPerNode;
+  labelPerNode.resize(_ptrmesh->nPt());
+  // I create a vector of set
+  // in each entry the set gives the connectivity
+  // i.e. the label of neighb. nodes
+
+  for(size_t iTet=0; iTet<_ptrmesh->nTet(); iTet++)  
+  {
+    for(short int iPt=0; iPt<4; iPt++)
+    {
+        for(short int jPt=iPt; jPt<4; jPt++)
+        {
+          size_t iNode=_ptrmesh->Tet(iTet).vertex[iPt];
+          size_t jNode=_ptrmesh->Tet(iTet).vertex[jPt];
+          labelPerNode[iNode].insert(jNode);
+          labelPerNode[jNode].insert(iNode);
+        }
+    }
+  }
+  // I evaluate the number of non_zero elements into the pattern
+  _Matrix._pattern.n_zero=0;
+  for(size_t iPt=0; iPt<_ptrmesh->nPt(); iPt++)
+  {
+    _Matrix._pattern.n_zero=_Matrix._pattern.n_zero+labelPerNode[iPt].size();
+  }
+  _Matrix._pattern.J.resize(_Matrix._pattern.n_zero);
+  _Matrix.K.resize(_Matrix._pattern.n_zero,0);
+  // Here I  fill the pattern of the matrix
+  _Matrix._pattern.I[0]=0;
+  for(size_t iPt=0; iPt<_ptrmesh->nPt(); iPt++)
+  {
+    _Matrix._pattern.I[iPt+1]=_Matrix._pattern.I[iPt]+labelPerNode[iPt].size();
+    
+    unsigned counter=0;
+    for(std::set<long int>::iterator it=labelPerNode[iPt].begin(); it!=labelPerNode[iPt].end(); ++it)
+    {
+      _Matrix._pattern.J[_Matrix._pattern.I[iPt]+counter]=*it;
+      counter=counter+1;
+    }
+  }
+}
+
 
 LaplaceSolver::~LaplaceSolver()
 {
@@ -64,5 +109,6 @@ LaplaceSolver::~LaplaceSolver()
   {
     _ptrmesh=NULL;
   }
+  _Matrix.clear(true);
 }
 

@@ -66,6 +66,10 @@ class LaplaceSolver
   inline void set_verbosity(short int verb) { if(verb>=0){ verbose=verb;} };
   
  private: 
+  //functions
+  void eval_pattern();
+  
+  //variables
   bool _consistentState;
   const Mesh *  _ptrmesh;
   double abs_toll;
@@ -73,6 +77,7 @@ class LaplaceSolver
   int itr_max;
   long int dimKrilovSp;
   short int verbose;
+  CSR_matrix _Matrix;
 
   
 
