@@ -140,6 +140,9 @@ class Mesh
     inline const size_t & triaToTetMap(size_t iTri) const{return triaToTet[iTri];};
 #endif
 
+    void evalBoundaryLabels();
+    void writeBoundaryLabels(std::string & fileDir, std::string & FileName);
+
 
     double hTri(size_t iTri); // diameter
     double rhoTri(size_t iTri);  //radius (inscribed)
@@ -150,9 +153,10 @@ class Mesh
     double rhoTet(size_t iTet);  //radius (inscribed)
     double AreaTet(size_t iTet);
     double VolTet(size_t iTet); //volume
-    void evalBoundaryLabels();
-    void writeBoundaryLabels(std::string & fileDir, std::string & FileName);
-
+    std::vector<double> TetJacobian(size_t iTet);
+    std::vector<double> TetJacobianTransponse(size_t iTet);    
+    std::vector<double> TetInvJacobian(size_t iTet);
+    std::vector<double> TetInvJacobianTransponse(size_t iTet);    
 
   private:
     void checkConnectivity();
@@ -161,6 +165,8 @@ class Mesh
     void writeElements(std::string outputFileName, bool binary=false);
     bool isLittleEndian();
     void SwapBytes(void *pv, size_t n);
+    std::vector<double>InvertA3X3(const std::vector<double> & Mat0);
+    short int RM3X3Ind(short int irow, short int jcol);
     bool consistentState;
     bool outwardNormOnBoundary;
     std::vector<Point> points;

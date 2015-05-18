@@ -307,7 +307,7 @@ void Mesh::evalTriangles(mapfacetype bound_faces, size_t & nbTri)
       for(short int ivTe=0; ivTe<4; ivTe++)
       {
             notInTriaIndex=ivTe;
-            for(short int ivTr=0; ivTe<3; ivTr++)
+            for(short int ivTr=0; ivTr<3; ivTr++)
             {
               if(Tria.vertex[ivTr]==Tet.vertex[ivTe])
               {
@@ -1361,3 +1361,113 @@ void Mesh::preprocessingOperations()
 {
   this->checkConnectivity();
 }
+
+
+
+std::vector<double> Mesh::TetJacobian(size_t iTet)
+{
+  std::vector<double> Jacobian(9,0.0);
+  if(consistentState)
+  {
+    Tetrahedron & Tetra=tetrahedra[iTet];
+    for(short int jc=0; jc<3; jc++)
+    {
+      for(short int jv=0; jv<3; jv++)
+      {
+        Jacobian[3*(jc)+jv]=points[Tetra.vertex[1+jv]].coord[jc]-points[Tetra.vertex[0]].coord[jc];
+      }
+    }
+
+  }
+  return(Jacobian);
+}
+
+
+
+std::vector<double> Mesh::TetJacobianTransponse(size_t iTet)
+{
+  std::vector<double> JacobianT(9,0.0);
+  if(consistentState)
+  {
+    Tetrahedron & Tetra=tetrahedra[iTet];
+    for(short int jv=0; jv<3; jv++)
+    {
+      for(short int jc=0; jc<3; jc++)
+      {
+        JacobianT[3*(jv)+jc]=points[Tetra.vertex[1+jv]].coord[jc]-points[Tetra.vertex[0]].coord[jc];
+      }
+    }
+  }
+ 
+  return(JacobianT);
+}
+
+std::vector<double>Mesh::InvertA3X3(const std::vector<double> & Mat0)
+{
+  //matrix is considered as row major
+  
+  double det=0.0;
+  std::vector<double> inverted(9,0);
+  
+  //rowMajor3X3Index(short int irow, short int jcol)
+  
+  for(short int ir=0; ir<3; ir++)
+  {
+    det = det+(Mat0[RM3X3Ind(0,ir)]*(Mat0[RM3X3Ind(1,(ir+1)%3)]*Mat0[RM3X3Ind(2,(ir+2)%3)]-Mat0[RM3X3Ind(1,(ir+2)%3)]*Mat0[RM3X3Ind(2,(ir+1)%3)]));
+    for(short int jc=0; jc<3; jc++)
+    {
+      double entry=(Mat0[RM3X3Ind((ir+1)%3,(jc+1)%3)]*Mat0[RM3X3Ind((ir+2)%3,(jc+2)%3)]) - (Mat0[RM3X3Ind((ir+1)%3,(jc+2)%3)]*Mat0[RM3X3Ind((ir+2)%3,(jc+1)%3)] );
+      inverted[RM3X3Ind(ir,jc)]=entry;
+    }
+  }
+
+  if(std::sqrt(det*det)>0.0)
+  {
+    std::vector<double>::iterator it;
+    for(it=inverted.begin(); it!=inverted.end(); ++it)
+    {
+      *it=*it/det;
+    }
+    
+  }
+  else
+  {
+    inverted.clear();
+    inverted.resize(9,0);
+  }
+  return(inverted);      
+}
+
+
+short int Mesh::RM3X3Ind(short int irow, short int jcol)
+{
+  short int index=irow*3+jcol;
+  return(index);
+}
+
+
+std::vector<double> Mesh::TetInvJacobian(size_t iTet)
+{
+  std::vector<double> invJacobian(9,0);
+  if(consistentState)
+  {
+    std::vector<double> Jacobian=this->TetJacobian(iTet);
+    invJacobian=InvertA3X3(Jacobian);
+  }
+  return(invJacobian);
+}
+
+
+std::vector<double> Mesh::TetInvJacobianTransponse(size_t iTet)
+{
+  std::vector<double> invJacobianT(9,0);
+  if(consistentState)
+  {
+    std::vector<double> JacobianT=this->TetJacobianTransponse(iTet);
+    invJacobianT=InvertA3X3(JacobianT);
+  }
+  return(invJacobianT);
+}
+
+
+
