@@ -603,7 +603,7 @@ void Mesh::evalBoundaryLabels()
 {
   if(consistentState && nTri())
   {
-
+    nbElToRegionLab.clear();
     pointRegions.clear();
     regionLabels.clear();
     typedef std::map<size_t, regionSetType > nodeToRegionMapType;
@@ -727,6 +727,14 @@ void Mesh::evalBoundaryLabels()
           break;
         }
       }
+    }
+    regionSubdivisionTypeIterator iter;
+
+    for(iter=pointRegions.begin(); iter!=pointRegions.end(); ++iter)
+    {
+      size_t sizereg=(iter->second).size();
+      int labreg=iter->first;
+      nbElToRegionLab.insert(std::pair<size_t,int>(sizereg,labreg));
     }
   }// end if on consistence of mesh
 }
@@ -1150,6 +1158,7 @@ void Mesh::clear()
   triaToTet.clear();
   pointRegions.clear();
   regionLabels.clear();
+  nbElToRegionLab.clear();
   outwardNormOnBoundary=false;
   consistentState=false;
 }
@@ -1470,4 +1479,18 @@ std::vector<double> Mesh::TetInvJacobianTransponse(size_t iTet) const
 }
 
 
+const std::set<size_t> & Mesh::Endocardium() const
+{
+  std::multimap<size_t,int>::const_reverse_iterator it=++(nbElToRegionLab.rbegin());
+  const std::set<size_t> & endo = pointRegions.at(it->second);
+  return(endo);
+
+}
+
+const std::set<size_t> & Mesh::Epicardium() const
+{
+  std::multimap<size_t,int>::const_reverse_iterator it=(nbElToRegionLab.rbegin());
+  const std::set<size_t> & epi = pointRegions.at(it->second);
+  return(epi);
+}
 

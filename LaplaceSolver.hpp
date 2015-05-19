@@ -4,6 +4,7 @@
 #include <fstream>
 #include <string>
 #include <vector>
+#include<map>
 #include "Mesh.hpp"
 #include "GetPot.hpp"
 
@@ -52,25 +53,38 @@ struct CSR_matrix
 class LaplaceSolver
 {
 
+ typedef std::map<long int, double> BCContainerType;
+ typedef BCContainerType::iterator BCContainerTypeIterator;
  public:
   LaplaceSolver();
   LaplaceSolver(const Mesh * _mesh);
   LaplaceSolver(const GetPot & dfile, const Mesh * _mesh);
+  void solve();
   ~LaplaceSolver();
   void setMesh(const Mesh * _mesh);
   // set functions
+  inline void setBCValue(size_t node, double value){DirichletBC.insert(std::pair<size_t,double>(node,value));};
+  void setBCValue(std::set<size_t> region, double value);
+  void setBCValue(BCContainerType BCS);
   inline void set_abs_toll(double toll){ if(toll>0.0){abs_toll=toll;} };
   inline void set_rel_toll(double toll){ if(toll>0.0){rel_toll=toll;} };
   inline void set_max_it(int maxit){ if(maxit>0){itr_max=maxit;} };
   inline void set_Krilov_dim(long int Kdim){ if(Kdim>0){dimKrilovSp=Kdim;} };
   inline void set_verbosity(short int verb) {  verbose=verb; };
+  inline std::vector<double> & sol(){return _sol;};
+  inline double & sol(size_t iP){return (_sol[iP]);};
+  inline const std::vector<double> & sol() const {return _sol;};
+  inline const double & sol(size_t iP) const {return _sol[iP];};
+
   
  private: 
   //functions
   void eval_pattern();
   void evaldphi0();
+  void matrixAssembly(bool build_pattern=1);
   std::vector<double> localStiff(size_t iTet, double k=1.0);
   short int RMIndex(short int irow, short int jcol, short int rank=4);
+  
   //variables
   bool _consistentState;
   const Mesh *  _ptrmesh;
@@ -81,7 +95,9 @@ class LaplaceSolver
   short int verbose;
   CSR_matrix _Matrix;
   std::vector<std::vector<double> > dphi0;
-
+  std::vector<double> _sol;
+  std::vector<double> _RHS;
+  BCContainerType DirichletBC;
   
 
 };

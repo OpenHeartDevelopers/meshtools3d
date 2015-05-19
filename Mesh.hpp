@@ -111,9 +111,11 @@ class Mesh
     void initializeTetraVector(size_t dim);
     void preprocessingOperations();
     void extractBoundary();
+    void evalBoundaryLabels();
     void clear();
     void writeCarpMesh(std::string outputFileName, double rescaling=1.0, bool binary=false);
     void writeVTKMesh(std::string outputFileName, double rescaling=1.0, bool binary=false);
+    void writeBoundaryLabels(std::string & fileDir, std::string & FileName);
      
     inline size_t nPt() const {return points.size();};
     inline size_t nTri() const {return triangles.size();};
@@ -140,9 +142,8 @@ class Mesh
     inline const size_t & triaToTetMap(size_t iTri) const{return triaToTet[iTri];};
 #endif
 
-    void evalBoundaryLabels();
-    void writeBoundaryLabels(std::string & fileDir, std::string & FileName);
-
+    const std::set<size_t> & Endocardium() const;
+    const std::set<size_t> & Epicardium() const;  
 
     double hTri(size_t iTri); // diameter
     double rhoTri(size_t iTri);  //radius (inscribed)
@@ -178,6 +179,7 @@ class Mesh
     // two regions could share the same point if on boundary
     regionSubdivisionType pointRegions;
     regionSetType regionLabels;
+    std::multimap<size_t,int> nbElToRegionLab;
 };
 
 #endif

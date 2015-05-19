@@ -1,5 +1,6 @@
 #include "LaplaceSolver.hpp"
 #include<iostream>
+#include "Chrono.hpp"
 #include "mgmres.hpp"
 
 LaplaceSolver::LaplaceSolver()
@@ -31,6 +32,8 @@ void LaplaceSolver::setMesh(const Mesh *  _mesh)
     _ptrmesh=_mesh;
     _consistentState=true;
     this->evaldphi0();
+    _sol.resize(_ptrmesh->nPt(),0);
+    _RHS.resize(_ptrmesh->nPt(),0);
   }
 }
 
@@ -54,8 +57,26 @@ verbose(0)
     dimKrilovSp=_ptrmesh->nPt();
     std::cout<<"Warning: Krilov space dimension was bigger than matrix size; changed to "<<_ptrmesh->nPt()<<std::endl;
   }
-
 }
+
+
+void LaplaceSolver::setBCValue(std::set<size_t> region, double value)
+{
+  std::set<size_t>::iterator nodeiter;
+  for(nodeiter=region.begin(); nodeiter!=region.end(); ++nodeiter)
+  {
+    DirichletBC.insert(std::pair<long int,double>(*nodeiter,value));
+  }
+}
+void LaplaceSolver::setBCValue(BCContainerType BCS)
+{
+  BCContainerTypeIterator mapiter;
+  for(mapiter=BCS.begin(); mapiter!=BCS.end(); ++mapiter)
+  {
+    DirichletBC.insert(*mapiter);
+  }
+}
+
 
 
 void LaplaceSolver::eval_pattern()
@@ -148,6 +169,8 @@ LaplaceSolver::~LaplaceSolver()
   }
   _Matrix.clear(true);
   dphi0.clear();
+  _sol.clear();
+  _RHS.clear();
 }
 
 
@@ -169,10 +192,162 @@ void LaplaceSolver::evaldphi0()
     dphi0[0][jc]=-1;
     dphi0[jc+1][jc]=1;
   }
+}
+
+
+
+
+void LaplaceSolver::matrixAssembly(bool build_pattern)
+{
+
+  Chrono chrono;
+  if(verbose)
+  {
+    std::cout<<"Assembling the matrix"<<std::endl;
+  }
+  chrono.start();
+    if(build_pattern)
+  {
+    eval_pattern();
+  }
   
+  short int* reordering=new short int [4];
+  for(size_t iTet=0; iTet<_ptrmesh->nTet(); iTet++)
+  {
+    std::vector<double>local_stiffness(16,0);
+    reordering[0]=0;
+    reordering[1]=1;
+    reordering[2]=2;
+    reordering[3]=3;
+    std::vector<size_t> TetVertex(4,0);
+    std::map<size_t,short int> vord;
+    for(short int iv=0; iv<4; iv++)
+    {
+      TetVertex[iv]=_ptrmesh->Tet(iTet).vertex[iv];
+      vord.insert(std::pair<size_t,short int>(TetVertex[iv],iv));
+    }
+    //Node reordering
+    std::map<size_t,short int>::iterator it;
+    short int countv=0;
+    for(it=vord.begin(); it!=vord.end(); ++it)
+    {
+      reordering[countv]=it->second;
+      countv++;
+    }
+    countv=0;
+    vord.clear();
+    local_stiffness=localStiff(iTet);
+    std::vector<double> local_RHS(3,0);
+    // local matrix and RHS
+    for(short int iPt=0; iPt<4; iPt++)
+    {
+        long int global_vertex=TetVertex[iPt];
+        std::map<long int, double>::iterator itv;
+        itv=DirichletBC.find(global_vertex);
+        //there is a boundary condition
+        if(!(itv==DirichletBC.end()))
+        {
+          double aii=local_stiffness[RMIndex(iPt,iPt,4)];
+          local_stiffness[RMIndex(iPt,iPt,4)]=0.0;
+          //simmetric diagonalization bcs
+          for(short int jPt=0; jPt<4; jPt++)
+          {
+            local_stiffness[RMIndex(iPt,jPt,4)]=0.0;  //rows to zero
+            double aji=local_stiffness[RMIndex(jPt,iPt,4)];
+            // simm. diag step
+            local_RHS[jPt]=local_RHS[jPt]-aji*(itv->second); 
+            local_stiffness[RMIndex(jPt,iPt,4)]=0.0;
+          }
+          local_stiffness[RMIndex(iPt,iPt,4)]=aii; 
+          local_RHS[iPt]=aii*(itv->second);
+        }
+    }//end for on local points
+
+    // matrix and RHS connectivity
+    for(short int iPt=0; iPt<4; iPt++)
+    {
+      long int I_index=TetVertex[reordering[iPt]];
+      _RHS[I_index]=_RHS[I_index]+local_RHS[reordering[iPt]];
+      for(short int jPt=0; jPt<4; jPt++)
+      {
+        long int start=_Matrix._pattern.I[I_index];
+        long int end=_Matrix._pattern.I[I_index+1]-1;
+        long int J_index=TetVertex[reordering[jPt]];
+        double matrix_entry=local_stiffness[RMIndex(reordering[iPt],reordering[jPt],4)];
+        bool found=false;
+        long int tmpIndex=0.5*(start+end);
+        size_t numel=end-start;
+        if(_Matrix._pattern.J[start]==J_index)
+        {
+          found=true;
+          tmpIndex=start;
+        }
+        if(!found)
+        {
+          if(_Matrix._pattern.J[end]==J_index)
+          found=true;
+          tmpIndex=end;
+        }
+        if(!found)
+        {
+          if(_Matrix._pattern.J[tmpIndex]==J_index)
+          found=true;
+        }
+        size_t counter=0;
+        while(!found && counter<=numel)
+        {
+          if(J_index<_Matrix._pattern.J[tmpIndex])  
+          {
+            end=tmpIndex;
+          }
+          else
+          {
+            start=tmpIndex;
+          }
+          tmpIndex=0.5*(end+start);
+          if(_Matrix._pattern.J[tmpIndex]==J_index)
+          {
+            found=true;
+          }
+          counter=counter+1;
+        }
+        if(found)
+        {
+          _Matrix.K[tmpIndex]=_Matrix.K[tmpIndex]+matrix_entry;
+        }
+        else
+        {
+          std::cerr<<"SOMETHING GOES WRONG"<<std::endl;
+          exit(1);
+        }
+      }//end loop on jPt
+    }//end loop on iPt
+    
+    
+
+  }//end loop on tetra
   
+  delete [] reordering;
+  reordering=NULL;
+  chrono.stop();
+  std::cout<<" done in "<<chrono<<std::endl;
+  chrono.reset();
+}
 
 
-
+void LaplaceSolver::solve()
+{
+  matrixAssembly();
+  _sol=_RHS;
+  Chrono chrono;
+  long int nPt=_ptrmesh->nPt();
+  std::cout<<"Solving the linear system (GMRES)"<<std::endl;
+  chrono.start();
+  pmgmres_ilu_cr( nPt, _Matrix._pattern.n_zero, _Matrix._pattern.I.data(), _Matrix._pattern.J.data(), _Matrix.K.data(), 
+                    _sol.data(), _RHS.data(), itr_max, dimKrilovSp,  abs_toll, 
+                    rel_toll, verbose );
+  chrono.stop();
+  std::cout<<" done in "<<chrono<<std::endl;
+  chrono.reset();
 }
 
