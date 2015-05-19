@@ -63,12 +63,14 @@ class LaplaceSolver
   inline void set_rel_toll(double toll){ if(toll>0.0){rel_toll=toll;} };
   inline void set_max_it(int maxit){ if(maxit>0){itr_max=maxit;} };
   inline void set_Krilov_dim(long int Kdim){ if(Kdim>0){dimKrilovSp=Kdim;} };
-  inline void set_verbosity(short int verb) { if(verb>=0){ verbose=verb;} };
+  inline void set_verbosity(short int verb) {  verbose=verb; };
   
  private: 
   //functions
   void eval_pattern();
-  
+  void evaldphi0();
+  std::vector<double> localStiff(size_t iTet, double k=1.0);
+  short int RMIndex(short int irow, short int jcol, short int rank=4);
   //variables
   bool _consistentState;
   const Mesh *  _ptrmesh;
@@ -78,6 +80,7 @@ class LaplaceSolver
   long int dimKrilovSp;
   short int verbose;
   CSR_matrix _Matrix;
+  std::vector<std::vector<double> > dphi0;
 
   
 

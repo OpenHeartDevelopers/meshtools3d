@@ -147,16 +147,16 @@ class Mesh
     double hTri(size_t iTri); // diameter
     double rhoTri(size_t iTri);  //radius (inscribed)
     double qTri(size_t iTri);  //quality of triangle
-    double AreaTri(size_t iTri); //area
+    double AreaTri(size_t iTri) const; //area
     
     double hTet(size_t iTet); // diameter (circumscribed)
     double rhoTet(size_t iTet);  //radius (inscribed)
     double AreaTet(size_t iTet);
-    double VolTet(size_t iTet); //volume
-    std::vector<double> TetJacobian(size_t iTet);
-    std::vector<double> TetJacobianTransponse(size_t iTet);    
-    std::vector<double> TetInvJacobian(size_t iTet);
-    std::vector<double> TetInvJacobianTransponse(size_t iTet);    
+    double VolTet(size_t iTet) const; //volume
+    std::vector<double> TetJacobian(size_t iTet) const;
+    std::vector<double> TetJacobianTransponse(size_t iTet) const;    
+    std::vector<double> TetInvJacobian(size_t iTet) const;
+    std::vector<double> TetInvJacobianTransponse(size_t iTet) const;
 
   private:
     void checkConnectivity();
@@ -165,8 +165,8 @@ class Mesh
     void writeElements(std::string outputFileName, bool binary=false);
     bool isLittleEndian();
     void SwapBytes(void *pv, size_t n);
-    std::vector<double>InvertA3X3(const std::vector<double> & Mat0);
-    short int RM3X3Ind(short int irow, short int jcol);
+    std::vector<double>InvertA3X3(const std::vector<double> & Mat0) const;
+    short int RM3X3Ind(short int irow, short int jcol) const;
     bool consistentState;
     bool outwardNormOnBoundary;
     std::vector<Point> points;

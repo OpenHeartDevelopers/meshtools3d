@@ -30,6 +30,7 @@ void LaplaceSolver::setMesh(const Mesh *  _mesh)
   {
     _ptrmesh=_mesh;
     _consistentState=true;
+    this->evaldphi0();
   }
 }
 
@@ -102,6 +103,42 @@ void LaplaceSolver::eval_pattern()
   }
 }
 
+std::vector<double> LaplaceSolver::localStiff(size_t iTet, double k)
+{
+  std::vector<double> lstif(16,0); //4X4 matrix
+  double Volume=(_ptrmesh->VolTet(iTet));
+  std::vector<double> invJt=(_ptrmesh->TetInvJacobianTransponse(iTet)); // 9X1
+  std::vector<std::vector<double> > dphi;
+  dphi.resize(4);
+  double coef = k*Volume/6.0;
+  for(short int jf=0; jf<4; jf++)
+  {
+    dphi[jf].resize(3,0);
+    for(short int ic=0; ic<3; ic++)
+    {
+      for(short int jc=0; jc<3; jc++)
+      {
+        (dphi[jf])[ic]=(dphi[jf])[ic]+invJt[RMIndex(ic,jc,3)]  *(dphi0[jf])[jc];
+      }
+    }
+  }
+  // Now eval the matrix
+  for(short int ir=0; ir<4; ir++)
+  {
+    for(short int jc=ir; jc<4; jc++)
+    {
+      double entry=0;
+      for(short int icoor=0; icoor<3; icoor++)
+      {
+        entry=entry+((dphi[ir])[icoor])*((dphi[jc])[icoor]);
+      }
+      lstif[RMIndex(ir,jc,4)]=coef*entry;
+      lstif[RMIndex(jc,ir,4)]=coef*entry;
+    }
+  }
+  return(lstif);
+}
+
 
 LaplaceSolver::~LaplaceSolver()
 {
@@ -110,5 +147,32 @@ LaplaceSolver::~LaplaceSolver()
     _ptrmesh=NULL;
   }
   _Matrix.clear(true);
+  dphi0.clear();
+}
+
+
+short int LaplaceSolver::RMIndex(short int irow, short int jcol, short int rank)
+{
+  short int index=irow*rank+jcol;
+  return(index);
+}
+
+void LaplaceSolver::evaldphi0()
+{
+  dphi0.resize(4);
+  for(short int jf=0; jf<4; jf++)
+  {
+      dphi0[jf].resize(3);
+  }
+  for(short int jc=0; jc<3; jc++)
+  {
+    dphi0[0][jc]=-1;
+    dphi0[jc+1][jc]=1;
+  }
+  
+  
+
+
+
 }
 

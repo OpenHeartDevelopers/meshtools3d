@@ -454,13 +454,13 @@ double Mesh::qTri(size_t iTri)
   return(quality);
 }
 
-double Mesh::AreaTri(size_t iTri)
+double Mesh::AreaTri(size_t iTri) const
 {
   //! returns the area of a triangle
   double area=0.0;
   if(consistentState && nTri())
   {
-    Triangle & Tria=triangles[iTri];
+    const Triangle & Tria=triangles[iTri];
     std::vector<Point> TriaPts(3);
     for(short int iPt=0; iPt<3; iPt++)
     {
@@ -488,11 +488,11 @@ double Mesh::hTet(size_t iTet)
 {
 
   double h=0.0;
-  /*if(consistentState && nTet())
+  if(consistentState && nTet())
   {
     double volume=VolTet(iTet);
     Tetrahedron Tet=tetrahedra[iTet];
-  }*/
+  }
   return(h);
 }
 
@@ -564,13 +564,13 @@ double Mesh::AreaTet(size_t iTet)
 }
 
 
-double Mesh::VolTet(size_t iTet)
+double Mesh::VolTet(size_t iTet) const
 {
   //! returns the volume of a tetra
   double volume=0.0;
   if(consistentState && nTet())
   {
-    Tetrahedron Tet=tetrahedra[iTet];
+    const Tetrahedron & Tet=tetrahedra[iTet];
     std::vector<Point> TetPts(4);
     for(short int iPt=0; iPt<4; iPt++)
     {
@@ -1364,12 +1364,12 @@ void Mesh::preprocessingOperations()
 
 
 
-std::vector<double> Mesh::TetJacobian(size_t iTet)
+std::vector<double> Mesh::TetJacobian(size_t iTet) const
 {
   std::vector<double> Jacobian(9,0.0);
   if(consistentState)
   {
-    Tetrahedron & Tetra=tetrahedra[iTet];
+    const Tetrahedron & Tetra=tetrahedra[iTet];
     for(short int jc=0; jc<3; jc++)
     {
       for(short int jv=0; jv<3; jv++)
@@ -1384,12 +1384,12 @@ std::vector<double> Mesh::TetJacobian(size_t iTet)
 
 
 
-std::vector<double> Mesh::TetJacobianTransponse(size_t iTet)
+std::vector<double> Mesh::TetJacobianTransponse(size_t iTet) const
 {
   std::vector<double> JacobianT(9,0.0);
   if(consistentState)
   {
-    Tetrahedron & Tetra=tetrahedra[iTet];
+    const Tetrahedron & Tetra=tetrahedra[iTet];
     for(short int jv=0; jv<3; jv++)
     {
       for(short int jc=0; jc<3; jc++)
@@ -1402,7 +1402,7 @@ std::vector<double> Mesh::TetJacobianTransponse(size_t iTet)
   return(JacobianT);
 }
 
-std::vector<double>Mesh::InvertA3X3(const std::vector<double> & Mat0)
+std::vector<double>Mesh::InvertA3X3(const std::vector<double> & Mat0) const
 {
   //matrix is considered as row major
   
@@ -1439,31 +1439,31 @@ std::vector<double>Mesh::InvertA3X3(const std::vector<double> & Mat0)
 }
 
 
-short int Mesh::RM3X3Ind(short int irow, short int jcol)
+short int Mesh::RM3X3Ind(short int irow, short int jcol) const
 {
   short int index=irow*3+jcol;
   return(index);
 }
 
 
-std::vector<double> Mesh::TetInvJacobian(size_t iTet)
+std::vector<double> Mesh::TetInvJacobian(size_t iTet) const
 {
   std::vector<double> invJacobian(9,0);
   if(consistentState)
   {
-    std::vector<double> Jacobian=this->TetJacobian(iTet);
+    const std::vector<double> Jacobian=this->TetJacobian(iTet);
     invJacobian=InvertA3X3(Jacobian);
   }
   return(invJacobian);
 }
 
 
-std::vector<double> Mesh::TetInvJacobianTransponse(size_t iTet)
+std::vector<double> Mesh::TetInvJacobianTransponse(size_t iTet) const
 {
   std::vector<double> invJacobianT(9,0);
   if(consistentState)
   {
-    std::vector<double> JacobianT=this->TetJacobianTransponse(iTet);
+    const std::vector<double> JacobianT=this->TetJacobianTransponse(iTet);
     invJacobianT=InvertA3X3(JacobianT);
   }
   return(invJacobianT);
