@@ -736,6 +736,21 @@ void Mesh::evalBoundaryLabels()
       int labreg=iter->first;
       nbElToRegionLab.insert(std::pair<size_t,int>(sizereg,labreg));
     }
+    //now endo and epi of type lonh int for Laplace solver
+    
+    std::multimap<size_t,int>::const_reverse_iterator it=++(nbElToRegionLab.rbegin());
+    std::set<size_t>::iterator ite;
+    for(ite=pointRegions.at(it->second).begin();ite!=pointRegions.at(it->second).end(); ++ite)
+    {
+      _Endo.insert(static_cast<long int>(*ite));
+    }
+    it=(nbElToRegionLab.rbegin());
+    for(ite=pointRegions.at(it->second).begin();ite!=pointRegions.at(it->second).end(); ++ite)
+    {
+      _Epi.insert(static_cast<long int>(*ite));
+    }
+    
+    
   }// end if on consistence of mesh
 }
 
@@ -1479,18 +1494,4 @@ std::vector<double> Mesh::TetInvJacobianTransponse(size_t iTet) const
 }
 
 
-const std::set<size_t> & Mesh::Endocardium() const
-{
-  std::multimap<size_t,int>::const_reverse_iterator it=++(nbElToRegionLab.rbegin());
-  const std::set<size_t> & endo = pointRegions.at(it->second);
-  return(endo);
-
-}
-
-const std::set<size_t> & Mesh::Epicardium() const
-{
-  std::multimap<size_t,int>::const_reverse_iterator it=(nbElToRegionLab.rbegin());
-  const std::set<size_t> & epi = pointRegions.at(it->second);
-  return(epi);
-}
 

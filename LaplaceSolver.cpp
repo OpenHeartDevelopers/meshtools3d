@@ -60,9 +60,9 @@ verbose(0)
 }
 
 
-void LaplaceSolver::setBCValue(std::set<size_t> region, double value)
+void LaplaceSolver::setBCValue(std::set<long int> region, double value)
 {
-  std::set<size_t>::iterator nodeiter;
+  std::set<long int>::iterator nodeiter;
   for(nodeiter=region.begin(); nodeiter!=region.end(); ++nodeiter)
   {
     DirichletBC.insert(std::pair<long int,double>(*nodeiter,value));
@@ -206,11 +206,20 @@ void LaplaceSolver::matrixAssembly(bool build_pattern)
     std::cout<<"Assembling the matrix"<<std::endl;
   }
   chrono.start();
-    if(build_pattern)
+  if(build_pattern)
   {
+    if(verbose)
+    {
+      std::cout<<"pattern evaluation...";
+    }
+    
     eval_pattern();
+    if(verbose)
+    {
+      std::cout<<"done"<<std::endl;
+    }
   }
-  
+
   short int* reordering=new short int [4];
   for(size_t iTet=0; iTet<_ptrmesh->nTet(); iTet++)
   {
@@ -221,24 +230,25 @@ void LaplaceSolver::matrixAssembly(bool build_pattern)
     reordering[3]=3;
     std::vector<size_t> TetVertex(4,0);
     std::map<size_t,short int> vord;
+    std::map<size_t,short int>::iterator it;
     for(short int iv=0; iv<4; iv++)
     {
       TetVertex[iv]=_ptrmesh->Tet(iTet).vertex[iv];
-      vord.insert(std::pair<size_t,short int>(TetVertex[iv],iv));
+      vord.insert(std::pair<size_t, short int >(TetVertex[iv],iv) );
     }
     //Node reordering
-    std::map<size_t,short int>::iterator it;
+    
     short int countv=0;
     for(it=vord.begin(); it!=vord.end(); ++it)
     {
       reordering[countv]=it->second;
-      countv++;
+      countv=countv+1;
     }
     countv=0;
     vord.clear();
     local_stiffness=localStiff(iTet);
-    std::vector<double> local_RHS(3,0);
-    // local matrix and RHS
+    std::vector<double> local_RHS(4,0);
+    // local matrix and RHS (imposing bcs)
     for(short int iPt=0; iPt<4; iPt++)
     {
         long int global_vertex=TetVertex[iPt];
@@ -249,6 +259,7 @@ void LaplaceSolver::matrixAssembly(bool build_pattern)
         {
           double aii=local_stiffness[RMIndex(iPt,iPt,4)];
           local_stiffness[RMIndex(iPt,iPt,4)]=0.0;
+
           //simmetric diagonalization bcs
           for(short int jPt=0; jPt<4; jPt++)
           {
@@ -264,6 +275,9 @@ void LaplaceSolver::matrixAssembly(bool build_pattern)
     }//end for on local points
 
     // matrix and RHS connectivity
+  
+  
+  
     for(short int iPt=0; iPt<4; iPt++)
     {
       long int I_index=TetVertex[reordering[iPt]];
@@ -323,10 +337,9 @@ void LaplaceSolver::matrixAssembly(bool build_pattern)
       }//end loop on jPt
     }//end loop on iPt
     
-    
 
   }//end loop on tetra
-  
+
   delete [] reordering;
   reordering=NULL;
   chrono.stop();
@@ -355,7 +368,7 @@ void LaplaceSolver::solve()
 
 void LaplaceSolver::writeSolution(std::string filename)
 {
-  std::string fname=filename+".dat";
+  std::string fname=filename+"_potential.dat";
   std::ofstream fsol(fname.c_str());
   if(!fsol)
   {

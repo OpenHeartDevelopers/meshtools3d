@@ -63,8 +63,8 @@ class LaplaceSolver
   ~LaplaceSolver();
   void setMesh(const Mesh * _mesh);
   // set functions
-  inline void setBCValue(size_t node, double value){DirichletBC.insert(std::pair<size_t,double>(node,value));};
-  void setBCValue(std::set<size_t> region, double value);
+  inline void setBCValue(long int node, double value){DirichletBC.insert(std::pair<long int, double>(node,value));};
+  void setBCValue(std::set<long int> region, double value);
   void setBCValue(BCContainerType BCS);
   inline void set_abs_toll(double toll){ if(toll>0.0){abs_toll=toll;} };
   inline void set_rel_toll(double toll){ if(toll>0.0){rel_toll=toll;} };

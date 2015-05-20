@@ -142,8 +142,8 @@ class Mesh
     inline const size_t & triaToTetMap(size_t iTri) const{return triaToTet[iTri];};
 #endif
 
-    const std::set<size_t> & Endocardium() const;
-    const std::set<size_t> & Epicardium() const;  
+    inline const std::set<long int> & Endocardium() const {  return(_Endo);};
+    inline const std::set<long int> & Epicardium() const {  return(_Epi);};;  
 
     double hTri(size_t iTri); // diameter
     double rhoTri(size_t iTri);  //radius (inscribed)
@@ -180,6 +180,9 @@ class Mesh
     regionSubdivisionType pointRegions;
     regionSetType regionLabels;
     std::multimap<size_t,int> nbElToRegionLab;
+    std::set<long int> _Endo;
+    std::set<long int> _Epi;
 };
 
 #endif
+
