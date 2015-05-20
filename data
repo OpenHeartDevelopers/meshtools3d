@@ -17,6 +17,7 @@ facet_size          = 0.2
 facet_distance      = 6
 cell_rad_edge_ratio = 1.4
 cell_size           = 0.2
+
 # rescaling for carp and vtk output 
 rescaleFactor       = 1000
 
@@ -27,8 +28,11 @@ itr_max         = 500
 dimKrilovSp     = 150
 verbose         = 0 
 
-[output]
+[others]
+eval_thickness  = 1
 
+
+[output]
 outdir          = /home/cc14/cgalTests/LA2
 name            = LA
 out_medit       = 1
@@ -36,3 +40,4 @@ out_carp        = 1
 out_carp_binary = 0
 out_vtk         = 1
 out_vtk_binary  = 1
+out_potential   = 1

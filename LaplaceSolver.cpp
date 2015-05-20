@@ -351,3 +351,23 @@ void LaplaceSolver::solve()
   chrono.reset();
 }
 
+
+
+void LaplaceSolver::writeSolution(std::string filename)
+{
+  std::string fname=filename+".dat";
+  std::ofstream fsol(fname.c_str());
+  if(!fsol)
+  {
+    std::cerr<<"ERROR: FILE "<<fname<<" NOT OPENED"<<std::endl;
+    exit(1);
+  }
+  size_t nPt=_ptrmesh->nPt();
+  for(size_t iPt=0; iPt<nPt; iPt++)
+  {
+    fsol<<_sol[iPt]<<std::endl;
+  }
+  fsol.close();
+}
+
+

@@ -8,6 +8,7 @@
 #include <cmath>
 #include "Chrono.hpp"
 #include "Mesh.hpp"
+#include "LaplaceSolver.hpp"
 #include "GetPot.hpp"
 #include<CGALDataType.hpp>
 #include<set>
@@ -34,11 +35,13 @@ int main(int argc,char **argv)
 
   std::string out_dir        = param_file("output/outdir","."); 
   std::string out_name       = param_file("output/name","imgmesh"); 
+  bool eval_thickness        = param_file("others/eval_thickness",true); 
   bool out_medit             = param_file("output/out_medit",false);
   bool out_carp              = param_file("output/out_carp",false);  
   bool out_carp_binary       = param_file("output/out_carp_binary",false);
   bool out_vtk               = param_file("output/out_vtk",false);
   bool out_vtk_binary        = param_file("output/out_vtk_binary",false);
+  bool out_potential         = param_file("output/out_potential",false);
   double rescaling           = param_file("meshing/rescaleFactor",1.0);
   
 
@@ -169,6 +172,20 @@ int main(int argc,char **argv)
   chrono2.reset();
 
   CarpMesh.writeBoundaryLabels(out_dir, out_name);
+  if(eval_thickness)
+  {
+    LaplaceSolver Laplace(param_file, &CarpMesh );
+    Laplace.setBCValue(CarpMesh.Endocardium(), 0.0);
+    Laplace.setBCValue(CarpMesh.Epicardium(), 1.0);
+    Laplace.solve();
+    if(out_potential)
+    {
+      std::string cfileoutName=out_dir+"/"+out_name;
+      Laplace.writeSolution(cfileoutName);
+    }
+    
+  }
+  
   
   if(out_carp)
   {

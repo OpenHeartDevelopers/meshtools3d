@@ -75,7 +75,7 @@ class LaplaceSolver
   inline double & sol(size_t iP){return (_sol[iP]);};
   inline const std::vector<double> & sol() const {return _sol;};
   inline const double & sol(size_t iP) const {return _sol[iP];};
-
+  void writeSolution(std::string filename);
   
  private: 
   //functions
