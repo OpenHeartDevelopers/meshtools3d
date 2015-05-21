@@ -758,16 +758,14 @@ void Mesh::evalBoundaryLabels()
 
 void Mesh::writeBoundaryLabels(std::string & fileDir, std::string & FileName)
 {
-    regionSubdivisionTypeIterator regIter;
-    for(regIter=pointRegions.begin();regIter!=pointRegions.end();++regIter)
+    for(regionSubdivisionTypeIterator regIter=pointRegions.begin();regIter!=pointRegions.end();++regIter)
     {
         std::ostringstream regionLabel;
         regionLabel << regIter->first;
         std::string SurfLabelFilename=fileDir+ "/"+FileName+"_"+regionLabel.str()+".vtx";
         std::ofstream surfLabFile(SurfLabelFilename.c_str());
         surfLabFile<<(regIter->second).size()<<std::endl;
-        connectSetTypeIterator pointSetIter;
-        for(pointSetIter=(regIter->second).begin(); pointSetIter !=(regIter->second).end(); ++pointSetIter )
+        for(connectSetTypeIterator pointSetIter=(regIter->second).begin(); pointSetIter !=(regIter->second).end(); ++pointSetIter )
         {
           surfLabFile<<*pointSetIter<<std::endl;
         }
@@ -1159,6 +1157,53 @@ void Mesh::writeVTKMesh(std::string outputFileName, double rescaling, bool binar
   {
     VTKFile<<std::endl;
   }
+  
+  //now i detrmine point label
+  std::vector<int> plab(nPt,0);
+  for(regionSubdivisionTypeIterator it=pointRegions.begin(); it!= pointRegions.end(); ++it)
+  {
+    for(connectSetTypeIterator itP=(it->second).begin(); itP!=(it->second).end(); ++itP)
+    {
+      plab[*itP]=(it->first);
+    }
+    
+  }
+  VTKFile<<"POINT_DATA "<<nPt<<std::endl;
+  VTKFile<<"SCALARS NodeLabeling float"<<nPt<<std::endl;
+  VTKFile<<"LOOKUP_TABLE default"<<nPt<<std::endl;
+  for(size_t iPt=0; iPt<nPt; iPt++)
+  {
+    vtkFloatType labelOfPt=static_cast<vtkFloatType>(plab[iPt]);
+    
+    if(binary)
+    {
+      if(littleEndianMachine)
+      {
+        SwapBytes(&labelOfPt, sizeof(labelOfPt));
+      }
+      VTKFile.write((char*) &labelOfPt,sizeof(vtkFloatType));
+    }
+    else
+    {
+      VTKFile<<std::setw(4)<<std::setprecision(1)<<std::left<<std::setfill('0')<<labelOfPt;
+      if((1+iPt)%6)
+      {
+        VTKFile<<std::endl;
+      }
+      else
+      {
+        VTKFile<<" ";
+      }
+    }
+  }
+
+  if(binary)
+  {
+    VTKFile<<std::endl;
+  }
+
+
+  
   VTKFile.close();
 }
 

@@ -91,11 +91,11 @@ class Mesh
 {
   typedef std::set<int>  regionSetType;
   typedef std::set<size_t> connectSetType;
-  typedef std::set<size_t>::iterator connectSetTypeIterator;
+  typedef connectSetType::iterator connectSetTypeIterator;
   typedef std::map<int, connectSetType> regionSubdivisionType;
-  typedef std::map<int, connectSetType>::iterator regionSubdivisionTypeIterator;
+  typedef regionSubdivisionType::iterator regionSubdivisionTypeIterator;
   typedef std::set<size_t> facetype;
-  typedef std::set<size_t>::iterator facetype_iter;
+  typedef facetype::iterator facetype_iter;
   typedef std::pair<size_t,facetype> faceLabtype;
   typedef std::multimap<size_t, faceLabtype > mapfacetype;
   
