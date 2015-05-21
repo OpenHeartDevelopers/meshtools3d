@@ -181,7 +181,19 @@ int main(int argc,char **argv)
     if(out_potential)
     {
       std::string cfileoutName=out_dir+"/"+out_name;
-      Laplace.writeSolution(cfileoutName);
+      if(out_vtk)
+      {
+        Laplace.writeVTKSolution(cfileoutName,rescaling,out_vtk_binary);
+      }
+      else
+      {
+        if(out_carp || !out_vtk) 
+        {
+          Laplace.writeSolution(cfileoutName);
+        }
+        
+      }
+      
     }
     
   }

@@ -400,7 +400,7 @@ void LaplaceSolver::writeVTKSolution(std::string filename, double rescaling, boo
 
   bool littleEndianMachine=isLittleEndian();
   
-  std::string outputFileName=filename+".vtk";
+  std::string outputFileName=filename+"_potential.vtk";
 
   short int precision=12;
   short int width=11;
