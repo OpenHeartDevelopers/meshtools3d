@@ -76,6 +76,7 @@ class LaplaceSolver
   inline const std::vector<double> & sol() const {return _sol;};
   inline const double & sol(size_t iP) const {return _sol[iP];};
   void writeSolution(std::string filename);
+  void writeVTKSolution(std::string filename, double rescaling=1.0, bool binary=false);
   std::vector<double> ElementTetraGradient(size_t iEl) const;
  private: 
   //functions
@@ -84,6 +85,8 @@ class LaplaceSolver
   void matrixAssembly(bool build_pattern=1);
   std::vector<double> localStiff(size_t iTet, double k=1.0);
   short int RMIndex(short int irow, short int jcol, short int rank=4) const;
+  bool isLittleEndian();
+  void SwapBytes(void *pv, size_t n);
   
   //variables
   bool _consistentState;

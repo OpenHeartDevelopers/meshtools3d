@@ -983,7 +983,6 @@ void Mesh::writeVTKMesh(std::string outputFileName, double rescaling, bool binar
   typedef int vtkIntType;
   typedef float vtkFloatType;
   
-  
   // For an unknown idiots reason (or perhaps because network uses always big endian), 
   // paraview needs output in big endian. So, first 
   // I determine the endianness of the current machine

@@ -9,8 +9,7 @@ a segmentation in .inr file is required. Possible outputs are:
 
 Some functionality are implemented but not used; in particular:
 
-* evaluation and output of surface region points
-* output in binary formats (CARP)
+* CARP output in binary format (can be used by setting out_carp_binary = 1 inside output section but not tested till now)
 * triangle re-orientation with outward normals (when boudary is extracted)
 
 ### Surface region points
@@ -40,8 +39,15 @@ where input is located; meshing section the mesh generation parameters (rescaleF
 * implement output for .mesh file also in Mesh class (could be useful?)
 * implement output also for triangles (boundary elements)
 
-## what's new
+## What's new
 
 12 may 2015
 * added a class "Chrono" for time profiling
 * binary output for vtk (with correct endianess)
+
+21 May 2015
+* Laplace Solver for evaluating armonic extension
+* Mesh class can evaluate Tetra and Tria centroids
+* Laplace solver can evaluate Tetra Gradients for post-processing
+* vtk visualize also output regions
+* added a routine to write Laplace solution in a VTK file

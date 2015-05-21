@@ -186,7 +186,6 @@ int main(int argc,char **argv)
     
   }
   
-  
   if(out_carp)
   {
       std::string cfileoutName=out_dir+"/"+out_name;

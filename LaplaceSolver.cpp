@@ -383,6 +383,218 @@ void LaplaceSolver::writeSolution(std::string filename)
   fsol.close();
 }
 
+void LaplaceSolver::writeVTKSolution(std::string filename, double rescaling, bool binary)
+{
+  // These types are defined for the binary output
+  // I suppose that paraview look for float floating point
+  // and int integers; with this type definition is easier to
+  // change the output type
+   
+  typedef int vtkIntType;
+  typedef float vtkFloatType;
+  
+  // For an unknown idiots reason (or perhaps because network uses always big endian), 
+  // paraview needs output in big endian. So, first 
+  // I determine the endianness of the current machine
+  
+
+  bool littleEndianMachine=isLittleEndian();
+  
+  std::string outputFileName=filename+".vtk";
+
+  short int precision=12;
+  short int width=11;
+
+  size_t nPt=_ptrmesh->nPt();
+  size_t nElem=0;
+  bool is_3D=false;
+  vtkIntType * vertex=NULL;
+  short int nbV=0;
+  vtkIntType typeCell=0;
+  vtkIntType nbVoutput=0;
+  if(_ptrmesh->nTet()>0)
+  {
+    nElem=_ptrmesh->nTet();
+    is_3D=true;
+    nbV=4;
+    typeCell=10;
+  }
+  else
+  {
+    nElem=_ptrmesh->nTri();
+    is_3D=false;
+    nbV=3;
+    typeCell=5;
+  }
+  nbVoutput=static_cast<vtkIntType>(nbV);
+
+  if(binary && littleEndianMachine )
+  {
+    SwapBytes(&nbVoutput, sizeof(nbVoutput));
+    SwapBytes(&typeCell, sizeof(typeCell));
+  }
+  vertex= new vtkIntType[nbV];
+  std::ofstream VTKFile;
+  
+  if(binary)
+  {
+    VTKFile.open(outputFileName.c_str(),std::ios::out | std::ios::binary);
+  }
+  else
+  {
+    VTKFile.open(outputFileName.c_str(),std::ios::out );
+  }
+  
+  VTKFile<<"# vtk DataFile Version 4.2"<<std::endl;
+  VTKFile<<"Visualization of specified geometry"<<std::endl;
+  if(binary)
+  {
+    VTKFile<<"BINARY"<<std::endl;
+  }
+  else
+  {
+    VTKFile<<"ASCII"<<std::endl;
+  }
+  VTKFile<<"DATASET UNSTRUCTURED_GRID"<<std::endl;
+  
+  //Points
+  VTKFile<<"POINTS "<<nPt<<" float"<<std::endl;
+  for(size_t iPt=0; iPt<nPt; iPt++)
+  {
+    const Point  & Pt=_ptrmesh->Pt(iPt);
+    for(short int jc=0; jc<3; jc++)
+    {
+        vtkFloatType pcoord=rescaling*static_cast<vtkFloatType>(Pt.coord[jc]);
+        if(binary)
+        {
+          if(littleEndianMachine)
+          {
+            SwapBytes(&pcoord, sizeof(pcoord));
+          }
+          VTKFile.write((char*) &pcoord,sizeof(vtkFloatType));
+        }
+        else
+        {
+          VTKFile<<std::setw(width)<<std::setprecision(precision)<<std::left<<std::setfill('0')<<pcoord;
+          if(jc==2)
+          {
+            VTKFile<<std::endl;
+          }
+          else
+          {
+            VTKFile<<" ";
+          }
+        }
+    }
+  }//end loop on points
+    
+  if(binary)
+  {
+    VTKFile<<std::endl;
+  }
+  
+  // Elements 
+  VTKFile<<"CELLS "<<nElem<<" "<<(nbV+1)*nElem<<std::endl;
+  for(size_t iElem=0; iElem<nElem; iElem++)
+  {
+    for(vtkIntType iV=0; iV<nbV; iV++ )
+    {
+      if(is_3D)
+      {
+        vertex[iV]=static_cast<vtkIntType>((_ptrmesh->Tet(iElem)).vertex[iV]);
+      }
+      else
+      {
+        vertex[iV]=static_cast<vtkIntType>((_ptrmesh->Tri(iElem)).vertex[iV]);
+      }
+    }
+    if(binary)
+    {
+      VTKFile.write((char*) &nbVoutput,sizeof(vtkIntType)); 
+      for(short int iV=0; iV<nbV; iV++ )
+      {
+        vtkIntType VertexCP=vertex[iV];
+        if(littleEndianMachine)
+        {
+          SwapBytes(&VertexCP, sizeof(VertexCP));
+        }
+        VTKFile.write((char*) &VertexCP,sizeof(vtkIntType)); 
+      }
+    }
+    else
+    {
+      VTKFile<<nbV;
+      for(vtkIntType iV=0; iV<nbV; iV++ )
+      {
+        VTKFile<<" "<<vertex[iV];
+      }
+      VTKFile<<std::endl;
+    }
+  }//end loop on elements
+
+  delete [] vertex;
+  vertex=NULL;
+
+
+  if(binary)
+  {
+    VTKFile<<std::endl;
+  }
+
+  //Cell types
+  VTKFile<<"CELL_TYPES "<<nElem<<std::endl;
+  for(size_t iElem=0; iElem<nElem; iElem++)
+  {
+    if(binary)
+    {
+      VTKFile.write((char*) &typeCell,sizeof(vtkIntType)); 
+    }
+    else
+    {
+      VTKFile<<typeCell<<std::endl;
+    }
+  }
+  if(binary)
+  {
+    VTKFile<<std::endl;
+  }
+  
+  //now i detrmine point label
+  VTKFile<<"POINT_DATA "<<nPt<<std::endl;
+  VTKFile<<"SCALARS NodeLabeling float"<<nPt<<std::endl;
+  VTKFile<<"LOOKUP_TABLE default"<<nPt<<std::endl;
+  for(size_t iPt=0; iPt<nPt; iPt++)
+  {
+    vtkFloatType valueAtPt=static_cast<vtkFloatType>(_sol[iPt]);
+    if(binary)
+    {
+      if(littleEndianMachine)
+      {
+        SwapBytes(&valueAtPt, sizeof(valueAtPt));
+      }
+      VTKFile.write((char*) &valueAtPt,sizeof(vtkFloatType));
+    }
+    else
+    {
+      VTKFile<<std::setw(width)<<std::setprecision(precision)<<std::left<<std::setfill('0')<<valueAtPt;
+      if((1+iPt)%6)
+      {
+        VTKFile<<std::endl;
+      }
+      else
+      {
+        VTKFile<<" ";
+      }
+    }
+  }
+
+  if(binary)
+  {
+    VTKFile<<std::endl;
+  }
+  VTKFile.close();
+}
+
 
 std::vector<double> LaplaceSolver::ElementTetraGradient(size_t iTet) const
 {
@@ -409,7 +621,39 @@ std::vector<double> LaplaceSolver::ElementTetraGradient(size_t iTet) const
     gradient[1]=gradient[1]+invJt[RMIndex(1,jc,3)]*gradient0[jc];
     gradient[2]=gradient[2]+invJt[RMIndex(2,jc,3)]*gradient0[jc];
   }
-
   return(gradient);
 }
+
+
+//used to evaluate endianess
+bool LaplaceSolver::isLittleEndian()
+{
+  bool littleEndianMachine=true;
+  int x = 1;
+	if(*(char *)&x == 1)
+	{
+	  littleEndianMachine=true;
+	}
+	else
+	{
+	  littleEndianMachine=false;
+	}
+  return(littleEndianMachine);
+}
+
+
+//used to convert to big endian
+void LaplaceSolver::SwapBytes(void *pv, size_t n)
+{
+    char *p = static_cast<char*>(pv);
+    size_t lo, hi;
+    for(lo=0, hi=n-1; hi>lo; lo++, hi--)
+    {
+        char tmp=p[lo];
+        p[lo] = p[hi];
+        p[hi] = tmp;
+    }
+}
+
+
 
