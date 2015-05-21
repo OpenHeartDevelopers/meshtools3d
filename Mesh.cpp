@@ -631,23 +631,21 @@ void Mesh::evalBoundaryLabels()
     }
 
     //algo on divisions starts
-    regionSubdivisionTypeIterator itRegToNodeMap;
-    for(itRegToNodeMap=pointRegions.begin(); itRegToNodeMap!=pointRegions.end(); ++itRegToNodeMap)
+    
+    for(regionSubdivisionTypeIterator itRegToNodeMap=pointRegions.begin(); itRegToNodeMap!=pointRegions.end(); ++itRegToNodeMap)
     {
       int labelOfRegions=itRegToNodeMap->first;
       // iterate on points belonging to the region labelOfRegions
       // extract the local connectivity of the region
       connectivityType regionconnect;
-      connectSetTypeIterator cRegIt;
-      for(cRegIt=(itRegToNodeMap->second).begin(); cRegIt!=(itRegToNodeMap->second).end(); ++cRegIt)
+      for(connectSetTypeIterator cRegIt=(itRegToNodeMap->second).begin(); cRegIt!=(itRegToNodeMap->second).end(); ++cRegIt)
       {
         // node belonging to region
         size_t node=*cRegIt;
         // explore connectivity of node; extract only connections belonging to the same region
         connectSetType connections;
 
-        connectSetTypeIterator connectiter;        
-        for(connectiter=connectivity[node].begin(); connectiter!=connectivity[node].end(); ++connectiter)
+        for(connectSetTypeIterator connectiter=connectivity[node].begin(); connectiter!=connectivity[node].end(); ++connectiter)
         {
           //NodeToregionMap[*connectiter]: set<int> of region labels
           // connectiter belongs to the region under study
@@ -658,14 +656,13 @@ void Mesh::evalBoundaryLabels()
         }
         regionconnect.insert(std::pair<size_t, connectSetType> (node,connections) );
       }
-      connectSetTypeIterator seedIter;
+
       //first: determine a seed point
       size_t seed= *(itRegToNodeMap->second.begin());
-      size_t count=0;
-      for(seedIter=itRegToNodeMap->second.begin(); seedIter!=itRegToNodeMap->second.end(); ++seedIter)
+      for(connectSetTypeIterator seedIter=itRegToNodeMap->second.begin(); seedIter!=itRegToNodeMap->second.end(); ++seedIter)
       {
-        count=count+1;
         seed=*seedIter;
+        //full inside the region (not on a boundary of two)
         if(NodeToregionMap[seed].size()==1)
         {
           break;
@@ -678,9 +675,9 @@ void Mesh::evalBoundaryLabels()
       {
         size_t candidate= *(Queue.begin());
         Queue.erase(candidate);
-        connectSetTypeIterator countNode;
+
         //regionconnect : map<size_t, connectSetType>
-        for(countNode=regionconnect[candidate].begin(); countNode!=regionconnect[candidate].end(); ++countNode)
+        for(connectSetTypeIterator countNode=regionconnect.at(candidate).begin(); countNode!=regionconnect.at(candidate).end(); ++countNode)
         {
           //check that countNode is inside the region
           if(RegionNodes.find(*countNode)==RegionNodes.end())
@@ -690,26 +687,32 @@ void Mesh::evalBoundaryLabels()
             Queue.insert(*countNode);
           }
         }
-      }
+      }//end of while
       //RegionNodes: nodes of the connected region with label itRegToNodeMap->first
       //check if ... itRegToNodeMap->second : list of points belonging to (set)
       //if is the case, there are some point to move
       if((itRegToNodeMap->second).size() !=RegionNodes.size()  )
       {
-        int newRegionLabel=*(regionLabels.rbegin())+1;
+        //first: create a new label region
+        int newRegionLabel=1+(*(regionLabels.rbegin()));
         regionLabels.insert(newRegionLabel);
         
-        connectSetType newSet=itRegToNodeMap->second;
-        connectSetTypeIterator reg_iter;
-        for(reg_iter=RegionNodes.begin();reg_iter!=RegionNodes.end(); ++reg_iter)
+        //copy inside newSet the whole set of point belonging to the current region 
+        connectSetType newSet=(itRegToNodeMap->second);
+
+        //Delete points identified to the current region
+        for(connectSetTypeIterator reg_iter=RegionNodes.begin();reg_iter!=RegionNodes.end(); ++reg_iter)
         {
           newSet.erase(*reg_iter);
         }
+        //insert the new region inside pointRegions
         pointRegions.insert(std::pair<int, connectSetType>(newRegionLabel,newSet) );
         
         //nodeToRegionMapType = <size_t, set<int> >
-         for(reg_iter=newSet.begin();reg_iter!=newSet.end(); ++reg_iter)
+        //remove point not belonging to region
+         for(connectSetTypeIterator reg_iter=newSet.begin();reg_iter!=newSet.end(); ++reg_iter)
          {
+          (itRegToNodeMap->second).erase(*reg_iter);
           NodeToregionMap[*reg_iter].erase(labelOfRegions);
           NodeToregionMap[*reg_iter].insert(newRegionLabel);
          }
@@ -728,9 +731,9 @@ void Mesh::evalBoundaryLabels()
         }
       }
     }
-    regionSubdivisionTypeIterator iter;
+    
 
-    for(iter=pointRegions.begin(); iter!=pointRegions.end(); ++iter)
+    for(regionSubdivisionTypeIterator iter=pointRegions.begin(); iter!=pointRegions.end(); ++iter)
     {
       size_t sizereg=(iter->second).size();
       int labreg=iter->first;
@@ -739,13 +742,13 @@ void Mesh::evalBoundaryLabels()
     //now endo and epi of type lonh int for Laplace solver
     
     std::multimap<size_t,int>::const_reverse_iterator it=++(nbElToRegionLab.rbegin());
-    std::set<size_t>::iterator ite;
-    for(ite=pointRegions.at(it->second).begin();ite!=pointRegions.at(it->second).end(); ++ite)
+    
+    for(connectSetTypeIterator ite=pointRegions.at(it->second).begin();ite!=pointRegions.at(it->second).end(); ++ite)
     {
       _Endo.insert(static_cast<long int>(*ite));
     }
     it=(nbElToRegionLab.rbegin());
-    for(ite=pointRegions.at(it->second).begin();ite!=pointRegions.at(it->second).end(); ++ite)
+    for(connectSetTypeIterator ite=pointRegions.at(it->second).begin();ite!=pointRegions.at(it->second).end(); ++ite)
     {
       _Epi.insert(static_cast<long int>(*ite));
     }
