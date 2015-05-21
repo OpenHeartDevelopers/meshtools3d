@@ -174,7 +174,7 @@ LaplaceSolver::~LaplaceSolver()
 }
 
 
-short int LaplaceSolver::RMIndex(short int irow, short int jcol, short int rank)
+short int LaplaceSolver::RMIndex(short int irow, short int jcol, short int rank) const
 {
   short int index=irow*rank+jcol;
   return(index);
@@ -383,4 +383,33 @@ void LaplaceSolver::writeSolution(std::string filename)
   fsol.close();
 }
 
+
+std::vector<double> LaplaceSolver::ElementTetraGradient(size_t iTet) const
+{
+  std::vector<double> gradient(3,0);
+  double  gradient0[3];
+  gradient0[0]=0.0;
+  gradient0[1]=0.0;
+  gradient0[2]=0.0;
+  const Tetrahedron & Tet= _ptrmesh->Tet(iTet);
+  std::vector<double> invJt=_ptrmesh->TetInvJacobianTransponse( iTet);
+  //first: eval grad0
+  for(short int iv=0; iv<4; iv++)
+  {
+    double sol_at_vertex=_sol[Tet.vertex[iv]];
+    gradient0[0]=gradient0[0]+ sol_at_vertex*(dphi0[iv])[0];
+    gradient0[1]=gradient0[1]+ sol_at_vertex*(dphi0[iv])[1];
+    gradient0[2]=gradient0[2]+ sol_at_vertex*(dphi0[iv])[2];
+  }
+  //second: eval gradient by pre-multiplying bt J^-t
+  double dx=0, dy=0, dz=0;
+  for(short int jc=0; jc<3; jc++)
+  {
+    gradient[0]=gradient[0]+invJt[RMIndex(0,jc,3)]*gradient0[jc];
+    gradient[1]=gradient[1]+invJt[RMIndex(1,jc,3)]*gradient0[jc];
+    gradient[2]=gradient[2]+invJt[RMIndex(2,jc,3)]*gradient0[jc];
+  }
+
+  return(gradient);
+}
 

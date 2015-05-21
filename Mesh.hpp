@@ -141,7 +141,6 @@ class Mesh
     inline const Tetrahedron & Tet(size_t iTet) const{return tetrahedra[iTet];};
     inline const size_t & triaToTetMap(size_t iTri) const{return triaToTet[iTri];};
 #endif
-
     inline const std::set<long int> & Endocardium() const {  return(_Endo);};
     inline const std::set<long int> & Epicardium() const {  return(_Epi);};;  
 
@@ -158,6 +157,10 @@ class Mesh
     std::vector<double> TetJacobianTransponse(size_t iTet) const;    
     std::vector<double> TetInvJacobian(size_t iTet) const;
     std::vector<double> TetInvJacobianTransponse(size_t iTet) const;
+
+    std::vector<double> TetraCentroid(size_t iTet) const;
+    std::vector<double> TriaCentroid(size_t iTri) const;
+
 
   private:
     void checkConnectivity();

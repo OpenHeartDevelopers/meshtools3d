@@ -76,14 +76,14 @@ class LaplaceSolver
   inline const std::vector<double> & sol() const {return _sol;};
   inline const double & sol(size_t iP) const {return _sol[iP];};
   void writeSolution(std::string filename);
-  
+  std::vector<double> ElementTetraGradient(size_t iEl) const;
  private: 
   //functions
   void eval_pattern();
   void evaldphi0();
   void matrixAssembly(bool build_pattern=1);
   std::vector<double> localStiff(size_t iTet, double k=1.0);
-  short int RMIndex(short int irow, short int jcol, short int rank=4);
+  short int RMIndex(short int irow, short int jcol, short int rank=4) const;
   
   //variables
   bool _consistentState;

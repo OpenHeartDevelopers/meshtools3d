@@ -1493,5 +1493,45 @@ std::vector<double> Mesh::TetInvJacobianTransponse(size_t iTet) const
   return(invJacobianT);
 }
 
+std::vector<double> Mesh::TetraCentroid(size_t iTet) const
+{
+  std::vector<double> centroid(3,0);
+  if(consistentState && this->nTet())
+  {
+    const Tetrahedron & Tetra= tetrahedra[iTet];
+    for(short int jv=0; jv<4; jv++)
+    {
+      for(short int ic=0; ic<3; ic++)
+      {
+        centroid[ic]=centroid[ic]+0.25*points[Tetra.vertex[jv]].coord[ic];
+      }
+    
+    }
+  }
+  return(centroid);
+}
+
+
+std::vector<double> Mesh::TriaCentroid(size_t iTri) const
+{
+  std::vector<double> centroid(3,0);
+  if(consistentState && this->nTri())
+  {
+    const Triangle & Tria= triangles[iTri];
+    for(short int jv=0; jv<3; jv++)
+    {
+      for(short int ic=0; ic<3; ic++)
+      {
+        centroid[ic]=centroid[ic]+points[Tria.vertex[jv]].coord[ic];
+      }
+    }
+    for(short int ic=0; ic<3; ic++)
+    {
+      centroid[ic]=centroid[ic]/3.0;
+    }
+  }
+  return(centroid);
+}
+
 
 
