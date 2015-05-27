@@ -42,12 +42,18 @@ where input is located; meshing section the mesh generation parameters (rescaleF
 ## What's new
 
 12 may 2015
+
 * added a class "Chrono" for time profiling
 * binary output for vtk (with correct endianess)
 
 21 May 2015
+
 * Laplace Solver for evaluating armonic extension
 * Mesh class can evaluate Tetra and Tria centroids
 * Laplace solver can evaluate Tetra Gradients for post-processing
 * vtk visualize also output regions
 * added a routine to write Laplace solution in a VTK file
+
+22 May 2015
+
+* Added some examples
