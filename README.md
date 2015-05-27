@@ -52,8 +52,12 @@ where input is located; meshing section the mesh generation parameters (rescaleF
 * Mesh class can evaluate Tetra and Tria centroids
 * Laplace solver can evaluate Tetra Gradients for post-processing
 * vtk visualize also output regions
+<<<<<<< HEAD
 * added a routine to write Laplace solution in a VTK file
 
 22 May 2015
 
 * Added some examples
+=======
+* added a routine to write Laplace solution in a VTK file
+>>>>>>> 67ad7d3fe69c42cadf4bb75d0bd6d672b8234321
