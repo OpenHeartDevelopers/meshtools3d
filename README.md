@@ -13,7 +13,9 @@ Some functionality are implemented but not used; in particular:
 * triangle re-orientation with outward normals (when boudary is extracted)
 
 ### Surface region points
-This functionality, actually disabled, determine endo, epii,  mitral valves nodes, etc  on the boundary, when these region are constrained by another one.
+This functionality determines endo, epi,  mitral valves nodes, etc  on the boundary, when these region are constrained by another one.
+Endocardium and Epicardium surfaces are given as output and determined as the regions with the largest number of points (epicardium) 
+and the second region with the largest number of points (endocardium) within the extracted ones.
 
 ## Installation
 
