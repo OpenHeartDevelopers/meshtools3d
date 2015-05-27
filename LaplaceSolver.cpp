@@ -579,11 +579,11 @@ void LaplaceSolver::writeVTKSolution(std::string filename, double rescaling, boo
       VTKFile<<std::setw(width)<<std::setprecision(precision)<<std::left<<std::setfill('0')<<valueAtPt;
       if((1+iPt)%6)
       {
-        VTKFile<<std::endl;
+        VTKFile<<" ";
       }
       else
       {
-        VTKFile<<" ";
+        VTKFile<<std::endl;
       }
     }
   }
