@@ -797,7 +797,7 @@ void Mesh::initializeTetraVector(size_t dim)
   }
 }
 
-void Mesh::writeCarpMesh(std::string outputFileName, double rescaling, bool binary)
+void Mesh::writeCarpMesh(std::string outputFileName, bool binary, double rescaling)
 {
   writePoints(outputFileName,rescaling, binary);  
   writeElements(outputFileName, binary);
@@ -975,7 +975,7 @@ void Mesh::writeElements(std::string outputFileName, bool binary)
 }
 
 
-void Mesh::writeVTKMesh(std::string outputFileName, double rescaling, bool binary)
+void Mesh::writeVTKMesh(std::string outputFileName, bool binary, double rescaling)
 {
   
   // These types are defined for the binary output
@@ -996,7 +996,7 @@ void Mesh::writeVTKMesh(std::string outputFileName, double rescaling, bool binar
   std::string fileName=outputFileName+".vtk";
 
   short int precision=12;
-  short int width=11;
+  
 
   size_t nPt=this->nPt();
   size_t nElem=0;
@@ -1020,14 +1020,12 @@ void Mesh::writeVTKMesh(std::string outputFileName, double rescaling, bool binar
     typeCell=5;
   }
   nbVoutput=static_cast<vtkIntType>(nbV);
-  if(littleEndianMachine)
-  {
-    SwapBytes(&nbVoutput, sizeof(nbVoutput));
-  }
+
 
   if(binary && littleEndianMachine )
   {
     SwapBytes(&typeCell, sizeof(typeCell));
+    SwapBytes(&nbVoutput, sizeof(nbVoutput));
   }
 
 
@@ -1074,7 +1072,7 @@ void Mesh::writeVTKMesh(std::string outputFileName, double rescaling, bool binar
         }
         else
         {
-          VTKFile<<std::setw(width)<<std::setprecision(precision)<<std::left<<std::setfill('0')<<pcoord;
+          VTKFile<<std::setprecision(precision)<<pcoord;
           if(jc==2)
           {
             VTKFile<<std::endl;
@@ -1124,7 +1122,7 @@ void Mesh::writeVTKMesh(std::string outputFileName, double rescaling, bool binar
     }
     else
     {
-      VTKFile<<nbV;
+      VTKFile<<nbVoutput;
       for(vtkIntType iV=0; iV<nbV; iV++ )
       {
         VTKFile<<" "<<vertex[iV];
@@ -1152,7 +1150,15 @@ void Mesh::writeVTKMesh(std::string outputFileName, double rescaling, bool binar
     }
     else
     {
-      VTKFile<<typeCell<<std::endl;
+      VTKFile<<typeCell;
+      if(((1+iElem)%6) && (iElem<(nElem-1)))
+      {
+        VTKFile<<" ";
+      }
+      else
+      {
+        VTKFile<<std::endl;
+      }
     }
   }
   if(binary)
@@ -1170,9 +1176,10 @@ void Mesh::writeVTKMesh(std::string outputFileName, double rescaling, bool binar
     }
     
   }
+  
   VTKFile<<"POINT_DATA "<<nPt<<std::endl;
-  VTKFile<<"SCALARS NodeLabeling float"<<nPt<<std::endl;
-  VTKFile<<"LOOKUP_TABLE default"<<nPt<<std::endl;
+  VTKFile<<"SCALARS NodeLabels FLOAT"<<std::endl;
+  VTKFile<<"LOOKUP_TABLE default"<<std::endl;
   for(size_t iPt=0; iPt<nPt; iPt++)
   {
     vtkFloatType labelOfPt=static_cast<vtkFloatType>(plab[iPt]);
@@ -1187,14 +1194,14 @@ void Mesh::writeVTKMesh(std::string outputFileName, double rescaling, bool binar
     }
     else
     {
-      VTKFile<<std::setw(4)<<std::setprecision(1)<<std::left<<std::setfill('0')<<labelOfPt;
-      if((1+iPt)%6)
+      VTKFile<<labelOfPt;
+      if(((1+iPt)%6) && (iPt<nPt-1))
       {
-        VTKFile<<std::endl;
+        VTKFile<<" ";
       }
       else
       {
-        VTKFile<<" ";
+        VTKFile<<std::endl;
       }
     }
   }
@@ -1203,7 +1210,6 @@ void Mesh::writeVTKMesh(std::string outputFileName, double rescaling, bool binar
   {
     VTKFile<<std::endl;
   }
-
 
   
   VTKFile.close();
@@ -1580,5 +1586,58 @@ std::vector<double> Mesh::TriaCentroid(size_t iTri) const
   return(centroid);
 }
 
+
+void Mesh::writeTetraCentroids(std::string outputFileName, double rescaling)
+{
+  short int precision=12;
+  size_t nTet=this->nTet();
+  if(consistentState && nTet)
+  {
+    std::ofstream TetCentroidFile(outputFileName.c_str());
+    TetCentroidFile<<nTet<<std::endl;
+    for(size_t iTet=0; iTet<nTet; iTet++)
+    {
+      std::vector<double> centroid=TetraCentroid(iTet);
+      centroid[0]=centroid[0]*rescaling;
+      centroid[1]=centroid[1]*rescaling;
+      centroid[2]=centroid[2]*rescaling;
+      TetCentroidFile<<std::setprecision(precision)<<centroid[0]<<" "
+                     <<std::setprecision(precision)<<centroid[1]<<" "
+                     <<std::setprecision(precision)<<centroid[2]<<std::endl;
+    }  
+    TetCentroidFile.close();
+  }
+}
+
+
+
+void Mesh::writeTris(std::string outputFileName)
+{
+  size_t nTri=this->nTri();
+  if(consistentState && nTri)
+  {
+      std::ofstream TrisFile(outputFileName.c_str());
+      TrisFile<<nTri<<std::endl;
+      for(size_t iTri=0; iTri<this->nTri(); iTri++)
+      {
+        TrisFile<<triangles[iTri].vertex[0]<<" "<<triangles[iTri].vertex[1]<<" "<<triangles[iTri].vertex[2]<<std::endl;
+      }
+      TrisFile.close();
+  }
+}
+
+void Mesh::meshRescaling(double rescaling)
+{
+  if(consistentState)
+  {
+    for(size_t iPt=0; iPt<this->nPt(); iPt++)
+    {
+      for(short int ic=0; ic<3; ic++)
+      {
+        points[iPt].coord[ic]=rescaling*points[iPt].coord[ic];
+      }
+    }
+  }
+}
 
 

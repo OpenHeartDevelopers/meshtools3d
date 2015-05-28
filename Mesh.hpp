@@ -113,9 +113,12 @@ class Mesh
     void extractBoundary();
     void evalBoundaryLabels();
     void clear();
-    void writeCarpMesh(std::string outputFileName, double rescaling=1.0, bool binary=false);
-    void writeVTKMesh(std::string outputFileName, double rescaling=1.0, bool binary=false);
+    void writeCarpMesh(std::string outputFileName, bool binary=false, double rescaling=1.0);
+    void writeVTKMesh(std::string outputFileName, bool binary=false, double rescaling=1.0);
     void writeBoundaryLabels(std::string & fileDir, std::string & FileName);
+    void writeTetraCentroids(std::string outputFileName, double rescaling=1.0);
+    void writeTris(std::string outputFileName);
+    void meshRescaling(double rescaling=1.0);
      
     inline size_t nPt() const {return points.size();};
     inline size_t nTri() const {return triangles.size();};

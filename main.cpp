@@ -172,18 +172,23 @@ int main(int argc,char **argv)
   chrono2.reset();
 
   CarpMesh.writeBoundaryLabels(out_dir, out_name);
+  CarpMesh.meshRescaling(rescaling); //rescale the whole mesh; not on output. So output of rescaling is 1 now
   if(eval_thickness)
   {
     LaplaceSolver Laplace(param_file, &CarpMesh );
     Laplace.setBCValue(CarpMesh.Endocardium(), 1.0);  
     Laplace.setBCValue(CarpMesh.Epicardium(), 0.0);  
     Laplace.solve();
+    std::string cfileoutName=out_dir+"/"+out_name;
+    Laplace.writeElementGradient(cfileoutName);
+    CarpMesh.writeTetraCentroids(cfileoutName);
+    CarpMesh.writeTris(cfileoutName);
     if(out_potential)
     {
-      std::string cfileoutName=out_dir+"/"+out_name;
+      
       if(out_vtk)
       {
-        Laplace.writeVTKSolution(cfileoutName,rescaling,out_vtk_binary);
+        Laplace.writeVTKSolution(cfileoutName,out_vtk_binary);
       }
       else
       {
@@ -191,7 +196,6 @@ int main(int argc,char **argv)
         {
           Laplace.writeSolution(cfileoutName);
         }
-        
       }
       
     }
@@ -201,12 +205,12 @@ int main(int argc,char **argv)
   if(out_carp)
   {
       std::string cfileoutName=out_dir+"/"+out_name;
-      CarpMesh.writeCarpMesh(cfileoutName,rescaling,out_carp_binary);
+      CarpMesh.writeCarpMesh(cfileoutName,out_carp_binary);
   }
   if(out_vtk)
   {
       std::string cfileoutName=out_dir+"/"+out_name;
-      CarpMesh.writeVTKMesh(cfileoutName,rescaling,out_vtk_binary);
+      CarpMesh.writeVTKMesh(cfileoutName,out_vtk_binary);
 
   }
   return 0;

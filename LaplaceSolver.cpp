@@ -383,7 +383,7 @@ void LaplaceSolver::writeSolution(std::string filename)
   fsol.close();
 }
 
-void LaplaceSolver::writeVTKSolution(std::string filename, double rescaling, bool binary)
+void LaplaceSolver::writeVTKSolution(std::string filename, bool binary, double rescaling)
 {
   // These types are defined for the binary output
   // I suppose that paraview look for float floating point
@@ -403,7 +403,6 @@ void LaplaceSolver::writeVTKSolution(std::string filename, double rescaling, boo
   std::string outputFileName=filename+"_potential.vtk";
 
   short int precision=12;
-  short int width=11;
 
   size_t nPt=_ptrmesh->nPt();
   size_t nElem=0;
@@ -475,7 +474,7 @@ void LaplaceSolver::writeVTKSolution(std::string filename, double rescaling, boo
         }
         else
         {
-          VTKFile<<std::setw(width)<<std::setprecision(precision)<<std::left<<std::setfill('0')<<pcoord;
+          VTKFile<<std::setprecision(precision)<<pcoord;
           if(jc==2)
           {
             VTKFile<<std::endl;
@@ -551,7 +550,16 @@ void LaplaceSolver::writeVTKSolution(std::string filename, double rescaling, boo
     }
     else
     {
-      VTKFile<<typeCell<<std::endl;
+      VTKFile<<typeCell;
+      if(((1+iElem)%6) && (iElem<(nElem-1)))
+      {
+        VTKFile<<" ";
+      }
+      else
+      {
+        VTKFile<<std::endl;
+      }
+
     }
   }
   if(binary)
@@ -561,8 +569,8 @@ void LaplaceSolver::writeVTKSolution(std::string filename, double rescaling, boo
   
   //now i detrmine point label
   VTKFile<<"POINT_DATA "<<nPt<<std::endl;
-  VTKFile<<"SCALARS NodeLabeling float"<<nPt<<std::endl;
-  VTKFile<<"LOOKUP_TABLE default"<<nPt<<std::endl;
+  VTKFile<<"SCALARS Potential float"<<std::endl;
+  VTKFile<<"LOOKUP_TABLE default"<<std::endl;
   for(size_t iPt=0; iPt<nPt; iPt++)
   {
     vtkFloatType valueAtPt=static_cast<vtkFloatType>(_sol[iPt]);
@@ -576,8 +584,8 @@ void LaplaceSolver::writeVTKSolution(std::string filename, double rescaling, boo
     }
     else
     {
-      VTKFile<<std::setw(width)<<std::setprecision(precision)<<std::left<<std::setfill('0')<<valueAtPt;
-      if((1+iPt)%6)
+      VTKFile<<std::setprecision(precision)<<valueAtPt;
+      if(((1+iPt)%6) && (iPt<nPt-1))
       {
         VTKFile<<" ";
       }
@@ -592,6 +600,53 @@ void LaplaceSolver::writeVTKSolution(std::string filename, double rescaling, boo
   {
     VTKFile<<std::endl;
   }
+  /*if(is_3D)
+  {
+    VTKFile<<"CELL_DATA "<<nElem<<std::endl;
+    VTKFile<<"VECTORS Gradient float"<<std::endl;
+    VTKFile<<"LOOKUP_TABLE default"<<std::endl;
+    for(size_t iElem=0; iElem<nElem; iElem++)
+    {
+      std::vector<double> gradient= ElementTetraGradient(iElem);
+      vtkFloatType vx=static_cast<vtkFloatType>(gradient[0]);
+      vtkFloatType vy=static_cast<vtkFloatType>(gradient[1]);
+      vtkFloatType vz=static_cast<vtkFloatType>(gradient[2]);
+      gradient.clear();
+      if(binary)
+      {
+        if(littleEndianMachine)
+        {
+          SwapBytes(&vx, sizeof(vx));
+          SwapBytes(&vy, sizeof(vy));
+          SwapBytes(&vz, sizeof(vz));
+        }
+        VTKFile.write((char*) &vx,sizeof(vtkFloatType));
+        VTKFile.write((char*) &vy,sizeof(vtkFloatType));
+        VTKFile.write((char*) &vz,sizeof(vtkFloatType));
+      
+      }
+      else
+      {
+        VTKFile<<std::setprecision(precision)<<vx<<" "
+               <<std::setprecision(precision)<<vy<<" "
+               <<std::setprecision(precision)<<vz;
+        
+        if(((1+iElem)%2) && (iElem<nElem-1))
+        {
+          VTKFile<<" ";
+        }
+        else
+        {
+          VTKFile<<std::endl;
+        }
+      }
+    }
+    if(binary)
+    {
+      VTKFile<<std::endl;
+    }
+  }*/
+  
   VTKFile.close();
 }
 
@@ -654,6 +709,35 @@ void LaplaceSolver::SwapBytes(void *pv, size_t n)
         p[hi] = tmp;
     }
 }
+
+
+
+void LaplaceSolver::writeElementGradient(std::string filename)
+{
+  short int precision=12;
+  short int width=11;
+  std::string fname=filename+"_elemgrad.dat";
+  std::ofstream fgrad(fname.c_str());
+  if(!fgrad)
+  {
+    std::cerr<<"ERROR: FILE "<<fname<<" NOT OPENED"<<std::endl;
+    exit(1);
+  }
+  size_t nTet=_ptrmesh->nTet();
+  for(size_t iTet=0; iTet<nTet; iTet++)
+  {
+    std::vector<double> gradient= ElementTetraGradient(iTet);
+    fgrad<<std::setw(width)<<std::setprecision(precision)<<std::left << std::setfill('0')<<gradient[0]<<" "
+         <<std::setw(width)<<std::setprecision(precision)<<std::left << std::setfill('0')<<gradient[1]<<" "
+         <<std::setw(width)<<std::setprecision(precision)<<std::left << std::setfill('0')<<gradient[2]<<std::endl;
+  }
+  fgrad.close();
+
+
+
+
+}
+
 
 
 

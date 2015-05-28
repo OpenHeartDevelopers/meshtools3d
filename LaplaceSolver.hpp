@@ -76,7 +76,8 @@ class LaplaceSolver
   inline const std::vector<double> & sol() const {return _sol;};
   inline const double & sol(size_t iP) const {return _sol[iP];};
   void writeSolution(std::string filename);
-  void writeVTKSolution(std::string filename, double rescaling=1.0, bool binary=false);
+  void writeVTKSolution(std::string filename, bool binary=false, double rescaling=1.0);
+  void writeElementGradient(std::string filename);
   std::vector<double> ElementTetraGradient(size_t iEl) const;
  private: 
   //functions
