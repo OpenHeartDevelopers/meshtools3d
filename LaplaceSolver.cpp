@@ -716,7 +716,7 @@ void LaplaceSolver::writeElementGradient(std::string filename)
 {
   short int precision=12;
   short int width=11;
-  std::string fname=filename+"_elemgrad.dat";
+  std::string fname=filename+".grad";
   std::ofstream fgrad(fname.c_str());
   if(!fgrad)
   {

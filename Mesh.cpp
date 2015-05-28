@@ -1593,7 +1593,8 @@ void Mesh::writeTetraCentroids(std::string outputFileName, double rescaling)
   size_t nTet=this->nTet();
   if(consistentState && nTet)
   {
-    std::ofstream TetCentroidFile(outputFileName.c_str());
+    std::string fname=outputFileName+".cpts";
+    std::ofstream TetCentroidFile(fname.c_str());
     TetCentroidFile<<nTet<<std::endl;
     for(size_t iTet=0; iTet<nTet; iTet++)
     {
@@ -1616,7 +1617,8 @@ void Mesh::writeTris(std::string outputFileName)
   size_t nTri=this->nTri();
   if(consistentState && nTri)
   {
-      std::ofstream TrisFile(outputFileName.c_str());
+      std::string fname=outputFileName+".tris";
+      std::ofstream TrisFile(fname.c_str());
       TrisFile<<nTri<<std::endl;
       for(size_t iTri=0; iTri<this->nTri(); iTri++)
       {
