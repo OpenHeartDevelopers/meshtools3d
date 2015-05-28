@@ -175,8 +175,8 @@ int main(int argc,char **argv)
   if(eval_thickness)
   {
     LaplaceSolver Laplace(param_file, &CarpMesh );
-    Laplace.setBCValue(CarpMesh.Endocardium(), 0.0);  
-    Laplace.setBCValue(CarpMesh.Epicardium(), 1.0);  
+    Laplace.setBCValue(CarpMesh.Endocardium(), 1.0);  
+    Laplace.setBCValue(CarpMesh.Epicardium(), 0.0);  
     Laplace.solve();
     if(out_potential)
     {
