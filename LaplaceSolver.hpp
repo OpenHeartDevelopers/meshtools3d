@@ -78,7 +78,7 @@ class LaplaceSolver
   void writeSolution(std::string filename);
   void writeVTKSolution(std::string filename, bool binary=false, double rescaling=1.0);
   void writeElementGradient(std::string filename);
-  std::vector<double> ElementTetraGradient(size_t iEl) const;
+  std::vector<double> ElementTetraGradient(size_t iEl, bool normalize=true) const;
  private: 
   //functions
   void eval_pattern();

@@ -2,6 +2,7 @@
 #include<iostream>
 #include "Chrono.hpp"
 #include "mgmres.hpp"
+#include<cmath>
 
 LaplaceSolver::LaplaceSolver()
 :_consistentState(false),
@@ -651,7 +652,7 @@ void LaplaceSolver::writeVTKSolution(std::string filename, bool binary, double r
 }
 
 
-std::vector<double> LaplaceSolver::ElementTetraGradient(size_t iTet) const
+std::vector<double> LaplaceSolver::ElementTetraGradient(size_t iTet,bool normalize) const
 {
   std::vector<double> gradient(3,0);
   double  gradient0[3];
@@ -675,6 +676,16 @@ std::vector<double> LaplaceSolver::ElementTetraGradient(size_t iTet) const
     gradient[0]=gradient[0]+invJt[RMIndex(0,jc,3)]*gradient0[jc];
     gradient[1]=gradient[1]+invJt[RMIndex(1,jc,3)]*gradient0[jc];
     gradient[2]=gradient[2]+invJt[RMIndex(2,jc,3)]*gradient0[jc];
+  }
+  
+  if(normalize)
+  {
+    double norm=std::sqrt(gradient[0]*gradient[0]+gradient[1]*gradient[1]+gradient[2]*gradient[2]);
+    for(short int jc=0; jc<3; jc++)
+    {
+      gradient[jc]=gradient[jc]/norm;
+    }
+  
   }
   return(gradient);
 }
