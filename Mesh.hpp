@@ -188,6 +188,8 @@ class Mesh
     std::multimap<size_t,int> nbElToRegionLab;
     std::set<long int> _Endo;
     std::set<long int> _Epi;
+    int _endoLabel;
+    int _epiLabel;
 };
 
 #endif

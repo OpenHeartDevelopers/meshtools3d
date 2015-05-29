@@ -21,7 +21,9 @@ outwardNormOnBoundary(false),
 points(0),
 triangles(0),
 tetrahedra(0),
-triaToTet(0)
+triaToTet(0),
+_endoLabel(-1),
+_epiLabel(-1)
 {
 
 }
@@ -33,7 +35,9 @@ outwardNormOnBoundary(false),
 points(0),
 triangles(0),
 tetrahedra(0),
-triaToTet(0)
+triaToTet(0),
+_endoLabel(-1),
+_epiLabel(-1)
 {
   readFromFile(inputFileame);
 }
@@ -740,15 +744,16 @@ void Mesh::evalBoundaryLabels()
       nbElToRegionLab.insert(std::pair<size_t,int>(sizereg,labreg));
     }
     //now endo and epi of type lonh int for Laplace solver
-    
     std::multimap<size_t,int>::const_reverse_iterator it=++(nbElToRegionLab.rbegin());
-    
-    for(connectSetTypeIterator ite=pointRegions.at(it->second).begin();ite!=pointRegions.at(it->second).end(); ++ite)
+    _endoLabel =it->second;
+    for(connectSetTypeIterator ite=pointRegions.at(_endoLabel).begin();ite!=pointRegions.at(_endoLabel).end(); ++ite)
     {
       _Endo.insert(static_cast<long int>(*ite));
     }
+
     it=(nbElToRegionLab.rbegin());
-    for(connectSetTypeIterator ite=pointRegions.at(it->second).begin();ite!=pointRegions.at(it->second).end(); ++ite)
+    _epiLabel =it->second;
+    for(connectSetTypeIterator ite=pointRegions.at(_epiLabel).begin();ite!=pointRegions.at(_epiLabel).end(); ++ite)
     {
       _Epi.insert(static_cast<long int>(*ite));
     }
@@ -761,12 +766,31 @@ void Mesh::evalBoundaryLabels()
 
 void Mesh::writeBoundaryLabels(std::string & fileDir, std::string & FileName)
 {
+    
     for(regionSubdivisionTypeIterator regIter=pointRegions.begin();regIter!=pointRegions.end();++regIter)
     {
-        std::ostringstream regionLabel;
-        regionLabel << regIter->first;
-        std::string SurfLabelFilename=fileDir+ "/"+FileName+"_"+regionLabel.str()+".vtx";
-        std::ofstream surfLabFile(SurfLabelFilename.c_str());
+        std::ofstream surfLabFile;
+        std::string SurfLabelFilename;
+        if(((regIter->first)!=_epiLabel) &&  ((regIter->first)!=_endoLabel)   )
+        {
+          std::ostringstream regionLabel;
+          regionLabel << regIter->first;
+          SurfLabelFilename=fileDir+ "/"+FileName+"_"+regionLabel.str()+".vtx";
+        }
+        else
+        {
+          if((regIter->first)==_epiLabel)
+          {
+            SurfLabelFilename=fileDir+ "/"+FileName+"_"+"epi"+".vtx";
+          }
+          else
+          {
+            SurfLabelFilename=fileDir+ "/"+FileName+"_"+"endo"+".vtx";
+          }
+        
+        }
+        
+        surfLabFile.open(SurfLabelFilename.c_str());
         surfLabFile<<(regIter->second).size()<<std::endl;
         for(connectSetTypeIterator pointSetIter=(regIter->second).begin(); pointSetIter !=(regIter->second).end(); ++pointSetIter )
         {
