@@ -5,10 +5,10 @@
 #include <string>
 #include<vector>
 #include <string>
-#include <values.h>
+//#include <values.h>
+#include <cfloat>
 #include<set>
 #include<map>
-
 
 struct MeshInfo{
   std::vector<double> baricenter;

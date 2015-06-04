@@ -6,12 +6,15 @@
 #include <sstream>
 #include <string>
 #include <cmath>
+#include <cfloat>
 #include "Chrono.hpp"
 #include "Mesh.hpp"
 #include "LaplaceSolver.hpp"
 #include "GetPot.hpp"
 #include<CGALDataType.hpp>
 #include<set>
+
+
 
 int main(int argc,char **argv)
 {
