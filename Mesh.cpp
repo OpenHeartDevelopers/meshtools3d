@@ -872,9 +872,9 @@ void Mesh::writePoints(std::string outputFileName, double rescaling, bool binary
     }
     else
     {
-      ptFile<<" "<<std::setw(width)<<std::setprecision(precision)<<std::left << std::setfill('0')<<rescaling*Pt.x()<<" "
-                 <<std::setw(width)<<std::setprecision(precision)<<std::left << std::setfill('0')<<rescaling*Pt.y()<<" "
-                 <<std::setw(width)<<std::setprecision(precision)<<std::left << std::setfill('0')<<rescaling*Pt.z()<<std::endl;
+      ptFile<<" "<<std::setw(width)<<std::setprecision(precision)<<rescaling*Pt.x()<<" "
+                 <<std::setw(width)<<std::setprecision(precision)<<rescaling*Pt.y()<<" "
+                 <<std::setw(width)<<std::setprecision(precision)<<rescaling*Pt.z()<<std::endl;
     }
   }
   ptFile.close();
