@@ -35,8 +35,29 @@ void LaplaceSolver::setMesh(const Mesh *  _mesh)
     this->evaldphi0();
     _sol.resize(_ptrmesh->nPt(),0);
     _RHS.resize(_ptrmesh->nPt(),0);
+    
+    if(dimKrilovSp>static_cast<long int>(_ptrmesh->nPt()))
+    {
+      dimKrilovSp=_ptrmesh->nPt();
+      std::cout<<"Warning: Krilov space dimension was bigger than matrix size; changed to "<<_ptrmesh->nPt()<<std::endl;
+    }
   }
 }
+
+void LaplaceSolver::initialize(const GetPot & dfile)
+{
+  abs_toll    = dfile("laplacesolver/abs_toll",1.e-6);
+  rel_toll    = dfile("laplacesolver/rel_toll",1.e-6);
+  itr_max     = dfile("laplacesolver/itr_max",100);    
+  verbose     = dfile("laplacesolver/verbose",0);
+  dimKrilovSp = dfile("laplacesolver/dimKrilovSp",100);
+  if(_consistentState &&  (dimKrilovSp>static_cast<long int>(_ptrmesh->nPt()))  )
+  {
+      dimKrilovSp=_ptrmesh->nPt();
+      std::cout<<"Warning: Krilov space dimension was bigger than matrix size; changed to "<<_ptrmesh->nPt()<<std::endl;
+  }
+}
+
 
 LaplaceSolver::LaplaceSolver(const GetPot & dfile, const Mesh * _mesh)
 :_consistentState(false),
@@ -48,16 +69,7 @@ dimKrilovSp(10),
 verbose(0)
 {
   this->setMesh(_mesh);
-  abs_toll    = dfile("laplacesolver/abs_toll",1.e-6);
-  rel_toll    = dfile("laplacesolver/rel_toll",1.e-6);
-  itr_max     = dfile("laplacesolver/itr_max",100);    
-  dimKrilovSp = dfile("laplacesolver/dimKrilovSp",100);
-  verbose     = dfile("laplacesolver/verbose",0);
-  if(dimKrilovSp>static_cast<long int>(_ptrmesh->nPt()))
-  {
-    dimKrilovSp=_ptrmesh->nPt();
-    std::cout<<"Warning: Krilov space dimension was bigger than matrix size; changed to "<<_ptrmesh->nPt()<<std::endl;
-  }
+  this->initialize( dfile);
 }
 
 

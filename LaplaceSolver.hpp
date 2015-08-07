@@ -19,7 +19,16 @@ struct CSR_pattern
   :I(0,0),
   J(0,0),
   n_zero(0)
-  {}
+  {};
+  CSR_pattern(CSR_pattern & srcpattern)
+  :I(0,0),
+  J(0,0),
+  n_zero(0)
+  {
+    I=srcpattern.I;
+    J=srcpattern.J;
+    n_zero=srcpattern.n_zero;
+  }
   void clear()
   {
     I.clear();
@@ -59,6 +68,7 @@ class LaplaceSolver
   LaplaceSolver();
   LaplaceSolver(const Mesh * _mesh);
   LaplaceSolver(const GetPot & dfile, const Mesh * _mesh);
+  void initialize(const GetPot & dfile);
   void solve();
   ~LaplaceSolver();
   void setMesh(const Mesh * _mesh);
