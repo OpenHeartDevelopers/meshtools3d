@@ -4,3 +4,5 @@
 /Makefile
 /data
 /meshtools3d
+# Editor temporary files
+.*.swp
