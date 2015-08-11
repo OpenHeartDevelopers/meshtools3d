@@ -29,8 +29,17 @@ in the same folder this file is located, specifing the right CGAL path. Then typ
 
 ## Run
 
-Specify options inside a data file as data. Segmentation section tells
-where input is located; meshing section the mesh generation parameters (rescaleFactor conversely is only for output and affects only output of vtk and CARP); output section tells where to write the output, the output name and the formats to write as output (medit, carp, vtk)
+Copy the `data-template` file to data, and edit the contents as appropriate:
+
+```sh
+cp data-template data
+vim data
+```
+
+The segmentation section tells where input is located, the meshing section sets
+the mesh generation parameters (rescaleFactor conversely is only for output and
+affects only output of vtk and CARP) and the output section sets the output
+directory, name and formats (medit, carp, vtk).
 
 ## Parallel run with TBB library
 
