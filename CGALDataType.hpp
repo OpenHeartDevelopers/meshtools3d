@@ -12,7 +12,7 @@ typedef CGAL::Exact_predicates_inexact_constructions_kernel K;
 typedef CGAL::Labeled_image_mesh_domain_3<CGAL::Image_3,K> Mesh_domain;
 
 // Triangulation
-#ifdef CGAL_CONCURRENT_MESH_3
+#ifdef CGAL_LINKED_WITH_TBB
   typedef CGAL::Mesh_triangulation_3< Mesh_domain,
     CGAL::Kernel_traits<Mesh_domain>::Kernel, // Same as sequential
     CGAL::Parallel_tag                        // Tag to activate parallelism

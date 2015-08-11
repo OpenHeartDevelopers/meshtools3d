@@ -13,7 +13,9 @@
 #include "GetPot.hpp"
 #include<CGALDataType.hpp>
 #include<set>
-
+#ifdef CGAL_LINKED_WITH_TBB
+#include <tbb/task_scheduler_init.h>
+#endif
 
 
 int main(int argc,char **argv)
@@ -47,6 +49,24 @@ int main(int argc,char **argv)
   bool out_potential         = param_file("output/out_potential",false);
   double rescaling           = param_file("meshing/rescaleFactor",1.0);
   
+
+#ifdef CGAL_LINKED_WITH_TBB
+  int numThreads = 1;
+  char * nthr=NULL;
+  nthr = getenv("TBB_NUM_THREADS");
+  if(nthr!=NULL)
+  {
+    numThreads=atoi(nthr);
+    delete [] nthr;
+    nthr=NULL;
+    std::cout<<"nb of threads is: "<<numThreads<<std::endl;
+  }
+  else
+  {
+  std::cout<<"TBB_NUM_THREADS not setted; nb of threads is: "<<numThreads<<" (default)"<<std::endl;
+  }
+  tbb::task_scheduler_init init(numThreads);
+#endif
 
 //create the output dir
   

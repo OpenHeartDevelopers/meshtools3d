@@ -32,8 +32,17 @@ in the same folder this file is located, specifing the right CGAL path. Then typ
 Specify options inside a data file as data. Segmentation section tells
 where input is located; meshing section the mesh generation parameters (rescaleFactor conversely is only for output and affects only output of vtk and CARP); output section tells where to write the output, the output name and the formats to write as output (medit, carp, vtk)
 
+## Parallel run with TBB library
 
+If Intel TBB library is installed, the code is linked with TBB. TBB is a shared memory library, similar to OpenMP but more effcient. In this code the default number of core is setted to 1:
+this to avoid to take all the cores found by the library if no number of core is specified. The implementation of this code will check that the environment variable 'TBB_NUM_THREADS' is
+defined; for using for example 4 cores, on a shell window type:
 
+```sh
+  export TBB_NUM_THREADS = 4
+```
+
+Remark: TBB_NUM_THREADS is NOT a environment variable of TBB; it will affects only meshtools3d code
 
 ## TO DO
 
@@ -62,4 +71,9 @@ where input is located; meshing section the mesh generation parameters (rescaleF
 * Added some examples
 =======
 * added a routine to write Laplace solution in a VTK file
->>>>>>> 67ad7d3fe69c42cadf4bb75d0bd6d672b8234321
+
+11 Aug 2015
+* Added parallel run facilities
+
+
+
