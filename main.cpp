@@ -54,16 +54,16 @@ int main(int argc,char **argv)
   int numThreads = 1;
   char * nthr=NULL;
   nthr = getenv("TBB_NUM_THREADS");
-  if(nthr!=NULL)
-  {
-    numThreads=atoi(nthr);
-    delete [] nthr;
-    nthr=NULL;
-    std::cout<<"nb of threads is: "<<numThreads<<std::endl;
-  }
-  else
-  {
-  std::cout<<"TBB_NUM_THREADS not setted; nb of threads is: "<<numThreads<<" (default)"<<std::endl;
+  if (nthr != NULL)
+    numThreads = atoi(nthr);
+  if ((nthr == NULL) || (numThreads == 0)) {
+    numThreads = 1;
+    std::cout << "TBB_NUM_THREADS not set; nb of threads is: "
+              << numThreads
+              << " (default)"
+              << std::endl;
+  } else {
+    std::cout << "nb of threads is: " << numThreads << std::endl;
   }
   tbb::task_scheduler_init init(numThreads);
 #endif
