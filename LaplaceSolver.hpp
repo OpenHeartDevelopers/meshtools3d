@@ -89,6 +89,12 @@ class LaplaceSolver
   void writeVTKSolution(std::string filename, bool binary=false, double rescaling=1.0);
   void writeElementGradient(std::string filename);
   std::vector<double> ElementTetraGradient(size_t iEl, bool normalize=true) const;
+ 
+ protected:
+  bool isLittleEndian();
+  void SwapBytes(void *pv, size_t n);
+  const Mesh *  _ptrmesh;
+   
  private: 
   //functions
   void eval_pattern();
@@ -96,12 +102,9 @@ class LaplaceSolver
   void matrixAssembly(bool build_pattern=1);
   std::vector<double> localStiff(size_t iTet, double k=1.0);
   short int RMIndex(short int irow, short int jcol, short int rank=4) const;
-  bool isLittleEndian();
-  void SwapBytes(void *pv, size_t n);
-  
+   
   //variables
   bool _consistentState;
-  const Mesh *  _ptrmesh;
   double abs_toll;
   double rel_toll;
   int itr_max;
