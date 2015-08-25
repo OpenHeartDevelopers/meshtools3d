@@ -10,6 +10,8 @@
 #include "Chrono.hpp"
 #include "Mesh.hpp"
 #include "LaplaceSolver.hpp"
+#include "ThicknessEvaluation.hpp"
+
 #include "GetPot.hpp"
 #include<CGALDataType.hpp>
 #include<set>
@@ -198,13 +200,18 @@ int main(int argc,char **argv)
   CarpMesh.meshRescaling(rescaling); //rescale the whole mesh; not on output. So output of rescaling is 1 now
   if(eval_thickness)
   {
-    LaplaceSolver Laplace(param_file, &CarpMesh );
-    Laplace.setBCValue(CarpMesh.Endocardium(), 1.0);  
-    Laplace.setBCValue(CarpMesh.Epicardium(), 0.0);  
-    Laplace.solve();
+    ThicknessEvaluation ThicknessCompute(param_file, &CarpMesh );
+    ThicknessCompute.setBCValue(CarpMesh.Endocardium(), 1.0);  
+    ThicknessCompute.setBCValue(CarpMesh.Epicardium(), 0.0);  
+    ThicknessCompute.solve();
+    //LaplaceSolver Laplace(param_file, &CarpMesh );
+    //Laplace.setBCValue(CarpMesh.Endocardium(), 1.0);  
+    //Laplace.setBCValue(CarpMesh.Epicardium(), 0.0);  
+    // Laplace.solve();
     CarpMesh.initializeConnectivities();
     std::string cfileoutName=out_dir+"/"+out_name;
-    Laplace.writeElementGradient(cfileoutName);
+    //Laplace.writeElementGradient(cfileoutName);
+    ThicknessCompute.writeElementGradient(cfileoutName);
     CarpMesh.writeTetraCentroids(cfileoutName);
     CarpMesh.writeTris(cfileoutName);
     if(out_potential)
@@ -212,13 +219,15 @@ int main(int argc,char **argv)
       
       if(out_vtk)
       {
-        Laplace.writeVTKSolution(cfileoutName,out_vtk_binary);
+        ThicknessCompute.writeVTKSolution(cfileoutName,out_vtk_binary);
+        //Laplace.writeVTKSolution(cfileoutName,out_vtk_binary);
       }
       else
       {
         if(out_carp || !out_vtk) 
         {
-          Laplace.writeSolution(cfileoutName);
+          ThicknessCompute.writeSolution(cfileoutName);
+          //Laplace.writeSolution(cfileoutName);
         }
       }
       

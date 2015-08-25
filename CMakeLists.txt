@@ -62,7 +62,7 @@ endif()
 # Creating entries for target: meshtools3d
 # ############################
 
-add_executable( meshtools3d  GetPot.cpp main.cpp Mesh.cpp Chrono.cpp LaplaceSolver.cpp mgmres.cpp)
+add_executable( meshtools3d  GetPot.cpp main.cpp Mesh.cpp Chrono.cpp ThicknessEvaluation.cpp  LaplaceSolver.cpp  mgmres.cpp)
 
 add_to_cached_list( CGAL_EXECUTABLE_TARGETS meshtools3d )
 
