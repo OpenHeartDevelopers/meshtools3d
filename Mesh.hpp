@@ -129,6 +129,10 @@ class Mesh
     inline const MeshInfo & Info() const {return info;};
     inline const pointToElemConnectionType & conn_nodes() const {return _conn_nodes;};
     inline const pointToElemConnectionType & conn_nodesTris() const {return _conn_nodesTris;};
+    inline const facetype & endoTria() const {return _endoTris;};
+    inline const facetype & epiTria() const {return _epiTris;};
+
+    
     
 #ifndef NDEBUG
     inline Point & Pt(size_t iPt){return points.at(iPt);};
@@ -203,6 +207,9 @@ class Mesh
     pointToElemConnectionType _conn_nodes;
     pointToElemConnectionType _conn_nodesTris;
     pointToElemConnectionType _faceToFace;
+    pointToElemConnectionType _elemBoundaryTris;
+    facetype _endoTris;
+    facetype _epiTris;
 };
 
 #endif

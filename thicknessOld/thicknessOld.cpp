@@ -258,13 +258,15 @@ int main( int argc, char *argv[] )
 	int** elemBoundaryTris;
 	elemBoundaryTris = new int*[num_elems];
 	for(unsigned int i=0;i<num_elems;i++)
-		elemBoundaryTris[i] = new int[4];
-
-	// Initialises all entries to -1
-	for(unsigned int i=0;i<num_elems;i++)
-		for(int j=0;j<4;j++)
-			elemBoundaryTris[i][j] = -1;
-
+	{
+	  elemBoundaryTris[i] = new int[4];
+	  // Initialises all entries to -1
+	  for(int j=0;j<4;j++)
+	  {
+	    elemBoundaryTris[i][j] = -1;
+	  }
+	}
+			
 
 	for(unsigned int i=0;i<num_elems;i++)
 	{
@@ -286,13 +288,17 @@ int main( int argc, char *argv[] )
 					break;
 			}
 		}
-
+    //elemConnTris: list of triangles having at least one node in common with elem i
+    
 		// Makes a set of all 4 element nodes
 		set<int>elemNodes;
 		set<int>::iterator it2;
 		elemNodes.clear();
 		for(int n=0;n<4;n++)
-			elemNodes.insert(elems[i][n]);
+		{
+		  elemNodes.insert(elems[i][n]);
+		}
+			
 
 		// Iterates over each triangle face
 		for(int n=0;n<4;n++)
@@ -356,8 +362,9 @@ int main( int argc, char *argv[] )
 	}
 	*/
 
+	// illumTris: set of triangles having at least one point on illumNodeSet (_endo in my case)
 	for(unsigned int j=0;j<num_tris;j++)
-        {
+  {
 		for(int k=0;k<3;k++)
 		{
 			// Tries to find any triangle node within list of surface nodes
@@ -372,13 +379,13 @@ int main( int argc, char *argv[] )
 	int numIllumTris = illumTris.size();
 	cout << "Number of triangles which we are starting migration from  = " << numIllumTris << "\n";
 
-	//////////////////////////////
-        // PRE-PROCESSING: Defines list of surface triangles corresponding to other electrode
-        //////////////////////////////
+	////////////////////////////////////////////////////////////////////////////////////////
+  // PRE-PROCESSING: Defines list of surface triangles corresponding to other electrode //
+  ////////////////////////////////////////////////////////////////////////////////////////
         
 	// Defines a list of surface triangles which contain illuminating nodes
-        set<int> groundTris;
-        set<int>::iterator itg;
+   set<int> groundTris;
+   set<int>::iterator itg;
 
 	/*
         for(unsigned int i=0;i<num_surfNodesGround;i++)
@@ -392,21 +399,23 @@ int main( int argc, char *argv[] )
                 }
         }
 	*/
+	
+	// groundTris: set of triangles having at least one point on groundNodeSet (_epi in my case)
 	for(unsigned int j=0;j<num_tris;j++)
-        {
-                for(int k=0;k<3;k++)
-                {
-                        // Tries to find any triangle node within list of surface nodes
-                        it_surf = groundNodesSet.find(tris[j][k]);
-                        // If it does, add triangle to list of illuminated triangles
-                        if(it_surf != groundNodesSet.end() )
-                                groundTris.insert(j);
-                }
-        }
+  {
+    for(int k=0;k<3;k++)
+    {
+        // Tries to find any triangle node within list of surface nodes
+        it_surf = groundNodesSet.find(tris[j][k]);
+        // If it does, add triangle to list of illuminated triangles
+        if(it_surf != groundNodesSet.end() )
+          groundTris.insert(j);
+    }
+  }
 
-        // Finds size (or total number of illuminating surface triangles)
-        int numGroundTris = groundTris.size();
-        cout << "Number of triangles which form part of ground = " << numGroundTris << "\n";
+  // Finds size (or total number of illuminating surface triangles)
+  int numGroundTris = groundTris.size();
+  cout << "Number of triangles which form part of ground = " << numGroundTris << "\n";
 
 	//////////////////////////////
 	// PRE-PROCESSING: Associating each surface illumination triangle with corresponding tissue element
@@ -416,7 +425,12 @@ int main( int argc, char *argv[] )
 	int **illumElemsWithTris;
 	illumElemsWithTris = new int*[numIllumTris];
 	for(int i=0;i<numIllumTris;i++)
-		illumElemsWithTris[i] = new int[2];
+	{
+	  illumElemsWithTris[i] = new int[2];
+	  illumElemsWithTris[i][0] = -1;
+	  illumElemsWithTris[i][1] = -1;
+	}
+		
 
 	int c8 = 0;
 	for(it=illumTris.begin();it!=illumTris.end();it++)
@@ -452,11 +466,16 @@ int main( int argc, char *argv[] )
 				set<int> elemNodes;
 				elemNodes.clear();
 				for(int j=0;j<4;j++)
-					elemNodes.insert(elems[connElem][j]);
+				{
+				  elemNodes.insert(elems[connElem][j]);
+				}
 
 				// Removes (or tries to remove) all 3 nodes defined by triangle 
 				for(int j=0;j<3;j++)
-					elemNodes.erase(tris[thisIllumTri][j]);
+				{
+				  elemNodes.erase(tris[thisIllumTri][j]);
+				}
+					
 
 				// If we've successfully removed 3 nodes, then this trianlge is a face of this element
 				if(elemNodes.size() < 2)
@@ -487,8 +506,8 @@ int main( int argc, char *argv[] )
 	////////////////////////////////////////////////////////////
 	////////////////////////////////////////////////////////////
 	cout << "*******************************\n";
-        cout << "Computing wall thickness...\n";
-        cout << "*******************************\n";
+  cout << "* Computing wall thickness... *\n";
+  cout << "*******************************\n";
 	// Iterates over all surface illumination triangles
 	// Sets path going from each surface illuminating triangle
 	int interactions=0;

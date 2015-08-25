@@ -28,6 +28,9 @@ _epiLabel(-1)
   _conn_nodes.clear();
   _conn_nodesTris.clear();
   _faceToFace.clear();
+  _elemBoundaryTris.clear();
+  _endoTris.clear();
+  _epiTris.clear();
 }
 
 
@@ -44,6 +47,9 @@ _epiLabel(-1)
   _conn_nodes.clear();
   _conn_nodesTris.clear();
   _faceToFace.clear();
+  _elemBoundaryTris.clear();
+  _endoTris.clear();
+  _epiTris.clear();
   readFromFile(inputFileame);
 }
 
@@ -55,6 +61,9 @@ outwardNormOnBoundary(false)
   _conn_nodes.clear();
   _conn_nodesTris.clear(); 
   _faceToFace.clear(); 
+  _elemBoundaryTris.clear();
+  _endoTris.clear();
+  _epiTris.clear();
   points.resize(srcMesh.nPt());
   triangles.resize(srcMesh.nTri());
   triaToTet.resize(srcMesh.nTri());
@@ -288,6 +297,7 @@ void Mesh::readFromFile(const  std::string & inputFileame)
   }
   consistentState=true;
 }
+
 
 
 void Mesh::evalTriangles(mapfacetype bound_faces, size_t & nbTri)
@@ -620,7 +630,7 @@ void Mesh::evalBoundaryLabels()
     typedef std::map<size_t, regionSetType > nodeToRegionMapType;
     typedef std::map<size_t, connectSetType> connectivityType;
         
-    connectivityType connectivity;
+    connectivityType connectivity; //connectivity of triangles (surface connectivity)
     nodeToRegionMapType NodeToregionMap;
     
     for(size_t iTri=0; iTri<nTri(); iTri++)
@@ -835,7 +845,8 @@ void Mesh::initializeConnectivities()
     _conn_nodes.resize(this->nPt());
     _conn_nodesTris.resize(this->nPt());
     _faceToFace.resize(this->nTet());
-    cout << " Producing node-element connectivity array..." <<std::endl;
+    _elemBoundaryTris.resize(this->nTet());
+    std::cout << " Producing node-element connectivity array..." <<std::endl;
     for(size_t iTetra=0; iTetra<nTet(); iTetra++)
     {
       Tetrahedron & Tetra = tetrahedra[iTetra];
@@ -844,7 +855,7 @@ void Mesh::initializeConnectivities()
         _conn_nodes[Tetra.vertex[iVertex]].insert(iTetra);
       }
     }
-    cout << " Producing node-triangle connectivity array..." <<std::endl;
+    std::cout << " Producing node-triangle connectivity array..." <<std::endl;
     for(size_t iTria=0; iTria<nTri(); iTria++)
     {
       Triangle & Tria = triangles[iTria];
@@ -852,9 +863,10 @@ void Mesh::initializeConnectivities()
       {
         _conn_nodesTris[Tria.vertex[iVertex]].insert(iTria);
       }
+      _elemBoundaryTris[triaToTet[iTria]].insert(iTria);
     }
     
-    cout << "Constructing element face-to-face look-up table... "<<std::endl;
+    std::cout << "Constructing element face-to-face look-up table... "<<std::endl;
     for(size_t iTetra=0; iTetra<nTet(); iTetra++)
     {
       connectSetType elemConnElem;
@@ -906,6 +918,43 @@ void Mesh::initializeConnectivities()
       }//end iteration on each triangle face    
     }// end loop on itetra
   
+
+
+
+    size_t badElement = 0;
+	  for(size_t iTetra=0;iTetra<nTet();iTetra++)
+	  {
+	    size_t codim = (4-_faceToFace[iTetra].size());
+	    _elemBoundaryTris[iTetra].size();
+		  for(int h=0;h<4;h++)
+		  { 
+			  if( (codim>0)  && (codim!=_elemBoundaryTris[iTetra].size()))
+			  	badElement++;
+		  }
+	  }
+	  std::cout << "Number of bad elements = " << badElement <<std::endl;
+
+    _endoTris.clear();
+    _epiTris.clear();
+    typedef std::set<long int>::iterator surfiterType;
+
+    for(surfiterType endoIter=_Endo.begin(); endoIter!=_Endo.end(); ++endoIter)
+    {
+      for(connectSetTypeIterator itsubset=_conn_nodesTris[*endoIter].begin(); itsubset !=_conn_nodesTris[*endoIter].end(); ++itsubset)
+      {
+        _endoTris.insert(*itsubset);
+      }
+    }
+    for(surfiterType epiIter=_Epi.begin(); epiIter!=_Epi.end(); ++epiIter)
+    {
+      for(connectSetTypeIterator itsubset=_conn_nodesTris[*epiIter].begin(); itsubset !=_conn_nodesTris[*epiIter].end(); ++itsubset)
+      {
+        _epiTris.insert(*itsubset);
+      }
+    }
+
+
+
 
   }//end if on consistent state
 }
@@ -1342,6 +1391,10 @@ void Mesh::clear()
   nbElToRegionLab.clear();
   _conn_nodes.clear();
   _faceToFace.clear();
+  _elemBoundaryTris.clear();
+  _endoTris.clear();
+  _epiTris.clear();
+
   outwardNormOnBoundary=false;
   consistentState=false;
 }

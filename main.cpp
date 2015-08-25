@@ -202,6 +202,7 @@ int main(int argc,char **argv)
     Laplace.setBCValue(CarpMesh.Endocardium(), 1.0);  
     Laplace.setBCValue(CarpMesh.Epicardium(), 0.0);  
     Laplace.solve();
+    CarpMesh.initializeConnectivities();
     std::string cfileoutName=out_dir+"/"+out_name;
     Laplace.writeElementGradient(cfileoutName);
     CarpMesh.writeTetraCentroids(cfileoutName);
