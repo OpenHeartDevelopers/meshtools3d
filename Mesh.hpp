@@ -98,6 +98,7 @@ class Mesh
   typedef facetype::iterator facetype_iter;
   typedef std::pair<size_t,facetype> faceLabtype;
   typedef std::multimap<size_t, faceLabtype > mapfacetype;
+  typedef std::vector<connectSetType> pointToElemConnectionType;
   
 
   public:
@@ -113,6 +114,7 @@ class Mesh
     void extractBoundary();
     void evalBoundaryLabels();
     void clear();
+    void initializeConnectivities();
     void writeCarpMesh(std::string outputFileName, bool binary=false, double rescaling=1.0);
     void writeVTKMesh(std::string outputFileName, bool binary=false, double rescaling=1.0);
     void writeBoundaryLabels(std::string & fileDir, std::string & FileName);
@@ -125,6 +127,9 @@ class Mesh
     inline size_t nTet() const {return tetrahedra.size();};
     inline MeshInfo & Info(){return info;};
     inline const MeshInfo & Info() const {return info;};
+    inline const pointToElemConnectionType & conn_nodes() const {return _conn_nodes;};
+    inline const pointToElemConnectionType & conn_nodesTris() const {return _conn_nodesTris;};
+    
 #ifndef NDEBUG
     inline Point & Pt(size_t iPt){return points.at(iPt);};
     inline Triangle & Tri(size_t iTri){return triangles.at(iTri);};
@@ -134,6 +139,9 @@ class Mesh
     inline const Triangle & Tri(size_t iTri) const {return triangles.at(iTri);};
     inline const Tetrahedron & Tet(size_t iTet) const {return tetrahedra.at(iTet);};
     inline const size_t & triaToTetMap(size_t iTri) const {return triaToTet.at(iTri);};
+    inline const connectSetType & conn_nodes(size_t iPt) const {return _conn_nodes.at(iPt);};
+    inline const connectSetType & conn_nodesTris(size_t iPt) const {return _conn_nodesTris.at(iPt);};
+    
 #else
     inline Point & Pt(size_t iPt){return points[iPt];};
     inline Triangle & Tri(size_t iTri){return triangles[iTri];};
@@ -143,6 +151,8 @@ class Mesh
     inline const Triangle & Tri(size_t iTri) const {return triangles[iTri];};
     inline const Tetrahedron & Tet(size_t iTet) const{return tetrahedra[iTet];};
     inline const size_t & triaToTetMap(size_t iTri) const{return triaToTet[iTri];};
+    inline const connectSetType & conn_nodes(size_t iPt) const {return _conn_nodes[iPt];};
+    inline const connectSetType & conn_nodesTris(size_t iPt) const {return _conn_nodesTris[iPt];};
 #endif
     inline const std::set<long int> & Endocardium() const {  return(_Endo);};
     inline const std::set<long int> & Epicardium() const {  return(_Epi);};;  
@@ -190,6 +200,9 @@ class Mesh
     std::set<long int> _Epi;
     int _endoLabel;
     int _epiLabel;
+    pointToElemConnectionType _conn_nodes;
+    pointToElemConnectionType _conn_nodesTris;
+    pointToElemConnectionType _faceToFace;
 };
 
 #endif

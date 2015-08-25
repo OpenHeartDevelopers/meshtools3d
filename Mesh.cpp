@@ -25,7 +25,9 @@ triaToTet(0),
 _endoLabel(-1),
 _epiLabel(-1)
 {
-
+  _conn_nodes.clear();
+  _conn_nodesTris.clear();
+  _faceToFace.clear();
 }
 
 
@@ -39,6 +41,9 @@ triaToTet(0),
 _endoLabel(-1),
 _epiLabel(-1)
 {
+  _conn_nodes.clear();
+  _conn_nodesTris.clear();
+  _faceToFace.clear();
   readFromFile(inputFileame);
 }
 
@@ -47,7 +52,9 @@ Mesh::Mesh(const  Mesh & srcMesh)
 :consistentState(false),
 outwardNormOnBoundary(false)
 {
-    
+  _conn_nodes.clear();
+  _conn_nodesTris.clear(); 
+  _faceToFace.clear(); 
   points.resize(srcMesh.nPt());
   triangles.resize(srcMesh.nTri());
   triaToTet.resize(srcMesh.nTri());
@@ -821,6 +828,88 @@ void Mesh::initializeTetraVector(size_t dim)
   }
 }
 
+void Mesh::initializeConnectivities()
+{
+  if(consistentState==true)
+  {
+    _conn_nodes.resize(this->nPt());
+    _conn_nodesTris.resize(this->nPt());
+    _faceToFace.resize(this->nTet());
+    cout << " Producing node-element connectivity array..." <<std::endl;
+    for(size_t iTetra=0; iTetra<nTet(); iTetra++)
+    {
+      Tetrahedron & Tetra = tetrahedra[iTetra];
+      for(short int iVertex=0; iVertex<4; iVertex++)
+      {
+        _conn_nodes[Tetra.vertex[iVertex]].insert(iTetra);
+      }
+    }
+    cout << " Producing node-triangle connectivity array..." <<std::endl;
+    for(size_t iTria=0; iTria<nTri(); iTria++)
+    {
+      Triangle & Tria = triangles[iTria];
+      for(short int iVertex=0; iVertex<3; iVertex++)
+      {
+        _conn_nodesTris[Tria.vertex[iVertex]].insert(iTria);
+      }
+    }
+    
+    cout << "Constructing element face-to-face look-up table... "<<std::endl;
+    for(size_t iTetra=0; iTetra<nTet(); iTetra++)
+    {
+      connectSetType elemConnElem;
+      connectSetTypeIterator it_ce;
+      elemConnElem.clear();
+      Tetrahedron & Tetra = tetrahedra[iTetra];
+      // Iterates over each node in current element
+		  for(short int iVertex=0; iVertex<4; iVertex++)
+		  {
+			  size_t node = Tetra.vertex[iVertex];
+			  for(connectSetTypeIterator it =_conn_nodes[node].begin(); it != _conn_nodes[node].end(); ++it  )
+			  {
+          elemConnElem.insert(*it);
+			  }
+		  }
+      elemConnElem.erase(iTetra);
+      // Creates a set with all nodes defining element
+		  connectSetType elemNodes;
+		  elemNodes.clear();
+		  for(short int iVertex=0; iVertex<4; iVertex++)
+		  {
+		    elemNodes.insert(Tetra.vertex[iVertex]);
+		  }
+			// Iterates over each triangle face
+			for(short int iVertex=0; iVertex<4; iVertex++)
+			{
+			  // Erases one node (which then defines a triangle)
+			  elemNodes.erase(Tetra.vertex[iVertex]);
+			  // Iterates-over all elements in list of connected elements
+  			for(it_ce=elemConnElem.begin();it_ce!=elemConnElem.end();it_ce++)
+	  		{
+  				// Tries to find all 3 current triangle nodes (in turn) within this connected element
+				  short int p = 0;
+				  for(short int gVertex= 0 ;gVertex < 4; gVertex++)
+				  { 
+					    if(elemNodes.find(tetrahedra[*it_ce].vertex[gVertex]) != elemNodes.end())
+					    {
+					      p++;
+					    }
+				  }
+          // If p = 3 the we've found this triangle and thus this element must connect via the current element face
+				  if(p == 3)
+				  {
+					  _faceToFace[iTetra].insert(*it_ce);
+					  break;
+				  }
+	  		}
+			  elemNodes.insert(Tetra.vertex[iVertex]);
+      }//end iteration on each triangle face    
+    }// end loop on itetra
+  
+
+  }//end if on consistent state
+}
+
 void Mesh::writeCarpMesh(std::string outputFileName, bool binary, double rescaling)
 {
   writePoints(outputFileName,rescaling, binary);  
@@ -1251,6 +1340,8 @@ void Mesh::clear()
   pointRegions.clear();
   regionLabels.clear();
   nbElToRegionLab.clear();
+  _conn_nodes.clear();
+  _faceToFace.clear();
   outwardNormOnBoundary=false;
   consistentState=false;
 }

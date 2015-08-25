@@ -8,48 +8,6 @@
 
 using namespace std;
 
-// Function to load-in elements
-void loadElements(const char* file, int** &elems, unsigned int &num_elems)
-{
-	// Puts the .elem on end of mesh base-name and loads
-	string elem_end = ".elem";
-	string total_elem_file = file + elem_end;
-	ifstream elems_file(total_elem_file.c_str());
-
-	// Reads-in contents of file
-	if (elems_file.is_open())
-	{
-		cout << "Reading " << total_elem_file << " " << flush;
-
-		// Reads-in line 1 as number of elements
-		elems_file >> num_elems;
-
-		// Outputs
-		cout << "Number of elements = " << num_elems << endl << flush;
-
-		// Defines size of array to accommodate elements
-		elems = new int*[num_elems];
-
-		// Defines a string to read the Tt flag to
-		string Tt;
-
-		// Interates over total number of elements
-		for(unsigned i=0;i<num_elems;i++)
-		{
-			// Defines each row to have 5 columns and reads-in to array (including tag as 5th column)
-			elems[i] = new int[5];
-			elems_file >> Tt >> elems[i][0] >> elems[i][1] >> elems[i][2] >> elems[i][3] >> elems[i][4];
-		}
-		elems_file.close();
-
-		cout << "Done." << endl << flush;
-	}
-	else
-	{
-		cerr << "Can't Open " << file << "!" << endl << flush;
-	}
-}
-
 // Function to load-in nodes
 void loadNodes(const char* file, double** &coords, unsigned int &num_nodes)
 {
@@ -87,70 +45,40 @@ void loadNodes(const char* file, double** &coords, unsigned int &num_nodes)
 	}
 }
 
-// Function to load-in centroids
-void loadCentroids(const char* file, double** &cents, unsigned int &num_elems)
+// Function to load-in elements
+void loadElements(const char* file, int** &elems, unsigned int &num_elems)
 {
-	// Puts the .pts on end of mesh base-name and loads
-	string cpts_end = ".cpts";
-	string total_cpts_file = file + cpts_end;
-	ifstream cents_file(total_cpts_file.c_str());
+	// Puts the .elem on end of mesh base-name and loads
+	string elem_end = ".elem";
+	string total_elem_file = file + elem_end;
+	ifstream elems_file(total_elem_file.c_str());
 
 	// Reads-in contents of file
-	if (cents_file.is_open())
+	if (elems_file.is_open())
 	{
-		cout << "Reading " << total_cpts_file << " " << endl << flush;
+		cout << "Reading " << total_elem_file << " " << flush;
 
-		// Reads-in line 1 as number of nodes
-		cents_file >> num_elems;
-
-		cout << "Number of centroids = " << num_elems << endl << flush;
-
-		// Defines size of array to accommodate nodes
-		cents = new double*[num_elems];
-
-		// Iterates over total number of nodes
-		for(unsigned i=0;i<num_elems;i++)
-		{
-			// Defines each row to have 3 columns and reads-in to array
-			cents[i] = new double[3];
-			cents_file >> cents[i][0] >> cents[i][1] >> cents[i][2];
-		}
-		cents_file.close();
-		cout << "Done." << endl << flush;
-	}
-	else
-	{
-		cerr << "Can't Open " << file << "!" << endl << flush;
-	}
-}
-
-// Function to load-in list of (individual) surface nodes
-void loadSurfaceList(const char* file, int* &surface, unsigned int &num_surfnodes)
-{
-	// Defines filename
-	ifstream surf_file(file);
-
-	// Reads-in contents of file
-	if (surf_file.is_open())
-	{
-		cout << "Reading " << file << " "  << endl << flush;
-
-		// Reads-in line 1 as number of surface nodes
-		surf_file >> num_surfnodes;
+		// Reads-in line 1 as number of elements
+		elems_file >> num_elems;
 
 		// Outputs
-		cout << "Number of surface nodes = " << num_surfnodes  << endl << flush;
+		cout << "Number of elements = " << num_elems << endl << flush;
 
-		// Defines size of array to accommodate surface nodes
-		surface = new int [num_surfnodes];
+		// Defines size of array to accommodate elements
+		elems = new int*[num_elems];
 
-		// Iterates over total number of surface nodes
-		for(unsigned i=0;i<num_surfnodes;i++)
-		{	
-			// Reads-in to array
-			surf_file >> surface[i];
+		// Defines a string to read the Tt flag to
+		string Tt;
+
+		// Interates over total number of elements
+		for(unsigned i=0;i<num_elems;i++)
+		{
+			// Defines each row to have 5 columns and reads-in to array (including tag as 5th column)
+			elems[i] = new int[5];
+			elems_file >> Tt >> elems[i][0] >> elems[i][1] >> elems[i][2] >> elems[i][3] >> elems[i][4];
 		}
-		surf_file.close();
+		elems_file.close();
+
 		cout << "Done." << endl << flush;
 	}
 	else
@@ -205,6 +133,179 @@ void loadTris(const char* file, int** &tris, unsigned int &num_tris)
 		cerr << "Can't Open " << file << "!" << endl << flush;
 	}
 }
+
+// Function to load-in list of (individual) surface nodes
+void loadSurfaceList(const char* file, int* &surface, unsigned int &num_surfnodes)
+{
+	// Defines filename
+	ifstream surf_file(file);
+
+	// Reads-in contents of file
+	if (surf_file.is_open())
+	{
+		cout << "Reading " << file << " "  << endl << flush;
+
+		// Reads-in line 1 as number of surface nodes
+		surf_file >> num_surfnodes;
+
+		// Outputs
+		cout << "Number of surface nodes = " << num_surfnodes  << endl << flush;
+
+		// Defines size of array to accommodate surface nodes
+		surface = new int [num_surfnodes];
+
+		// Iterates over total number of surface nodes
+		for(unsigned i=0;i<num_surfnodes;i++)
+		{	
+			// Reads-in to array
+			surf_file >> surface[i];
+		}
+		surf_file.close();
+		cout << "Done." << endl << flush;
+	}
+	else
+	{
+		cerr << "Can't Open " << file << "!" << endl << flush;
+	}
+}
+
+// Function to load-in centroids
+void loadCentroids(const char* file, double** &cents, unsigned int &num_elems)
+{
+	// Puts the .pts on end of mesh base-name and loads
+	string cpts_end = ".cpts";
+	string total_cpts_file = file + cpts_end;
+	ifstream cents_file(total_cpts_file.c_str());
+
+	// Reads-in contents of file
+	if (cents_file.is_open())
+	{
+		cout << "Reading " << total_cpts_file << " " << endl << flush;
+
+		// Reads-in line 1 as number of nodes
+		cents_file >> num_elems;
+
+		cout << "Number of centroids = " << num_elems << endl << flush;
+
+		// Defines size of array to accommodate nodes
+		cents = new double*[num_elems];
+
+		// Iterates over total number of nodes
+		for(unsigned i=0;i<num_elems;i++)
+		{
+			// Defines each row to have 3 columns and reads-in to array
+			cents[i] = new double[3];
+			cents_file >> cents[i][0] >> cents[i][1] >> cents[i][2];
+		}
+		cents_file.close();
+		cout << "Done." << endl << flush;
+	}
+	else
+	{
+		cerr << "Can't Open " << file << "!" << endl << flush;
+	}
+}
+
+
+void loadVectors(const char* file, double** &vectors, unsigned int num_elems)
+{
+	ifstream vec_file(file);
+
+	if (vec_file.is_open())
+	{
+		cout << "Reading " << file << " " << endl << flush;
+
+		vectors = new double*[num_elems];
+
+		for(unsigned i=0;i<num_elems;i++)
+		{
+			vectors[i] = new double[3];
+			vec_file >> vectors[i][0] >> vectors[i][1] >> vectors[i][2];
+		}
+		vec_file.close();
+		cout << "Done." << endl << flush;
+	}
+	else
+	{
+		cerr << "Can't Open " << file << "!" << endl << flush;
+	}
+
+}
+
+void produceConnectivityArray(int** &conn_nodes,int** elems,unsigned int &num_nodes,unsigned int &num_elems)
+{
+
+	conn_nodes = new int*[num_nodes];
+	for(unsigned int i=0;i<num_nodes;i++)
+	{
+	  conn_nodes[i] = new int[100];
+    // Initialises all entries in array to -1
+	  for(int j=0;j<100;j++)
+	  {
+	    conn_nodes[i][j] = -1;
+	  }
+	}
+
+// Loops-over all nodes of all elements
+	for(unsigned int i=0;i<num_elems;i++)
+	{
+		for(int j=0;j<4;j++)
+		{
+		// Picks-out node
+			int node_n = elems[i][j];
+			int k = 0;
+
+		// Finds entry in connectivity array which is not yet filled (i.e. = -1)
+			while(conn_nodes[node_n][k] != -1)
+			{
+				k++;
+			}
+		// Adds element number to connectivity array
+			conn_nodes[node_n][k] = i;
+		}
+	}
+}
+
+void produceConnectivityArrayTris(int** &conn_nodesTris,int** tris,unsigned int &num_nodes,unsigned int &num_tris)
+{
+
+  conn_nodesTris = new int*[num_nodes];
+  for(unsigned int i=0;i<num_nodes;i++)
+  {
+    conn_nodesTris[i] = new int[50];
+    // Initialises all entries in array to -1
+    for(int j=0;j<50;j++)
+    {
+      conn_nodesTris[i][j] = -1;
+    }
+  }
+
+  // Loops-over all nodes of all elements
+  for(unsigned int i=0;i<num_tris;i++)
+  {
+      for(int j=0;j<3;j++)
+      {
+        // Picks-out node
+        int node_n = tris[i][j];
+        int k = 0;
+        // Finds entry in connectivity array which is not yet filled (i.e. = -1)
+        while(conn_nodesTris[node_n][k] != -1)
+        {
+          k++;
+        }
+        // Adds element number to connectivity array
+        conn_nodesTris[node_n][k] = i;
+      }
+  }
+}
+
+
+
+
+
+
+
+
 
 // Function to load-in list of triangles
 void loadTrisWithNoDummy(const char* file, int** &tris, unsigned int &num_tris)
@@ -471,31 +572,6 @@ void loadFibresNew(const char* file, double** &fibres, unsigned int &num_elems)
 }
 
 
-void loadVectors(const char* file, double** &vectors, unsigned int num_elems)
-{
-	ifstream vec_file(file);
-
-	if (vec_file.is_open())
-	{
-		cout << "Reading " << file << " " << endl << flush;
-
-		vectors = new double*[num_elems];
-
-		for(unsigned i=0;i<num_elems;i++)
-		{
-			vectors[i] = new double[3];
-			vec_file >> vectors[i][0] >> vectors[i][1] >> vectors[i][2];
-		}
-		vec_file.close();
-		cout << "Done." << endl << flush;
-	}
-	else
-	{
-		cerr << "Can't Open " << file << "!" << endl << flush;
-	}
-
-}
-
 void loadVectors4(const char* file, double** &vectors, unsigned int num_elems)
 {
         ifstream vec_file(file);
@@ -524,71 +600,4 @@ void loadVectors4(const char* file, double** &vectors, unsigned int num_elems)
 
 
 
-void produceConnectivityArray(int** &conn_nodes,int** elems,unsigned int &num_nodes,unsigned int &num_elems)
-{
-
-	conn_nodes = new int*[num_nodes];
-	for(unsigned int i=0;i<num_nodes;i++)
-		conn_nodes[i] = new int[100];
-
-// Initialises all entries in array to -1
-	for(unsigned int i=0;i<num_nodes;i++)
-	{
-		for(int j=0;j<100;j++)
-			conn_nodes[i][j] = -1;
-	}
-
-// Loops-over all nodes of all elements
-	for(unsigned int i=0;i<num_elems;i++)
-	{
-		for(int j=0;j<4;j++)
-		{
-		// Picks-out node
-			int node_n = elems[i][j];
-			int k = 0;
-
-		// Finds entry in connectivity array which is not yet filled (i.e. = -1)
-			while(conn_nodes[node_n][k] != -1)
-			{
-				k++;
-			}
-		// Adds element number to connectivity array
-			conn_nodes[node_n][k] = i;
-		}
-	}
-}
-
-void produceConnectivityArrayTris(int** &conn_nodesTris,int** tris,unsigned int &num_nodes,unsigned int &num_tris)
-{
-
-        conn_nodesTris = new int*[num_nodes];
-        for(unsigned int i=0;i<num_nodes;i++)
-                conn_nodesTris[i] = new int[50];
-
-// Initialises all entries in array to -1
-        for(unsigned int i=0;i<num_nodes;i++)
-        {
-                for(int j=0;j<50;j++)
-                        conn_nodesTris[i][j] = -1;
-        }
-
-// Loops-over all nodes of all elements
-        for(unsigned int i=0;i<num_tris;i++)
-        {
-                for(int j=0;j<3;j++)
-                {
-                // Picks-out node
-                        int node_n = tris[i][j];
-                        int k = 0;
-
-                // Finds entry in connectivity array which is not yet filled (i.e. = -1)
-                        while(conn_nodesTris[node_n][k] != -1)
-                        {
-                                k++;
-                        }
-                // Adds element number to connectivity array
-                        conn_nodesTris[node_n][k] = i;
-                }
-        }
-}
 

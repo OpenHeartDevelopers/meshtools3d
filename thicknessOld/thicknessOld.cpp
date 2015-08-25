@@ -50,12 +50,15 @@ int main( int argc, char *argv[] )
   cout << "*******************************\n";
 	// Reads Nodes
 	// Cesare: perhaps multiplication by 1000.0 is useless (input mesh is still in um)
+	//no rescaling since mesh is still rescaled in meshtools3d
+	double rescaleFactor=1.0;// 1000.0;
+
 	double** coords = NULL;
 	unsigned int num_nodes;
 	loadNodes(argv[1],coords,num_nodes);
 	for(unsigned int i=0;i<num_nodes;i++)
 		for(int j=0;j<3;j++)
-			coords[i][j] = coords[i][j]*1000.0;
+			coords[i][j] = coords[i][j]*rescaleFactor;
 
 	// Reads Elements
 	int** elems = NULL;
@@ -103,14 +106,14 @@ int main( int argc, char *argv[] )
 	loadCentroids(argv[1],cents,num_elems);
 	for(unsigned int i=0;i<num_elems;i++)
                 for(int j=0;j<3;j++)
-                        cents[i][j] = cents[i][j]*1000.0;
+                        cents[i][j] = cents[i][j]*rescaleFactor;
 
 	// Reads-in vectors from Laplace solve
 	// Cesare: Reads Gradients
 	double** grads = NULL;
 	loadVectors(argv[3],grads,num_elems);
 	int flag = atoi(argv[5]);
-	if(flag == 1)
+	if(flag == 1) //endo->epi
 	{
 		for(unsigned int i=0;i<num_elems;i++)
 			for(int h=0;h<3;h++)
@@ -174,6 +177,7 @@ int main( int argc, char *argv[] )
 	//////////////////////////////
 	cout << "Constructing element face-to-face look-up table... \n";
 	// Defines array
+	//faceToFace: for each element, i-th face  is opposed to the i-th node
 	int** faceToFace = NULL;
 	faceToFace = new int*[num_elems];
 	// Initialises to -1
