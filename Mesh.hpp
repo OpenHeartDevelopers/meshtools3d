@@ -60,31 +60,68 @@ struct Point{
   
 };
 
-struct Triangle{
-  std::vector<size_t> vertex;
+
+class Element
+{
+  public:
+    Element()
+      :regionLabel(0),
+      vertex(0),
+      _vtkCellType(0)
+      {};
+  ~Element()
+    {
+      vertex.clear();
+      regionLabel=0;
+      _vtkCellType=0;
+    };
+
+  inline const short int nbV() const {return static_cast<short int>(vertex.size());};
   int regionLabel;
-  Triangle() 
-   :vertex(3,0),
-   regionLabel(0)
-   {}
-  inline size_t & p0(){return vertex[0];};
-  inline size_t & p1(){return vertex[1];};
-  inline size_t & p2(){return vertex[2];};
+  std::vector<size_t> vertex;
+  int _vtkCellType;
 };
 
 
-struct Tetrahedron{
-  std::vector<size_t> vertex;
-  int regionLabel;
-  Tetrahedron() 
-   :vertex(4,0),
-   regionLabel(0)
-   {}
-  inline size_t & p0(){return vertex[0];};
-  inline size_t & p1(){return vertex[1];};
-  inline size_t & p2(){return vertex[2];};
-  inline size_t & p3(){return vertex[3];};
+class Triangle
+:public Element
+{
+  public:
+    Triangle()
+    :Element()
+    {
+        _vtkCellType=5;
+        vertex.resize(3);
+        vertex[0]=0;
+        vertex[1]=0;
+        vertex[2]=0;
+    }
+    inline size_t & p0(){return vertex[0];};
+    inline size_t & p1(){return vertex[1];};
+    inline size_t & p2(){return vertex[2];};
 };
+
+
+class Tetrahedron
+:public Element
+{
+  public:
+  Tetrahedron()
+    :Element()
+    {
+        _vtkCellType=10;
+        vertex.resize(4);
+        vertex[0]=0;
+        vertex[1]=0;
+        vertex[2]=0;
+        vertex[3]=0;
+    }
+    inline size_t & p0(){return vertex[0];};
+    inline size_t & p1(){return vertex[1];};
+    inline size_t & p2(){return vertex[2];};
+    inline size_t & p3(){return vertex[3];};
+};
+
 
 
 class Mesh
@@ -139,6 +176,7 @@ class Mesh
     inline const ElemToBoundaryFaceConnectionType & elemBoundaryTris() const {return _elemBoundaryTris;};
     inline const ElemToBoundaryFaceConnectionType & faceToFace() const {return _faceToFace;};
     
+    std::vector<int> copyLabelVector();
     
 #ifndef NDEBUG
     inline Point & Pt(size_t iPt){return points.at(iPt);};

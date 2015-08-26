@@ -204,13 +204,8 @@ int main(int argc,char **argv)
     ThicknessCompute.setBCValue(CarpMesh.Endocardium(), 1.0);  
     ThicknessCompute.setBCValue(CarpMesh.Epicardium(), 0.0);  
     ThicknessCompute.solve();
-    //LaplaceSolver Laplace(param_file, &CarpMesh );
-    //Laplace.setBCValue(CarpMesh.Endocardium(), 1.0);  
-    //Laplace.setBCValue(CarpMesh.Epicardium(), 0.0);  
-    // Laplace.solve();
     CarpMesh.initializeConnectivities();
     std::string cfileoutName=out_dir+"/"+out_name;
-    //Laplace.writeElementGradient(cfileoutName);
     ThicknessCompute.writeElementGradient(cfileoutName);
     CarpMesh.writeTetraCentroids(cfileoutName);
     CarpMesh.writeTris(cfileoutName);
@@ -220,14 +215,12 @@ int main(int argc,char **argv)
       if(out_vtk)
       {
         ThicknessCompute.writeVTKSolution(cfileoutName,out_vtk_binary);
-        //Laplace.writeVTKSolution(cfileoutName,out_vtk_binary);
       }
       else
       {
         if(out_carp || !out_vtk) 
         {
           ThicknessCompute.writeSolution(cfileoutName);
-          //Laplace.writeSolution(cfileoutName);
         }
       }
       
