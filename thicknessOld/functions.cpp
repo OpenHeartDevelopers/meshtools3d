@@ -8,6 +8,72 @@
 
 using namespace std;
 
+
+double* calculateInwardNormal(int element, int node0, int node1, int node2, double** &coords, double** &cents)
+{
+	double *N;
+	N = new double [3];
+	double node0node1[3], node0node2[3];
+	for(int j=0;j<3;j++)
+	{
+		node0node1[j] = coords[node0][j] - coords[node1][j];
+		node0node2[j] = coords[node0][j] - coords[node2][j];
+	}
+	// Calculates normal by cross-product
+	N[0] = (node0node1[1]*node0node2[2] - node0node1[2]*node0node2[1]);
+	N[1] = (node0node1[2]*node0node2[0] - node0node1[0]*node0node2[2]);
+	N[2] = (node0node1[0]*node0node2[1] - node0node1[1]*node0node2[0]);
+	
+	// Normalises
+	double NMag = sqrt(N[0]*N[0] + N[1]*N[1] + N[2]*N[2]);
+	for(int j=0;j<3;j++)
+		N[j] = N[j]/NMag;
+		
+		// Calculates constant for plane equation
+		double d = -(N[0]*coords[node0][0] + N[1]*coords[node0][1] + N[2]*coords[node0][2]);
+		
+		// Checks if the centroid of the element is a positive or negative distance from the plane
+		double dist = (N[0]*cents[element][0] + N[1]*cents[element][1] + N[2]*cents[element][2] + d);
+		
+		// If positive, then the normal is pointing into the tissue and all is ok
+		// If negative, then we need to reverse the direction of the triangle normal
+		if(dist < 0)
+			for(int j=0;j<3;j++)
+				N[j] = -N[j];
+	return(N);
+				
+}
+	
+double distanceOfPointToPlane(double* &N, int node, double** &coords, double x, double y, double z, double mu_x, double mu_y, double mu_z)
+{
+	double NdotQ = (N[0]*coords[node][0] + N[1]*coords[node][1] + N[2]*coords[node][2]);
+	double d = -NdotQ;
+
+	// Plug the intersection point (P') into the plane equation to get the value of a (i.e. distance of P from plane along U)
+	// N.(P + Ut) + d = 0
+	// => t = -(NP + d)/(N.U)
+	
+	double NdotP = (N[0]*x + N[1]*y + N[2]*z);
+	
+	double NdotU = (N[0]*mu_x + N[1]*mu_y + N[2]*mu_z);
+	
+	double a = -(NdotP + d)/(NdotU);
+	
+	return(a);
+}
+	
+double normalDistanceOfPointToPlane(double* &N, int node, double** &coords, double x, double y, double z)
+{
+  double NdotQ = (N[0]*coords[node][0] + N[1]*coords[node][1] + N[2]*coords[node][2]);
+  double d = -NdotQ;
+  double NdotP = (N[0]*x + N[1]*y + N[2]*z);
+  
+  double a = -(NdotP + d);
+  return(a);
+}
+	
+	
+
 //////////////////////////////
 // Function to obtain a random number
 //////////////////////////////
@@ -221,70 +287,8 @@ int GetCurrentElement(double x, double y, double z, double x_res, double y_res, 
 	
 }	
 
-double* calculateInwardNormal(int element, int node0, int node1, int node2, double** &coords, double** &cents)
-{
-	double *N;
-	N = new double [3];
-	double node0node1[3], node0node2[3];
-	for(int j=0;j<3;j++)
-	{
-		node0node1[j] = coords[node0][j] - coords[node1][j];
-		node0node2[j] = coords[node0][j] - coords[node2][j];
-	}
-	// Calculates normal by cross-product
-	N[0] = (node0node1[1]*node0node2[2] - node0node1[2]*node0node2[1]);
-	N[1] = (node0node1[2]*node0node2[0] - node0node1[0]*node0node2[2]);
-	N[2] = (node0node1[0]*node0node2[1] - node0node1[1]*node0node2[0]);
-	
-	// Normalises
-	double NMag = sqrt(N[0]*N[0] + N[1]*N[1] + N[2]*N[2]);
-	for(int j=0;j<3;j++)
-		N[j] = N[j]/NMag;
-		
-		// Calculates constant for plane equation
-		double d = -(N[0]*coords[node0][0] + N[1]*coords[node0][1] + N[2]*coords[node0][2]);
-		
-		// Checks if the centroid of the element is a positive or negative distance from the plane
-		double dist = (N[0]*cents[element][0] + N[1]*cents[element][1] + N[2]*cents[element][2] + d);
-		
-		// If positive, then the normal is pointing into the tissue and all is ok
-		// If negative, then we need to reverse the direction of the triangle normal
-		if(dist < 0)
-			for(int j=0;j<3;j++)
-				N[j] = -N[j];
-	return(N);
-				
-}
-	
-double distanceOfPointToPlane(double* &N, int node, double** &coords, double x, double y, double z, double mu_x, double mu_y, double mu_z)
-{
-	double NdotQ = (N[0]*coords[node][0] + N[1]*coords[node][1] + N[2]*coords[node][2]);
-	double d = -NdotQ;
 
-	// Plug the intersection point (P') into the plane equation to get the value of a (i.e. distance of P from plane along U)
-	// N.(P + Ut) + d = 0
-	// => t = -(NP + d)/(N.U)
-	
-	double NdotP = (N[0]*x + N[1]*y + N[2]*z);
-	
-	double NdotU = (N[0]*mu_x + N[1]*mu_y + N[2]*mu_z);
-	
-	double a = -(NdotP + d)/(NdotU);
-	
-	return(a);
-}
 
-double normalDistanceOfPointToPlane(double* &N, int node, double** &coords, double x, double y, double z)
-{
-        double NdotQ = (N[0]*coords[node][0] + N[1]*coords[node][1] + N[2]*coords[node][2]);
-        double d = -NdotQ;
-
-        double NdotP = (N[0]*x + N[1]*y + N[2]*z);
-
-        double a = -(NdotP + d);
-
-        return(a);
-}
 
 int cornerEdgeChecker(double x, double y, double z, double xmin, double ymin, double zmin, double xmax, double ymax, double zmax)
 {

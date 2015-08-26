@@ -112,8 +112,8 @@ int main( int argc, char *argv[] )
 	// Cesare: Reads Gradients
 	double** grads = NULL;
 	loadVectors(argv[3],grads,num_elems);
-	int flag = atoi(argv[5]);
-	if(flag == 1) //endo->epi
+	bool flag = atoi(argv[5]);
+	if(flag == true) //endo->epi
 	{
 		for(unsigned int i=0;i<num_elems;i++)
 			for(int h=0;h<3;h++)
@@ -719,19 +719,19 @@ int main( int argc, char *argv[] )
 							a_n = normalDistanceOfPointToPlane(N,triNodes[0],coords,x,y,z);
 							a = distanceOfPointToPlane(N,triNodes[0],coords,x,y,z,mu_x,mu_y,mu_z);
 							if(a >= 0 && a<aMin)
-                                                	{
-                                                        	// Updates smallest intersection distance
-                                                        	aMin = a;
-                                                        	// Defines closest intersecting face
-                                                        	intFace = n;
-                                                        	for(int h=0;h<3;h++)
-                                                                	Nmin[h] = N[h];
-                                                	}
+              {
+                  // Updates smallest intersection distance
+                  aMin = a;
+                  // Defines closest intersecting face
+                  intFace = n;
+                  for(int h=0;h<3;h++)
+                  {
+                    Nmin[h] = N[h];
+                  }
+              }
 						}
-
 						delete[] N;
 					}
-
 					// Puts the erased node back
 					elemNodes.insert(elems[element][n]);
 				}
@@ -753,28 +753,30 @@ int main( int argc, char *argv[] )
 					// Checks to see if this closest intersecting face is also a boundary face
 					// This is for interior boundaries
 					if(elemBoundaryTris[element][intFace] != -1)
-                                        {
-                                                // Checks to see if this is part of the ground electrode
-                                                if(groundTris.find(elemBoundaryTris[element][intFace]) != groundTris.end())
-                                                {
-                                                        inTissue = 0;
-                                                        break;
-                                                }
-                                                else
-                                                {
+          {
+            // Checks to see if this is part of the ground electrode
+            if(groundTris.find(elemBoundaryTris[element][intFace]) != groundTris.end())
+            {
+                inTissue = 0;
+                break;
+            }
+            else
+            {
 							wrongSurface = 1;
 							// Move a small distance in towards the centroid
 							double delta = 1.0;
-                                                        double v[3];
-                                                        v[0] = cents[element][0] - x;
-                                                        v[1] = cents[element][1] - y;
-                                                        v[2] = cents[element][2] - z;
-                                                        double magV = sqrt(v[0]*v[0] + v[1]*v[1] + v[2]*v[2]);
-                                                        for(int h=0;h<3;h++)
-                                                                v[h] = v[h]/magV;
-                                                        x = x + delta*v[0];
-                                                        y = y + delta*v[1];
-                                                        z = z + delta*v[2];
+              double v[3];
+              v[0] = cents[element][0] - x;
+              v[1] = cents[element][1] - y;
+              v[2] = cents[element][2] - z;
+              double magV = sqrt(v[0]*v[0] + v[1]*v[1] + v[2]*v[2]);
+              for(int h=0;h<3;h++)
+              {
+                v[h] = v[h]/magV;
+              }
+              x = x + delta*v[0];
+              y = y + delta*v[1];
+              z = z + delta*v[2];
 
 							// Calculate the normal to the current gradient and the face normal
 							double w[3],u[3];
@@ -797,13 +799,13 @@ int main( int argc, char *argv[] )
 							double dot3 = w[0]*u[0] + w[1]*u[1] + w[2]*u[2];
 							if(dot3 < 0)
 								for(int h=0;h<3;h++)
-                                                                	w[h] = -1.0*w[h];
+                  w[h] = -1.0*w[h];
 
 							mu_x_new = w[0];
-                                                        mu_y_new = w[1];
-                                                        mu_z_new = w[2];
-                                                }
-                                        }
+              mu_y_new = w[1];
+              mu_z_new = w[2];
+            }
+          }
 
 					// We also update our 'current element' as the one we're moving into as we cross this boundary
 					int newElement = faceToFace[element][intFace];
@@ -829,12 +831,15 @@ int main( int argc, char *argv[] )
 							}
 						}
 						else
-							adjustMu = 0;
+						{
+						  adjustMu = 0;
+						}
+							
 
 						// Move-up to face of element and update position
-                                                x = x_s + mu_x*aMin;
-                                                y = y_s + mu_y*aMin;
-                                                z = z_s + mu_z*aMin;
+            x = x_s + mu_x*aMin;
+            y = y_s + mu_y*aMin;
+            z = z_s + mu_z*aMin;
 						
 						// Instead of this, move a tiny amount into the new element
 						double v[3];
@@ -847,8 +852,8 @@ int main( int argc, char *argv[] )
 						y = y + delta*v[1]/vMag;
 						z = z + delta*v[2]/vMag;
 					}
-				}
-		}
+				}// end if on intface!=-1
+		}//end of while on inTissue
 	}
 
 cout << "Total number of interactions = " << interactions << "\n";

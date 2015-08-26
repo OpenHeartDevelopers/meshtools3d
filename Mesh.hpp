@@ -99,7 +99,12 @@ class Mesh
   typedef std::pair<size_t,facetype> faceLabtype;
   typedef std::multimap<size_t, faceLabtype > mapfacetype;
   typedef std::vector<connectSetType> pointToElemConnectionType;
-  
+
+  // type for elemBoundaryTris  
+  typedef std::map<short int, size_t> boundaryFaceInTetraType;
+  typedef std::vector<boundaryFaceInTetraType> ElemToBoundaryFaceConnectionType;
+
+
 
   public:
   
@@ -131,7 +136,8 @@ class Mesh
     inline const pointToElemConnectionType & conn_nodesTris() const {return _conn_nodesTris;};
     inline const facetype & endoTria() const {return _endoTris;};
     inline const facetype & epiTria() const {return _epiTris;};
-
+    inline const ElemToBoundaryFaceConnectionType & elemBoundaryTris() const {return _elemBoundaryTris;};
+    inline const ElemToBoundaryFaceConnectionType & faceToFace() const {return _faceToFace;};
     
     
 #ifndef NDEBUG
@@ -145,6 +151,8 @@ class Mesh
     inline const size_t & triaToTetMap(size_t iTri) const {return triaToTet.at(iTri);};
     inline const connectSetType & conn_nodes(size_t iPt) const {return _conn_nodes.at(iPt);};
     inline const connectSetType & conn_nodesTris(size_t iPt) const {return _conn_nodesTris.at(iPt);};
+    inline const boundaryFaceInTetraType & elemBoundaryTris(size_t iPt) const {return _elemBoundaryTris.at(iPt);};
+    inline const boundaryFaceInTetraType & faceToFace(size_t iPt) const {return _faceToFace.at(iPt);};
     
 #else
     inline Point & Pt(size_t iPt){return points[iPt];};
@@ -157,6 +165,8 @@ class Mesh
     inline const size_t & triaToTetMap(size_t iTri) const{return triaToTet[iTri];};
     inline const connectSetType & conn_nodes(size_t iPt) const {return _conn_nodes[iPt];};
     inline const connectSetType & conn_nodesTris(size_t iPt) const {return _conn_nodesTris[iPt];};
+    inline const boundaryFaceInTetraType & elemBoundaryTris(size_t iPt) const {return _elemBoundaryTris[iPt];};
+    inline const boundaryFaceInTetraType & faceToFace(size_t iPt) const {return _faceToFace[iPt];};
 #endif
     inline const std::set<long int> & Endocardium() const {  return(_Endo);};
     inline const std::set<long int> & Epicardium() const {  return(_Epi);};;  
@@ -206,8 +216,8 @@ class Mesh
     int _epiLabel;
     pointToElemConnectionType _conn_nodes;
     pointToElemConnectionType _conn_nodesTris;
-    pointToElemConnectionType _faceToFace;
-    pointToElemConnectionType _elemBoundaryTris;
+    ElemToBoundaryFaceConnectionType _faceToFace;
+    ElemToBoundaryFaceConnectionType _elemBoundaryTris;
     facetype _endoTris;
     facetype _epiTris;
 };

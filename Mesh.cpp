@@ -863,7 +863,33 @@ void Mesh::initializeConnectivities()
       {
         _conn_nodesTris[Tria.vertex[iVertex]].insert(iTria);
       }
-      _elemBoundaryTris[triaToTet[iTria]].insert(iTria);
+      
+      Tetrahedron & Tetra = tetrahedra[triaToTet[iTria]];
+      std::vector<bool> checkSide(4,false);
+      for(short int iTetV=0; iTetV<4; iTetV++)
+      {
+        size_t iPt=Tetra.vertex[iTetV];
+        for(short int iTriV=0; iTriV < 3; iTriV++)
+        {
+          if(Tria.vertex[iTriV]==iPt)
+          {
+            checkSide[iTetV]=true;
+            break;
+          }
+        }
+      }
+      //<short int,size_t>
+      
+      for(short int iTetV=0; iTetV<4; iTetV++)
+      {
+        if(!checkSide[iTetV])
+        {
+          _elemBoundaryTris[triaToTet[iTria]].insert(std::pair<short int, size_t >(iTetV,iTria) );    
+          break;
+        }
+      }
+      
+      
     }
     
     std::cout << "Constructing element face-to-face look-up table... "<<std::endl;
@@ -910,7 +936,7 @@ void Mesh::initializeConnectivities()
           // If p = 3 the we've found this triangle and thus this element must connect via the current element face
 				  if(p == 3)
 				  {
-					  _faceToFace[iTetra].insert(*it_ce);
+					  _faceToFace[iTetra].insert(std::pair<short int, size_t > (iVertex, *it_ce) );
 					  break;
 				  }
 	  		}
