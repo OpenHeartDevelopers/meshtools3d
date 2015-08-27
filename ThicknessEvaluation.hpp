@@ -44,6 +44,7 @@ public  LaplaceSolver
     GrahmOperatorOutput GrahmOperations( Point & p0, Point & p1, Point & p2, std::vector<double> & x_c);
     double distanceOfPointToPlane(std::vector<double> & N, Point & p0,  std::vector<double> & x_c, std::vector<double> & mu);
     double normalDistanceOfPointToPlane(std::vector<double> & N, Point & p0,  std::vector<double> & x_c);
+    std::vector<double> _thickness;
 
 
 };

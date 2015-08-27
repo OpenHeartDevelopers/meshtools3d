@@ -175,8 +175,11 @@ class Mesh
     inline const facetype & epiTria() const {return _epiTris;};
     inline const ElemToBoundaryFaceConnectionType & elemBoundaryTris() const {return _elemBoundaryTris;};
     inline const ElemToBoundaryFaceConnectionType & faceToFace() const {return _faceToFace;};
+    inline const std::vector<Triangle> & Tri() const {return triangles;};
+    inline const std::vector<Tetrahedron> & Tet() const {return tetrahedra;};
+
     
-    std::vector<int> copyLabelVector();
+    std::vector<double> copyLabelVectorForVTKOutput();
     
 #ifndef NDEBUG
     inline Point & Pt(size_t iPt){return points.at(iPt);};

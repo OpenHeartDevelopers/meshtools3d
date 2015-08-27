@@ -11,7 +11,7 @@
 #include "Mesh.hpp"
 #include "LaplaceSolver.hpp"
 #include "ThicknessEvaluation.hpp"
-
+#include "VtkWriter.hpp"
 #include "GetPot.hpp"
 #include<CGALDataType.hpp>
 #include<set>
@@ -198,6 +198,19 @@ int main(int argc,char **argv)
 
   CarpMesh.writeBoundaryLabels(out_dir, out_name);
   CarpMesh.meshRescaling(rescaling); //rescale the whole mesh; not on output. So output of rescaling is 1 now
+  
+  VtkWriter writerVTK(& CarpMesh, out_vtk_binary);
+  if(out_vtk)
+  {
+    writerVTK.setOutputDir(out_dir);
+    writerVTK.setPrefixName(out_name);
+    writerVTK.openFileForOutput();
+    std::vector<double> meshLabels = CarpMesh.copyLabelVectorForVTKOutput();
+    writerVTK.writeVariable(meshLabels, "region_labels",VtkWriter::Scalar);
+    meshLabels.clear();
+  }
+
+  
   if(eval_thickness)
   {
     ThicknessEvaluation ThicknessCompute(param_file, &CarpMesh );
@@ -205,27 +218,26 @@ int main(int argc,char **argv)
     ThicknessCompute.setBCValue(CarpMesh.Epicardium(), 0.0);  
     ThicknessCompute.solve();
     CarpMesh.initializeConnectivities();
+    
     std::string cfileoutName=out_dir+"/"+out_name;
     ThicknessCompute.writeElementGradient(cfileoutName);
     CarpMesh.writeTetraCentroids(cfileoutName);
     CarpMesh.writeTris(cfileoutName);
+    
     if(out_potential)
     {
-      
       if(out_vtk)
       {
-        ThicknessCompute.writeVTKSolution(cfileoutName,out_vtk_binary);
+        writerVTK.writeVariable(ThicknessCompute.sol(), "potential_func",VtkWriter::Scalar);
       }
       else
       {
         if(out_carp || !out_vtk) 
         {
-          ThicknessCompute.writeSolution(cfileoutName);
+          ThicknessCompute.writeSolution(out_dir+"/"+out_name);
         }
       }
-      
     }
-    
   }
   
   if(out_carp)
@@ -233,12 +245,13 @@ int main(int argc,char **argv)
       std::string cfileoutName=out_dir+"/"+out_name;
       CarpMesh.writeCarpMesh(cfileoutName,out_carp_binary);
   }
+
+  
   if(out_vtk)
   {
-      std::string cfileoutName=out_dir+"/"+out_name;
-      CarpMesh.writeVTKMesh(cfileoutName,out_vtk_binary);
-
+    writerVTK.CloseFile();
   }
+  
   return 0;
   
   

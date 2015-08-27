@@ -1404,14 +1404,14 @@ void Mesh::writeVTKMesh(std::string outputFileName, bool binary, double rescalin
 }
 
 
-std::vector<int> Mesh::copyLabelVector()
+std::vector<double> Mesh::copyLabelVectorForVTKOutput()
 {
-  std::vector<int> plab(nPt(),0);
+  std::vector<double> plab(nPt(),0);
   for(regionSubdivisionTypeIterator it=pointRegions.begin(); it!= pointRegions.end(); ++it)
   {
     for(connectSetTypeIterator itP=(it->second).begin(); itP!=(it->second).end(); ++itP)
     {
-      plab[*itP]=(it->first);
+      plab[*itP]=static_cast<double>(it->first);
     }
   }
   
