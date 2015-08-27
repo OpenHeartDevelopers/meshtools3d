@@ -213,11 +213,13 @@ int main(int argc,char **argv)
   
   if(eval_thickness)
   {
+    
+    CarpMesh.initializeConnectivities();
     ThicknessEvaluation ThicknessCompute(param_file, &CarpMesh );
     ThicknessCompute.setBCValue(CarpMesh.Endocardium(), 1.0);  
     ThicknessCompute.setBCValue(CarpMesh.Epicardium(), 0.0);  
     ThicknessCompute.solve();
-    CarpMesh.initializeConnectivities();
+    
     
     std::string cfileoutName=out_dir+"/"+out_name;
     ThicknessCompute.writeElementGradient(cfileoutName);
@@ -238,6 +240,19 @@ int main(int argc,char **argv)
         }
       }
     }
+    
+    if(out_vtk)
+    {
+      writerVTK.writeVariable(ThicknessCompute.thickness(), "Thickness",VtkWriter::Scalar);
+    }
+   
+   
+   if(out_carp || !out_vtk) 
+   {
+      ThicknessCompute.writeThickness(out_dir+"/"+out_name);
+   }
+
+    
   }
   
   if(out_carp)

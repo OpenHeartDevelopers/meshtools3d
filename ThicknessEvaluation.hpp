@@ -34,6 +34,11 @@ public  LaplaceSolver
     ThicknessEvaluation(const Mesh * _mesh);
     ThicknessEvaluation(const GetPot & dfile, const Mesh * _mesh);
     ~ThicknessEvaluation();
+    void setMesh(const Mesh * _mesh);
+    void solve();
+    void writeThickness(std::string filename);
+    inline const std::vector<double> & thickness() const {return _thickness;};
+    
 
 
   

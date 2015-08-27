@@ -23,16 +23,25 @@ ThicknessEvaluation::ThicknessEvaluation()
 ThicknessEvaluation::ThicknessEvaluation(const Mesh *  _mesh)
 :LaplaceSolver(_mesh)
 {
+  _thickness.resize(_ptrmesh->nPt(),0);
 }
 
+void ThicknessEvaluation::setMesh(const Mesh * _mesh)
+{
+  LaplaceSolver::setMesh(_mesh);
+  _thickness.resize(_ptrmesh->nPt(),0);
+}
 
 ThicknessEvaluation::ThicknessEvaluation(const GetPot & dfile, const Mesh * _mesh)
 :LaplaceSolver(dfile, _mesh)
 {
+  _thickness.resize(_ptrmesh->nPt(),0);
 }
 
 ThicknessEvaluation::~ThicknessEvaluation()
-{}
+{
+  _thickness.clear();
+}
 
 void ThicknessEvaluation::evalThickness()
 {
@@ -356,10 +365,67 @@ void ThicknessEvaluation::evalThickness()
   std::cout << "Total number of interactions = " << interactions << std::endl;
   double propProb = double(problems)/double(interactions);
   std::cout << "Total number of problems = " << problems << " ( or " << propProb << " ) "<<std::endl;
+  
+  std::vector<double> elemData(_ptrmesh->nTet(),0);
+  for(facetype::iterator it=(_ptrmesh->endoTria()).begin();it!=(_ptrmesh->endoTria()).end();it++)
+	{
+	  size_t elem_n = _ptrmesh->triaToTetMap(*it);
+	  size_t tri_n = *it;
+	  elemData[elem_n]=path[tri_n];
+  }
+  _thickness.clear();
+  _thickness.resize(_ptrmesh->nPt(),0);
+  
+  std::vector<int> surfPlotterCounter(_ptrmesh->nPt(),0);
+  
+  
+  for(facetype::iterator it=(_ptrmesh->endoTria()).begin();it!=(_ptrmesh->endoTria()).end();it++)
+  {
+	  size_t tri_n=*it;
+	  for(short int jVertex=0;jVertex<3;jVertex++)
+	  {
+	  	size_t node_n = (_ptrmesh->Tri(tri_n)).vertex[jVertex];
+	  	_thickness[node_n] += path[tri_n];
+	  	surfPlotterCounter[node_n]++;
+	  }
+  } 
+
+  for(size_t iPt=0;iPt<_thickness.size();iPt++)
+  {
+  	if(surfPlotterCounter[iPt] != 0)
+  	{
+  	  _thickness[iPt] = _thickness[iPt]/double(surfPlotterCounter[iPt]);
+  	}
+  }
 
 }
 
+void ThicknessEvaluation::solve()
+{
+  LaplaceSolver::solve();
+  evalThickness();
+}
 
+
+
+void ThicknessEvaluation::writeThickness(std::string filename)
+{
+  std::string fname=filename+"_thickness.dat";
+  std::ofstream fsol(fname.c_str());
+  if(!fsol)
+  {
+    std::cerr<<"ERROR: FILE "<<fname<<" NOT OPENED"<<std::endl;
+    exit(1);
+  }
+  size_t nPt=_ptrmesh->nPt();
+  for(size_t iPt=0; iPt<nPt; iPt++)
+  {
+    fsol<<_thickness[iPt]<<std::endl;
+  }
+  fsol.close();
+
+
+}
 
 
 bool ThicknessEvaluation::isInElement(std::vector<double> xc ,size_t iElem)
