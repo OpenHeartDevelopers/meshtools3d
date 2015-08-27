@@ -249,7 +249,7 @@ int main( int argc, char *argv[] )
 		}
 	}
 	//cout << "faceToFace = " << faceToFace[100][2] << "\n";
-
+  
 	//////////////////////////////
 	// PRE-PROCESSING: Create look-up table to list which elements have boundary triangles (connected via FACES)
 	//////////////////////////////
@@ -547,6 +547,7 @@ int main( int argc, char *argv[] )
 		// Sets-up list to store the previous triangle nodes from th face we just passed through
 		set<int> faceRem;
 		set<int>::iterator it_fr;
+		
 		// Initialises this list with the nodes of the epicardial triangle surface face
 		faceRem.clear();
 		for(int n=0;n<3;n++)
@@ -585,7 +586,11 @@ int main( int argc, char *argv[] )
 				
 				// Checks path to see if it's too long
 				if(path[thisIllumTri] > 50000)
-					break;
+				{
+				  std::cerr<<"WARNING: Triangle  "<<thisIllumTri<<" MAX LEN ("<<50000<<") PASSED: len =  "<<path[thisIllumTri]<<std::endl;
+				  break;
+				}
+					
 					
 
 				///////////////////////////////
@@ -616,7 +621,9 @@ int main( int argc, char *argv[] )
 
 				newCounter++;
 				if(newCounter > 1000)
-					inTissue = 0;
+				{
+				  inTissue = 0;
+				}
 
 				if(adjustMu == 0 && wrongSurface == 0)
 				{
