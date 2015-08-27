@@ -169,8 +169,6 @@ class Mesh
     inline size_t nTet() const {return tetrahedra.size();};
     inline MeshInfo & Info(){return info;};
     inline const MeshInfo & Info() const {return info;};
-    inline const pointToElemConnectionType & conn_nodes() const {return _conn_nodes;};
-    inline const pointToElemConnectionType & conn_nodesTris() const {return _conn_nodesTris;};
     inline const facetype & endoTria() const {return _endoTris;};
     inline const facetype & epiTria() const {return _epiTris;};
     inline const ElemToBoundaryFaceConnectionType & elemBoundaryTris() const {return _elemBoundaryTris;};
@@ -190,8 +188,6 @@ class Mesh
     inline const Triangle & Tri(size_t iTri) const {return triangles.at(iTri);};
     inline const Tetrahedron & Tet(size_t iTet) const {return tetrahedra.at(iTet);};
     inline const size_t & triaToTetMap(size_t iTri) const {return triaToTet.at(iTri);};
-    inline const connectSetType & conn_nodes(size_t iPt) const {return _conn_nodes.at(iPt);};
-    inline const connectSetType & conn_nodesTris(size_t iPt) const {return _conn_nodesTris.at(iPt);};
     inline const boundaryFaceInTetraType & elemBoundaryTris(size_t iPt) const {return _elemBoundaryTris.at(iPt);};
     inline const boundaryFaceInTetraType & faceToFace(size_t iPt) const {return _faceToFace.at(iPt);};
     
@@ -204,8 +200,6 @@ class Mesh
     inline const Triangle & Tri(size_t iTri) const {return triangles[iTri];};
     inline const Tetrahedron & Tet(size_t iTet) const{return tetrahedra[iTet];};
     inline const size_t & triaToTetMap(size_t iTri) const{return triaToTet[iTri];};
-    inline const connectSetType & conn_nodes(size_t iPt) const {return _conn_nodes[iPt];};
-    inline const connectSetType & conn_nodesTris(size_t iPt) const {return _conn_nodesTris[iPt];};
     inline const boundaryFaceInTetraType & elemBoundaryTris(size_t iPt) const {return _elemBoundaryTris[iPt];};
     inline const boundaryFaceInTetraType & faceToFace(size_t iPt) const {return _faceToFace[iPt];};
 #endif
@@ -255,8 +249,6 @@ class Mesh
     std::set<long int> _Epi;
     int _endoLabel;
     int _epiLabel;
-    pointToElemConnectionType _conn_nodes;
-    pointToElemConnectionType _conn_nodesTris;
     ElemToBoundaryFaceConnectionType _faceToFace;
     ElemToBoundaryFaceConnectionType _elemBoundaryTris;
     facetype _endoTris;

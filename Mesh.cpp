@@ -25,8 +25,6 @@ triaToTet(0),
 _endoLabel(-1),
 _epiLabel(-1)
 {
-  _conn_nodes.clear();
-  _conn_nodesTris.clear();
   _faceToFace.clear();
   _elemBoundaryTris.clear();
   _endoTris.clear();
@@ -44,8 +42,6 @@ triaToTet(0),
 _endoLabel(-1),
 _epiLabel(-1)
 {
-  _conn_nodes.clear();
-  _conn_nodesTris.clear();
   _faceToFace.clear();
   _elemBoundaryTris.clear();
   _endoTris.clear();
@@ -58,8 +54,6 @@ Mesh::Mesh(const  Mesh & srcMesh)
 :consistentState(false),
 outwardNormOnBoundary(false)
 {
-  _conn_nodes.clear();
-  _conn_nodesTris.clear(); 
   _faceToFace.clear(); 
   _elemBoundaryTris.clear();
   _endoTris.clear();
@@ -842,11 +836,12 @@ void Mesh::initializeConnectivities()
 {
   if(consistentState==true)
   {
-    _conn_nodes.resize(this->nPt());
-    _conn_nodesTris.resize(this->nPt());
+
     _faceToFace.resize(this->nTet());
     _elemBoundaryTris.resize(this->nTet());
+    pointToElemConnectionType _conn_nodes; // not used
     std::cout << " Producing node-element connectivity array..." <<std::endl;
+    _conn_nodes.resize(this->nPt());
     for(size_t iTetra=0; iTetra<nTet(); iTetra++)
     {
       Tetrahedron & Tetra = tetrahedra[iTetra];
@@ -855,41 +850,47 @@ void Mesh::initializeConnectivities()
         _conn_nodes[Tetra.vertex[iVertex]].insert(iTetra);
       }
     }
+    
+    pointToElemConnectionType _conn_nodesTris; //not used
     std::cout << " Producing node-triangle connectivity array..." <<std::endl;
+    _conn_nodesTris.resize(this->nPt());
     for(size_t iTria=0; iTria<nTri(); iTria++)
     {
-      Triangle & Tria = triangles[iTria];
+      const Triangle & Tria = triangles[iTria];
       for(short int iVertex=0; iVertex<3; iVertex++)
       {
         _conn_nodesTris[Tria.vertex[iVertex]].insert(iTria);
       }
-      
-      Tetrahedron & Tetra = tetrahedra[triaToTet[iTria]];
+      const Tetrahedron & Tetra = tetrahedra[triaToTet[iTria]];
       std::vector<bool> checkSide(4,false);
+      short int matchingCounter=0;
       for(short int iTetV=0; iTetV<4; iTetV++)
       {
         size_t iPt=Tetra.vertex[iTetV];
+        checkSide[iTetV]=false;
         for(short int iTriV=0; iTriV < 3; iTriV++)
         {
           if(Tria.vertex[iTriV]==iPt)
           {
             checkSide[iTetV]=true;
+            matchingCounter=matchingCounter+1;
             break;
           }
         }
       }
       //<short int,size_t>
       
-      for(short int iTetV=0; iTetV<4; iTetV++)
+      if(matchingCounter==3)
       {
-        if(!checkSide[iTetV])
+        for(short int iTetV=0; iTetV<4; iTetV++)
         {
-          _elemBoundaryTris[triaToTet[iTria]].insert(std::pair<short int, size_t >(iTetV,iTria) );    
-          break;
+          if(!checkSide[iTetV])
+          {
+            _elemBoundaryTris[triaToTet[iTria]].insert(std::pair<short int, size_t >(iTetV,iTria) );    
+            break;
+          }
         }
       }
-      
-      
     }
     
     std::cout << "Constructing element face-to-face look-up table... "<<std::endl;
@@ -921,14 +922,18 @@ void Mesh::initializeConnectivities()
 			{
 			  // Erases one node (which then defines a triangle)
 			  elemNodes.erase(Tetra.vertex[iVertex]);
+			  
 			  // Iterates-over all elements in list of connected elements
   			for(it_ce=elemConnElem.begin();it_ce!=elemConnElem.end();it_ce++)
 	  		{
+  				
+  				size_t connElem = *it_ce;
+  				
   				// Tries to find all 3 current triangle nodes (in turn) within this connected element
 				  short int p = 0;
 				  for(short int gVertex= 0 ;gVertex < 4; gVertex++)
 				  { 
-					    if(elemNodes.find(tetrahedra[*it_ce].vertex[gVertex]) != elemNodes.end())
+					    if(elemNodes.find(tetrahedra[connElem].vertex[gVertex]) != elemNodes.end())
 					    {
 					      p++;
 					    }
@@ -936,10 +941,12 @@ void Mesh::initializeConnectivities()
           // If p = 3 the we've found this triangle and thus this element must connect via the current element face
 				  if(p == 3)
 				  {
-					  _faceToFace[iTetra].insert(std::pair<short int, size_t > (iVertex, *it_ce) );
+					  _faceToFace[iTetra].insert(std::pair<short int, size_t > (iVertex, connElem) );
 					  break;
 				  }
 	  		}
+			  
+			  // Puts the erased node back before we try to move-on to the next triangle
 			  elemNodes.insert(Tetra.vertex[iVertex]);
       }//end iteration on each triangle face    
     }// end loop on itetra
@@ -1430,7 +1437,6 @@ void Mesh::clear()
   pointRegions.clear();
   regionLabels.clear();
   nbElToRegionLab.clear();
-  _conn_nodes.clear();
   _faceToFace.clear();
   _elemBoundaryTris.clear();
   _endoTris.clear();
