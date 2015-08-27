@@ -520,10 +520,10 @@ int main( int argc, char *argv[] )
 		int surfaceElem = 0;
 		for(int j=0;j<numIllumTris;j++)
 			if(illumElemsWithTris[j][0] == thisIllumTri)
-		{
-			surfaceElem = illumElemsWithTris[j][1];
-			illumElems[surfaceElem] = 1.0;
-		}
+		  {
+			  surfaceElem = illumElemsWithTris[j][1];
+			  illumElems[surfaceElem] = 1.0;
+		  }
 
 		//////////////////////////////
 		// Iterates over all nodes of selected triangle and derives centroid (of triangle)

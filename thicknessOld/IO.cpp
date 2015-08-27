@@ -8,6 +8,19 @@
 
 using namespace std;
 
+// Writes-out a data file of specified length
+void writeDataFile(string file, unsigned int length, double* data)
+{
+	ofstream datafile(file.c_str());
+	
+	for(unsigned int i=0;i<length;i++)
+	{		
+		datafile << data[i] << "\n";
+	}
+		
+		datafile.close();
+}
+
 // Reads-in a temporal file of integers with suffix .dat with specified length
 void readTemporalIntegerDataFile(string file, unsigned int length, int* &data, int t)
 {
@@ -226,16 +239,5 @@ void writeIntegerDataFile(string file, unsigned int length, int* data)
         datafile.close();
 }
 
-// Writes-out a data file of specified length
-void writeDataFile(string file, unsigned int length, double* data)
-{
-	ofstream datafile(file.c_str());
-	
-	for(unsigned int i=0;i<length;i++)
-	{		
-		datafile << data[i] << "\n";
-	}
-		
-		datafile.close();
-}
+
 

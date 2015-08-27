@@ -8,6 +8,9 @@
 
 using namespace std;
 
+// Function to write-out data files
+void writeDataFile(string file, unsigned int length, double* data);
+
 // Function to load-in temporal data files (e.g. vm.0.dat)
 void readTemporalDataFile(const char* file, unsigned int length, double* &data, int t);
 
@@ -37,9 +40,6 @@ void writeIntegerDataFile(string file, unsigned int length, int* data);
 
 // Function to write-out data files
 void writeIntegerListFile(string file, unsigned int length, int* data);
-
-// Function to write-out data files
-void writeDataFile(string file, unsigned int length, double* data);
 
 
 #endif
