@@ -173,6 +173,8 @@ class Mesh
     inline const facetype & epiTria() const {return _epiTris;};
     inline const ElemToBoundaryFaceConnectionType & elemBoundaryTris() const {return _elemBoundaryTris;};
     inline const ElemToBoundaryFaceConnectionType & faceToFace() const {return _faceToFace;};
+    
+    inline const std::vector<Point>  & Pt() const {return points;};
     inline const std::vector<Triangle> & Tri() const {return triangles;};
     inline const std::vector<Tetrahedron> & Tet() const {return tetrahedra;};
 
@@ -188,8 +190,8 @@ class Mesh
     inline const Triangle & Tri(size_t iTri) const {return triangles.at(iTri);};
     inline const Tetrahedron & Tet(size_t iTet) const {return tetrahedra.at(iTet);};
     inline const size_t & triaToTetMap(size_t iTri) const {return triaToTet.at(iTri);};
-    inline const boundaryFaceInTetraType & elemBoundaryTris(size_t iPt) const {return _elemBoundaryTris.at(iPt);};
-    inline const boundaryFaceInTetraType & faceToFace(size_t iPt) const {return _faceToFace.at(iPt);};
+    inline const boundaryFaceInTetraType & elemBoundaryTris(size_t iTet) const {return _elemBoundaryTris.at(iTet);};
+    inline const boundaryFaceInTetraType & faceToFace(size_t iTet) const {return _faceToFace.at(iTet);};
     
 #else
     inline Point & Pt(size_t iPt){return points[iPt];};
@@ -200,8 +202,8 @@ class Mesh
     inline const Triangle & Tri(size_t iTri) const {return triangles[iTri];};
     inline const Tetrahedron & Tet(size_t iTet) const{return tetrahedra[iTet];};
     inline const size_t & triaToTetMap(size_t iTri) const{return triaToTet[iTri];};
-    inline const boundaryFaceInTetraType & elemBoundaryTris(size_t iPt) const {return _elemBoundaryTris[iPt];};
-    inline const boundaryFaceInTetraType & faceToFace(size_t iPt) const {return _faceToFace[iPt];};
+    inline const boundaryFaceInTetraType & elemBoundaryTris(size_t iTet) const {return _elemBoundaryTris[iTet];};
+    inline const boundaryFaceInTetraType & faceToFace(size_t iTet) const {return _faceToFace[iTet];};
 #endif
     inline const std::set<long int> & Endocardium() const {  return(_Endo);};
     inline const std::set<long int> & Epicardium() const {  return(_Epi);};;  

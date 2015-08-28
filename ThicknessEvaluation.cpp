@@ -47,30 +47,47 @@ void ThicknessEvaluation::evalThickness()
 {
   typedef std::set<size_t> facetype;
   typedef std::map<short int, size_t> boundaryFaceInTetraType;
+  
   int interactions=0;
 	int problems=0;
 	std::vector<double> path(_ptrmesh->nTri(),0);
   
+  const facetype & illumTris  = _ptrmesh->endoTria();
+  const facetype & groundTris = _ptrmesh->epiTria();
+  const std::vector<boundaryFaceInTetraType> & elemBoundaryTris =  _ptrmesh->elemBoundaryTris();
+  const std::vector<boundaryFaceInTetraType> & faceToFace =  _ptrmesh->faceToFace();
+  const std::vector<Tetrahedron> & elems = _ptrmesh->Tet();
+  const std::vector<Triangle> & tris = _ptrmesh->Tri();
+  const std::vector<Point> & coords = _ptrmesh->Pt();
+  
   std::cout << "*******************************"<<std::endl;
   std::cout << "* Computing wall thickness... *"<<std::endl;
   std::cout << "*******************************"<<std::endl;
-  for(facetype::iterator it=(_ptrmesh->endoTria()).begin();it!=(_ptrmesh->endoTria()).end();it++)
+  for(facetype::iterator it=illumTris.begin();it!=illumTris.end();it++)
 	{
-	  size_t surfaceElem = _ptrmesh->triaToTetMap(*it);
-	  std::vector<double> coord_epi(3,0);
+    // Picks-out particular triangle
+		size_t thisIllumTri = *it;
+
+		// Picks-out the TISSUE element associated with this surface triangle from which we are illuminating
+	  size_t surfaceElem = _ptrmesh->triaToTetMap(thisIllumTri);
+
+		/////////////////////////////////////////////////////////////////////////////////////
+		// Iterates over all nodes of selected triangle and derives centroid (of triangle) //
+		/////////////////////////////////////////////////////////////////////////////////////
+	  std::vector<double> x_coord_epi(3,0);
 	  
-	  const Triangle & Tria = _ptrmesh->Tri(*it);
 	  for(short int jVertex=0;jVertex<3;jVertex++)
 		{
 			// One of the 3 triangle nodes
-			size_t node = Tria.vertex[jVertex];
+			size_t node = tris[thisIllumTri].vertex[jVertex];
 			// Calculates centroid of triangle
 			for(short int iCoord=0; iCoord<3; iCoord++)
 			{
-			  coord_epi[iCoord] +=_ptrmesh->Pt(node).coord[iCoord]/3.0;
+			  x_coord_epi[iCoord] +=coords[node].coord[iCoord]/3.0;
 			}
-			
 		}
+		
+		// Set-ups list to store the 4 nodes in each element        	
 		facetype elemNodes;
   	facetype::iterator i2;
 
@@ -82,18 +99,22 @@ void ThicknessEvaluation::evalThickness()
 		faceRem.clear();
   	for(short int jVertex=0;jVertex<3;jVertex++)
     {
-      faceRem.insert(Tria.vertex[jVertex]);
+      faceRem.insert(tris[thisIllumTri].vertex[jVertex]);
     }
+		
 		// Initial coordinates of photon packet set as centroid of triangle
-		std::vector<double> x_coord = coord_epi;
+		std::vector<double> x_coord = x_coord_epi;
 		std::vector<double> x_coord_s(3,0);
+		
 		// Defines initial element we're in
 		size_t element = surfaceElem;
-		size_t oldElement = 0;
+		size_t oldElement = element;
+    
     // Define initial direction as vector gradient direction
     std::vector<double> mu = ElementTetraGradient(element);
-    std::vector<double> mu_new(3,0);
+    std::vector<double> mu_new=mu;
     
+    // Defines some counters and flags
     bool inTissue = true;
     int newCounter = 0;
     bool adjustMu = false;
@@ -103,9 +124,9 @@ void ThicknessEvaluation::evalThickness()
       // Counts total interactions
 			interactions++;				
       // Checks path to see if it's too long
-      if(path[*it] > MAX_PATH_LEN)
+      if(path[thisIllumTri] > MAX_PATH_LEN)
       {
-        std::cerr<<"WARNING: Triangle  "<<*it<<" MAX LEN ("<<MAX_PATH_LEN<<") PASSED: len =  "<<path[*it]<<std::endl;
+        std::cerr<<"WARNING: Triangle  "<<thisIllumTri<<" MAX LEN ("<<MAX_PATH_LEN<<") PASSED: len =  "<<path[thisIllumTri]<<std::endl;
         break;
       }
 
@@ -114,14 +135,16 @@ void ThicknessEvaluation::evalThickness()
       /////////////////////////////////////////////////////////////////////
 
       // this part is not used after (if needed better to re-implement with affine transfo)
-      bool notInElement=~(isInElement(x_coord ,element));
+      bool notInElement=!(isInElement(x_coord ,element));
 
       newCounter++;
+      
       if(newCounter > MAX_ITER_THICK)
       {
         inTissue = false;
       }
-      if(~(adjustMu || wrongSurface) )
+
+      if( (adjustMu == false) && (wrongSurface == false))
 			{
 					// Initial directional cosines set from normal of triangle (calculating dot-product of each axis with normal)
 					mu = ElementTetraGradient(element);
@@ -132,8 +155,7 @@ void ThicknessEvaluation::evalThickness()
 			}
 
       // Updates starting position of step
-      
-      x_coord_s=x_coord;
+      x_coord_s = x_coord;
       wrongSurface = false;			
       
       //////////////////////////////////////////////////////////
@@ -141,24 +163,25 @@ void ThicknessEvaluation::evalThickness()
       //////////////////////////////////////////////////////////
       
       // Defines things to define closest face
-      double aMin = DBL_MAX;
+      //double aMin = DBL_MAX;
+      double aMin = 1000000.0;
       
       short int intFace = -1;
       
       // Creates a set with all nodes defining element
-      const Tetrahedron & Tetra = (this->_ptrmesh)->Tet(element);
       elemNodes.clear();
       for(short int iVertex=0;iVertex<4;iVertex++)
       {
-        elemNodes.insert(Tetra.vertex[iVertex]);      
+        elemNodes.insert(elems[element].vertex[iVertex]);      
       }
+
       std::vector<double> Nmin(3,0);
 
       // Iterates over each triangle face
       for(short int iVertex = 0;iVertex < 4; iVertex++)
       {
 					// Erases one node (which then defines a triangle)
-					elemNodes.erase(Tetra.vertex[iVertex]);
+					elemNodes.erase(elems[element].vertex[iVertex]);
 					// Defines each of 3 remaining nodes which now define the triangle face
 				  std::vector<size_t> triNodes(3,0);
 					short int p = 0; 
@@ -181,13 +204,11 @@ void ThicknessEvaluation::evalThickness()
 					if(c < 3)
 					{
 						// Calculates inward-facing normal of this triangle
-						Point p0 = (this->_ptrmesh)->Pt(triNodes[0]),
-						      p1 = (this->_ptrmesh)->Pt(triNodes[1]),
-						      p2 = (this->_ptrmesh)->Pt(triNodes[2]);
             
-            std::vector<double> centroid = (this->_ptrmesh)->TetraCentroid(element);
-            GrahmOperatorOutput	geoQuant = GrahmOperations( p0,  p1,  p2, centroid);
-            double a = distanceOfPointToPlane(geoQuant.N,  p0, x_coord_s,  mu);
+            std::vector<double> centroid = _ptrmesh->TetraCentroid(element);
+            GrahmOperatorOutput	geoQuant = GrahmOperations( coords[triNodes[0]],  coords[triNodes[1]],  coords[triNodes[2]], centroid);
+            centroid.clear();
+            double a = distanceOfPointToPlane(geoQuant.N,  coords[triNodes[0]], x_coord_s,  mu);
 						// Calculates intersection distance
 						if((a >= 0) && (a<aMin))
 						{
@@ -198,7 +219,7 @@ void ThicknessEvaluation::evalThickness()
 							Nmin=geoQuant.N;
 						}
 						// Calculates NORMAL distance of point to plane
-            double a_n =normalDistanceOfPointToPlane(geoQuant.N,  p0, x_coord_s);
+            double a_n =normalDistanceOfPointToPlane(geoQuant.N,  coords[triNodes[0]], x_coord_s);
             //double dot = N[0]*grads[element][0] + N[1]*grads[element][1] + N[2]*grads[element][2];
             if(a_n > 0)
             {
@@ -208,20 +229,23 @@ void ThicknessEvaluation::evalThickness()
 						{
 							  // Move along line towards centroid by a small amount and recompute a
 							  double delta = 1.0;
+							  centroid = _ptrmesh->TetraCentroid(element);
 							  std::vector<double> v(3,0);
 							  v =  waxpy(x_coord, centroid,-1.0);
+							  centroid.clear();
 							  double magV = sqrt(v[0]*v[0] + v[1]*v[1] + v[2]*v[2]);
 							  for(short int hCoord=0; hCoord<3; hCoord++)
 							  {
 							    v[hCoord] = v[hCoord]/magV;
 							  }
+							  //x=x+dlta*v
 							  for(short int hCoord=0; hCoord<3; hCoord++)
 							  {
-							    x_coord[hCoord] += delta*v[hCoord];	
+							    x_coord[hCoord] =x_coord[hCoord] + delta*v[hCoord];	
 							  }
 							  
-                a_n = normalDistanceOfPointToPlane(geoQuant.N,p0,x_coord);
-                a   = distanceOfPointToPlane(geoQuant.N,p0,x_coord, mu);
+                a_n = normalDistanceOfPointToPlane(geoQuant.N,coords[triNodes[0]],x_coord);
+                a   = distanceOfPointToPlane(geoQuant.N,coords[triNodes[0]],x_coord, mu);
 							  if(a >= 0 && a<aMin)
                 {
                   // Updates smallest intersection distance
@@ -233,7 +257,7 @@ void ThicknessEvaluation::evalThickness()
 						}
 					}
 					// Puts the erased node back
-					elemNodes.insert(Tetra.vertex[iVertex]);
+					elemNodes.insert(elems[element].vertex[iVertex]);
 				}
 				
 				if(intFace != -1)
@@ -241,25 +265,24 @@ void ThicknessEvaluation::evalThickness()
           //lastintface = intFace;
 					//lastaMin = aMin;
 					// Add details of face we've just moved to
-					elemNodes.erase(Tetra.vertex[intFace]);
+					elemNodes.erase(elems[element].vertex[intFace]);
           // Defines each of 3 remaining nodes which now define the triangle face
 					faceRem.clear();
 					for(i2=elemNodes.begin();i2!=elemNodes.end();i2++)
 					{
 					  faceRem.insert(*i2);
 					}
-					path[*it] += aMin;	
+					path[thisIllumTri] += aMin;	
 
 					// Checks to see if this closest intersecting face is also a boundary face
 					// This is for interior boundaries
-					const boundaryFaceInTetraType & ElementBTris = _ptrmesh->elemBoundaryTris(element);
+					const boundaryFaceInTetraType & ElementBTris = elemBoundaryTris[element];
 					boundaryFaceInTetraType::const_iterator iterBoundaryOnFace = ElementBTris.find(intFace);
 					
-					if(iterBoundaryOnFace !=ElementBTris.end() )
+          if(iterBoundaryOnFace != ElementBTris.end() )
           {
-            const facetype & endoTri = _ptrmesh->endoTria();
             // Checks to see if this is part of the ground electrode
-            if(endoTri.find(iterBoundaryOnFace->second) != endoTri.end())
+            if(groundTris.find(iterBoundaryOnFace->second) != groundTris.end())
             {
                 inTissue = false;
                 break;
@@ -268,27 +291,27 @@ void ThicknessEvaluation::evalThickness()
             {
               wrongSurface = true;
 							// Move a small distance in towards the centroid
+							std::vector<double> centroid = _ptrmesh->TetraCentroid(element);
 							double delta = 1.0;
-							std::vector<double> centroid = (this->_ptrmesh)->TetraCentroid(element);
               std::vector<double> v(3,0);
               v =  waxpy(x_coord,centroid,-1.0);
+              centroid.clear();
               double magV = sqrt(v[0]*v[0] + v[1]*v[1] + v[2]*v[2]);
               for(short int hCoord=0; hCoord<3; hCoord++)
 							{
-							  v[hCoord] = v[hCoord]/magV;
+							  v[hCoord]       = v[hCoord]/magV;
+							  x_coord[hCoord] = x_coord[hCoord]+ delta*v[hCoord];	
 							}
 
-              for(short int hCoord=0; hCoord<3; hCoord++)
-							{
-							  x_coord[hCoord] += delta*v[hCoord];	
-							}
               // Calculate the normal to the current gradient and the face normal
               std::vector<double> w(3,0),u(3,0);
               u=ElementTetraGradient(element);
+              
               std::vector<double> N1(3,0);
               N1[0] = (u[1]*Nmin[2] - u[2]*Nmin[1]);
-						  N1[1] = (u[2]*Nmin[0] - u[0]*Nmin[2]);
-						  N1[2] = (u[0]*Nmin[1] - u[1]*Nmin[0]);
+              N1[1] = (u[2]*Nmin[0] - u[0]*Nmin[2]);
+              N1[2] = (u[0]*Nmin[1] - u[1]*Nmin[0]);
+							
 							// Calculate the normal to the face normal and this normal to get the vector parallel to the face
 							w[0] = (N1[1]*Nmin[2] - N1[2]*Nmin[1]);
 							w[1] = (N1[2]*Nmin[0] - N1[0]*Nmin[2]);
@@ -307,15 +330,14 @@ void ThicknessEvaluation::evalThickness()
                 {
                   w[hCoord] = -1.0*w[hCoord];
                 }
-                  
               }
-              mu_new=w;
-            }
-          }
+              
+              mu_new = w;
+            } //end else (face boundary but not ground)
+          } //end if on face boundary
 
 					// We also update our 'current element' as the one we're moving into as we cross this boundary
-
-          const boundaryFaceInTetraType & faceToFaceMap = _ptrmesh->faceToFace(element);
+          const boundaryFaceInTetraType & faceToFaceMap = faceToFace[element];
           boundaryFaceInTetraType::const_iterator itfaceToFaceMap = faceToFaceMap.find(intFace);
           
           // Only if we haven't passed through a boundary
@@ -324,11 +346,11 @@ void ThicknessEvaluation::evalThickness()
             size_t newElement = itfaceToFaceMap->second;
 						oldElement = element;
 						element = newElement;
+						
 						mu_new = ElementTetraGradient(newElement);
-          
             if( (Nmin[0]*mu_new[0] + Nmin[1]*mu_new[1] + Nmin[2]*mu_new[2]) >= 0)
 						{	
-							  adjustMu = 1;
+							  adjustMu = true;
 							  mu_new = ElementTetraGradient(newElement);
 							  std::vector<double> mu_old = ElementTetraGradient(oldElement);
 							  for(short int hCoord=0; hCoord<3; hCoord++)
@@ -343,19 +365,29 @@ void ThicknessEvaluation::evalThickness()
 						}
 						else
 						{
-						    adjustMu = 0;
+						    adjustMu = false;
 						}
             // Move-up to face of element and update position
+            
             //x = x_s +aMin*mu
             x_coord=waxpy(mu, x_coord_s,aMin);
-						std::vector<double> centroid = (this->_ptrmesh)->TetraCentroid(element);
+						
+						
+						////////////////////////////////////////////////////////////////
+						// THE NEXT LINES ARE USELESS SINCE delta=0.0; I COMMENT THEM //
+						////////////////////////////////////////////////////////////////
+						/*
 						// Instead of this, move a tiny amount into the new element
+						std::vector<double> centroid = _ptrmesh->TetraCentroid(newElement);
 						std::vector<double> v(3,0);
 						v = waxpy(x_coord, centroid,-1.0);
+						centroid.clear();
 						double vMag = sqrt( v[0]*v[0] + v[1]*v[1] + v[2]*v[2]  );
 						double delta = 0.0;
 						//x = x + (delta/vMag)*v;
 						x_coord= waxpy(v, x_coord,delta/vMag);
+						*/
+						
           }
 				}// end if on intface!=-1
     }//end while on inTissue
@@ -365,26 +397,31 @@ void ThicknessEvaluation::evalThickness()
   std::cout << "Total number of interactions = " << interactions << std::endl;
   double propProb = double(problems)/double(interactions);
   std::cout << "Total number of problems = " << problems << " ( or " << propProb << " ) "<<std::endl;
-  
+
+// I commented the following instructions since elemData is not used thereafter  
+  /*
   std::vector<double> elemData(_ptrmesh->nTet(),0);
-  for(facetype::iterator it=(_ptrmesh->endoTria()).begin();it!=(_ptrmesh->endoTria()).end();it++)
+  for(facetype::iterator it=illumTris.begin();it!=illumTris.end();it++)
 	{
 	  size_t elem_n = _ptrmesh->triaToTetMap(*it);
 	  size_t tri_n = *it;
 	  elemData[elem_n]=path[tri_n];
   }
+  */
+  
+  // Maps data over to node list keeping track of how many surface triangles are associated with each node 
   _thickness.clear();
   _thickness.resize(_ptrmesh->nPt(),0);
   
   std::vector<int> surfPlotterCounter(_ptrmesh->nPt(),0);
   
   
-  for(facetype::iterator it=(_ptrmesh->endoTria()).begin();it!=(_ptrmesh->endoTria()).end();it++)
+  for(facetype::iterator it=illumTris.begin();it!=illumTris.end();it++)
   {
 	  size_t tri_n=*it;
 	  for(short int jVertex=0;jVertex<3;jVertex++)
 	  {
-	  	size_t node_n = (_ptrmesh->Tri(tri_n)).vertex[jVertex];
+	  	size_t node_n = (tris[tri_n]).vertex[jVertex];
 	  	_thickness[node_n] += path[tri_n];
 	  	surfPlotterCounter[node_n]++;
 	  }
@@ -428,23 +465,24 @@ void ThicknessEvaluation::writeThickness(std::string filename)
 }
 
 
-bool ThicknessEvaluation::isInElement(std::vector<double> xc ,size_t iElem)
+bool ThicknessEvaluation::isInElement(const std::vector<double> & xc ,const size_t & iElem)
 {
   // Tells if a point of coordinate xc is within element iElem
   // not in element is not the output of this function
   bool notInElement=false;
-  const Tetrahedron & Tetra = (this->_ptrmesh)->Tet(iElem);
+  const Tetrahedron & Tetra = _ptrmesh->Tet(iElem);
+  const std::vector<Point> & coords = _ptrmesh->Pt();
   for(short int qCoord=0;qCoord<3;qCoord++)
   {
     int qA = 0;
     int qB = 0;
     for(short int qVertex=0;qVertex<4;qVertex++)
     {
-  		if(xc[qCoord] > (_ptrmesh->Pt(Tetra.vertex[qVertex])).coord[qCoord] + IN_ELEM_TOLL)
+  		if(  xc[qCoord] > coords[Tetra.vertex[qVertex]].coord[qCoord] + IN_ELEM_TOLL   )
   		{
     		qA++;
   		}
-  		if(xc[qCoord] < (_ptrmesh->Pt(Tetra.vertex[qVertex])).coord[qCoord] - IN_ELEM_TOLL)
+  		if(  xc[qCoord] < coords[Tetra.vertex[qVertex]].coord[qCoord] - IN_ELEM_TOLL    )
       {
   		  qB++;
       }
@@ -454,45 +492,44 @@ bool ThicknessEvaluation::isInElement(std::vector<double> xc ,size_t iElem)
   				notInElement = true;
   	}	
   }
-  return(~notInElement);
+  return(!notInElement);
 }
 
 
 
 
-
-
-GrahmOperatorOutput ThicknessEvaluation::GrahmOperations( Point & p0, Point & p1, Point & p2, std::vector<double> & x_c)
+GrahmOperatorOutput ThicknessEvaluation::GrahmOperations( const Point & p0, const Point & p1, const Point & p2, const std::vector<double> & x_c)
 {
-	std::vector<double> N(3,0);
+  std::vector<double> N(3,0);
   std::vector<double> p0p1(3,0), p0p2(3,0);
   std::vector<double> p0pxc(3,0);
-
-	for(short int jCoord=0;jCoord<3;jCoord++)
-	{
+  for(short int jCoord=0;jCoord<3;jCoord++)
+  {
 		p0p1[jCoord] = p0.coord[jCoord] - p1.coord[jCoord];
 		p0p2[jCoord] = p0.coord[jCoord] - p2.coord[jCoord];
 		p0pxc[jCoord] = x_c[jCoord] - p0.coord[jCoord]; 
-	}
-	// Calculates normal by cross-product
-	N[0] = (p0p1[1]*p0p2[2] - p0p1[2]*p0p2[1]);
-	N[1] = (p0p1[2]*p0p2[0] - p0p1[0]*p0p2[2]);
-	N[2] = (p0p1[0]*p0p2[1] - p0p1[1]*p0p2[0]);
+  }
+  // Calculates normal by cross-product
+  N[0] = (p0p1[1]*p0p2[2] - p0p1[2]*p0p2[1]);
+  N[1] = (p0p1[2]*p0p2[0] - p0p1[0]*p0p2[2]);
+  N[2] = (p0p1[0]*p0p2[1] - p0p1[1]*p0p2[0]);
 	
-	// Normalises
-	double NMag = sqrt(N[0]*N[0] + N[1]*N[1] + N[2]*N[2]);
-	for(short int jCoord=0;jCoord<3;jCoord++)
-	{
-	  N[jCoord] = N[jCoord]/NMag;
-	}
+  // Normalises
+  double NMag = sqrt(N[0]*N[0] + N[1]*N[1] + N[2]*N[2]);
+  for(short int jCoord=0;jCoord<3;jCoord++)
+  {
+      N[jCoord] = N[jCoord]/NMag;
+  }
 		
   // Calculates constant for plane equation
   double d = -(N[0]*p0.coord[0] + N[1]*p0.coord[1] + N[2]*p0.coord[2]);
+
   // Checks if the centroid of the element is a positive or negative distance from the plane
   double dist = (N[0]*x_c[0] + N[1]*x_c[1] + N[2]*x_c[2] + d);
+
   // If positive, then the normal is pointing into the tissue and all is ok
   // If negative, then we need to reverse the direction of the triangle normal
-  if(dist < 0)
+  if(dist < 0.0)
   {
     for(short int jCoord=0;jCoord<3;jCoord++)
     {
@@ -511,14 +548,13 @@ GrahmOperatorOutput ThicknessEvaluation::GrahmOperations( Point & p0, Point & p1
 	result.projPt=projPt;
 	
 	return(result);
-				
 }
 
 
 
 
 
-double ThicknessEvaluation::distanceOfPointToPlane(std::vector<double> & N, Point & p0,  std::vector<double> & x_c, std::vector<double> & mu)
+double ThicknessEvaluation::distanceOfPointToPlane(const std::vector<double> & N, const Point & p0,  const std::vector<double> & x_c, const std::vector<double> & mu)
 {
 
 	// Plug the intersection point (P') into the plane equation to get the value of a (i.e. distance of P from plane along U)
@@ -534,7 +570,7 @@ double ThicknessEvaluation::distanceOfPointToPlane(std::vector<double> & N, Poin
 
 
 
-double ThicknessEvaluation::normalDistanceOfPointToPlane(std::vector<double> & N, Point & p0,  std::vector<double> & x_c)
+double ThicknessEvaluation::normalDistanceOfPointToPlane(const std::vector<double> & N, const Point & p0, const std::vector<double> & x_c)
 {
   double NdotQ = (N[0]*p0.coord[0] + N[1]*p0.coord[1] + N[2]*p0.coord[2]);
   double d = -NdotQ;
@@ -543,13 +579,13 @@ double ThicknessEvaluation::normalDistanceOfPointToPlane(std::vector<double> & N
   return(a);
 }
 
-std::vector<double> ThicknessEvaluation::waxpy(std::vector<double> & x, std::vector<double> & y, double  alpha)
+std::vector<double> ThicknessEvaluation::waxpy(const std::vector<double> & x, const std::vector<double> & y, double  alpha)
 {
   
   // implements w=ax+y
   size_t vecsize=x.size();
 #ifndef NDEBUG
-  if(vecsize() != y.size())
+  if(vecsize != y.size())
   {
     std::cerr<<"ERROR: x and y have different sizes"<<std::endl;
     exit(1);
@@ -558,7 +594,7 @@ std::vector<double> ThicknessEvaluation::waxpy(std::vector<double> & x, std::vec
   std::vector <double> w=y;
   for(size_t ir=0; ir<vecsize; ir++)
   {
-    w[ir]=w[ir]+alpha*x[ir];
+    w[ir]=y[ir]+alpha*x[ir];
   }
   return(w);
 }
