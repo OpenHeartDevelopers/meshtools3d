@@ -27,7 +27,7 @@ verbose         = 1
 
 [others]
 eval_thickness  = 1
-
+thickalgo       = 1
 
 [output]
 outdir          = /home/cc14/Codes/meshtools3d/examples/sphereCoarse4PotentialOUT
