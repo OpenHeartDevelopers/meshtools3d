@@ -17,11 +17,13 @@
 #endif
 
 ThicknessEvaluation::ThicknessEvaluation()
-:LaplaceSolver()
+:LaplaceSolver(),
+algorithm(1)
 {}
 
 ThicknessEvaluation::ThicknessEvaluation(const Mesh *  _mesh)
-:LaplaceSolver(_mesh)
+:LaplaceSolver(_mesh),
+algorithm(1)
 {
   _thickness.resize(_ptrmesh->nPt(),0);
 }
@@ -35,6 +37,7 @@ void ThicknessEvaluation::setMesh(const Mesh * _mesh)
 ThicknessEvaluation::ThicknessEvaluation(const GetPot & dfile, const Mesh * _mesh)
 :LaplaceSolver(dfile, _mesh)
 {
+  algorithm = dfile("others/thickalgo",1);
   _thickness.resize(_ptrmesh->nPt(),0);
 }
 
@@ -60,9 +63,9 @@ void ThicknessEvaluation::evalThickness()
   const std::vector<Triangle> & tris = _ptrmesh->Tri();
   const std::vector<Point> & coords = _ptrmesh->Pt();
   Chrono chrono;
-  std::cout << "*******************************"<<std::endl;
-  std::cout << "* Computing wall thickness... *"<<std::endl;
-  std::cout << "*******************************"<<std::endl;
+  std::cout << "******************************************************"<<std::endl;
+  std::cout << "* Computing wall thickness (M. Bishop Algorithm) ... *"<<std::endl;
+  std::cout << "******************************************************"<<std::endl;
   chrono.start();
   for(facetype::iterator it=illumTris.begin();it!=illumTris.end();it++)
 	{
@@ -442,7 +445,29 @@ void ThicknessEvaluation::evalThickness()
 void ThicknessEvaluation::solve()
 {
   LaplaceSolver::solve();
-  evalThickness();
+  
+  switch(algorithm)
+  {
+    case 1: // Martin Bishop Algorithm
+    {
+      evalThickness();
+	    break;
+    }
+    case 2:
+    {
+      evalThicknessAlternativeMethod();    
+      break;
+    }
+    default:
+    {
+      std::cerr<<"ERROR: UNKNOWN ALGORITHM!"<<std::endl;
+      exit(1);
+    
+    }
+  }  
+  
+  
+
 }
 
 
@@ -581,6 +606,21 @@ double ThicknessEvaluation::normalDistanceOfPointToPlane(const std::vector<doubl
   return(a);
 }
 
+
+
+double ThicknessEvaluation::pointDistances( const Point & p0, const Point & p1)
+{
+  double distance=0.0;
+  
+  for(short int icoord=0; icoord<3; icoord++)
+  {
+    double dh=(p1.coord[icoord]-p0.coord[icoord]); 
+    distance = distance+dh*dh;
+  }
+  distance=sqrt(distance);
+  return(distance);
+}
+
 std::vector<double> ThicknessEvaluation::waxpy(const std::vector<double> & x, const std::vector<double> & y, double  alpha)
 {
   
@@ -600,4 +640,135 @@ std::vector<double> ThicknessEvaluation::waxpy(const std::vector<double> & x, co
   }
   return(w);
 }
+
+
+
+
+void ThicknessEvaluation::evalThicknessAlternativeMethod()
+{
+/*****************************************************
+   from endo (phi=1) to ephi (phi=0)
+   follow the steepest descent (minimum value, since 
+   dphi<0 from endo to epi). also, minimum distance 
+   is considered in case dphi tends to increase
+   points are colored in such a way they are not touched
+   twice
+*******************************************************/  
+  
+  const std::vector<Tetrahedron> & elems = _ptrmesh->Tet();
+  const std::vector<Triangle> & tris = _ptrmesh->Tri();
+  const std::vector<Point> & coords = _ptrmesh->Pt();
+  
+  const std::set<long int> & endoSet = _ptrmesh->Endocardium();
+  const std::set<long int> &  epiSet  = _ptrmesh->Epicardium();
+
+  _thickness.clear();
+  _thickness.resize(_ptrmesh->nPt(),0);
+
+  
+  typedef std::set<size_t> pointSet;
+  std::vector<pointSet> connectivity;
+  connectivity.resize(_ptrmesh->nPt());
+  for(size_t iTet=0; iTet<  _ptrmesh->nTet(); iTet++)
+  {
+    const Tetrahedron & Tetra=elems[iTet];
+    for(short int iVertex=0; iVertex<4; iVertex++)
+    {
+      for(short int jVertex=1+iVertex; jVertex<4; jVertex++)
+      {
+        connectivity[Tetra.vertex[iVertex]].insert(Tetra.vertex[jVertex]);
+        connectivity[Tetra.vertex[jVertex]].insert(Tetra.vertex[iVertex]);
+      }
+    }
+  }
+  
+  Chrono chrono;
+  chrono.start();
+  
+  std::cout << "****************************************************"<<std::endl;
+  std::cout << "* Computing wall thickness... (Cesare's Algorithm) *"<<std::endl;
+  std::cout << "****************************************************"<<std::endl;
+  
+
+  for(std::set<long int>::iterator iendo=endoSet.begin(); iendo != endoSet.end(); ++iendo)
+  {
+    size_t pstart=static_cast<size_t>(*iendo);
+    bool search=true;
+    int internalCounter=0;
+    
+    size_t pend=pstart;
+    std::vector<bool> color(_ptrmesh->nPt(),false);
+    color[pstart]=true;
+    while(search)
+    {
+      pointSet connectedPts=connectivity[pend];
+      const Point & p0= coords[pend];
+      std::multimap<double,size_t> distances,dphi;
+      for(pointSet::iterator itcon=connectedPts.begin(); itcon!=connectedPts.end(); ++itcon)
+      {
+        if(!color[*itcon])
+        {
+          const Point & p1= coords[*itcon];
+          double dist = pointDistances(p1,p0);
+          distances.insert(std::pair<double,size_t>(dist,*itcon));
+          double dphidl=(_sol[*itcon]-_sol[pstart])/dist;
+          dphi.insert(std::pair<double,size_t>(dphidl,*itcon));
+        }
+      }
+      if(dphi.empty())
+      {
+         search=false;
+         pend=pstart;
+         std::cerr<<"Warning: dead corner"<<std::endl;
+         break;
+      }
+      
+      //distances,dphi;
+      
+      std::multimap<double,size_t>::iterator phiIter = dphi.begin(), 
+                                             distIter = distances.begin();
+      if((phiIter->first)>=0) //case 1) not on a dewcent dir: choose the nearest point and go ahead
+      {
+        pend=(distIter->second);
+      }
+      else
+      {
+        pend=phiIter->second;
+      }
+      color[phiIter->second]=true;  // so this point will not be reached again
+      
+      
+      if(epiSet.find(static_cast<size_t>(pend)) != epiSet.end())
+      {
+        search=false;
+        break;
+      }
+      
+      
+      internalCounter++;
+      if(internalCounter>MAX_ITER_THICK)
+      {
+        pend=pstart;
+        search=false;
+        break;
+      }
+    } //end of while on search
+  
+    const Point & p0= coords[pstart];
+    const Point & p1= coords[pend];
+    _thickness[*iendo] = pointDistances(p1,p0);
+  }//end loop on endo
+
+
+
+  chrono.stop();
+  std::cout << "Done in "<<chrono<<std::endl;
+}
+
+
+
+
+
+
+
 

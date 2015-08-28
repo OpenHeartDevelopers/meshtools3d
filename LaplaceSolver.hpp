@@ -94,7 +94,7 @@ class LaplaceSolver
   bool isLittleEndian();
   void SwapBytes(void *pv, size_t n);
   const Mesh *  _ptrmesh;
-   
+std::vector<double> _sol;   
  private: 
   //functions
   void eval_pattern();
@@ -112,7 +112,6 @@ class LaplaceSolver
   short int verbose;
   CSR_matrix _Matrix;
   std::vector<std::vector<double> > dphi0;
-  std::vector<double> _sol;
   std::vector<double> _RHS;
   BCContainerType DirichletBC;
   

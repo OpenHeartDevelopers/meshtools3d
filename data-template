@@ -30,6 +30,7 @@ verbose         = 0
 
 [others]
 eval_thickness  = 1
+thickalgo       = 1  #1: Martin Bishop Algorithm; 2: Cesare Corrado Algorithm
 
 
 [output]
