@@ -103,7 +103,7 @@ void loadTris(const char* file, int** &tris, unsigned int &num_tris)
 		// Reads-in line 1 as total number of triangles
 		tris_file >> num_tris;
 	
-		string dummy;
+		//string dummy;
 		
 		// Outputs
 		cout << "Number of Trianlges = " << num_tris << endl << flush;

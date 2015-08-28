@@ -27,21 +27,26 @@ double* calculateInwardNormal(int element, int node0, int node1, int node2, doub
 	// Normalises
 	double NMag = sqrt(N[0]*N[0] + N[1]*N[1] + N[2]*N[2]);
 	for(int j=0;j<3;j++)
-		N[j] = N[j]/NMag;
+	{
+	  N[j] = N[j]/NMag;
+	}
 		
-		// Calculates constant for plane equation
-		double d = -(N[0]*coords[node0][0] + N[1]*coords[node0][1] + N[2]*coords[node0][2]);
+  // Calculates constant for plane equation
+  double d = -(N[0]*coords[node0][0] + N[1]*coords[node0][1] + N[2]*coords[node0][2]);
 		
-		// Checks if the centroid of the element is a positive or negative distance from the plane
-		double dist = (N[0]*cents[element][0] + N[1]*cents[element][1] + N[2]*cents[element][2] + d);
+  // Checks if the centroid of the element is a positive or negative distance from the plane
+  double dist = (N[0]*cents[element][0] + N[1]*cents[element][1] + N[2]*cents[element][2] + d);
 		
-		// If positive, then the normal is pointing into the tissue and all is ok
-		// If negative, then we need to reverse the direction of the triangle normal
-		if(dist < 0)
-			for(int j=0;j<3;j++)
-				N[j] = -N[j];
-	return(N);
-				
+  // If positive, then the normal is pointing into the tissue and all is ok
+  // If negative, then we need to reverse the direction of the triangle normal
+  if(dist < 0.0)
+  {
+    for(int j=0;j<3;j++)
+    {
+      N[j] = -N[j];
+    }
+  }
+  return(N);
 }
 	
 double distanceOfPointToPlane(double* &N, int node, double** &coords, double x, double y, double z, double mu_x, double mu_y, double mu_z)

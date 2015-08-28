@@ -519,21 +519,22 @@ int main( int argc, char *argv[] )
 		// Picks-out the TISSUE element associated with this surface triangle from which we are illuminating
 		int surfaceElem = 0;
 		for(int j=0;j<numIllumTris;j++)
+		{
 			if(illumElemsWithTris[j][0] == thisIllumTri)
 		  {
 			  surfaceElem = illumElemsWithTris[j][1];
 			  illumElems[surfaceElem] = 1.0;
 		  }
-
+    }
 		//////////////////////////////
 		// Iterates over all nodes of selected triangle and derives centroid (of triangle)
 		//////////////////////////////
 		x_epi = 0.0, y_epi = 0.0, z_epi = 0.0;
-		int node;
+		//int node;
 		for(int j=0;j<3;j++)
 		{
 			// One of the 3 triangle nodes
-			node = tris[thisIllumTri][j];
+			int node = tris[thisIllumTri][j];
 			// Calculates centroid of triangle
 			x_epi += coords[node][0]/3.0;
 			y_epi += coords[node][1]/3.0;
@@ -551,7 +552,9 @@ int main( int argc, char *argv[] )
 		// Initialises this list with the nodes of the epicardial triangle surface face
 		faceRem.clear();
 		for(int n=0;n<3;n++)
-			faceRem.insert(tris[thisIllumTri][n]);
+		{
+		  faceRem.insert(tris[thisIllumTri][n]);
+		}
 
 		// Initial coordinates of photon packet set as centroid of triangle
 		x = x_epi;
@@ -560,7 +563,7 @@ int main( int argc, char *argv[] )
 
 		// Defines initial element we're in
 		int element = surfaceElem;
-		int oldElement = 0;
+		int oldElement = element;
 
 		// Define initial direction as vector gradient direction
 		mu_x = grads[element][0];
@@ -568,15 +571,15 @@ int main( int argc, char *argv[] )
 		mu_z = grads[element][2];
 
 		// Defines some counters and flags
-		int inTissue = 1;
+		bool inTissue = true;
 		int newCounter = 0;
 		int notInElement = 0;
-		int adjustMu = 0;
-		int wrongSurface = 0;
+		bool adjustMu = false;
+		bool wrongSurface = false;
 		double lastaMin = 0.0;
 		int lastintface = 0;
 		
-		while(inTissue == 1)
+		while(inTissue)
 		{
 				//cout << "x,y,z = " << x << " " << y << " " << z << "\n";
 				//cout << "element = " << element << "\n";
@@ -596,7 +599,7 @@ int main( int argc, char *argv[] )
 				///////////////////////////////
 				// Quick check to see if we are not in the element we should be in
 				///////////////////////////////                 
-				double * r;
+				double * r = NULL;
 				r = new double[3];
 				r[0] = x;
 				r[1] = y;
@@ -618,14 +621,16 @@ int main( int argc, char *argv[] )
 						notInElement = 1;
 					}	
 				}
-
+        delete [] r;
+        r=NULL;
+				
 				newCounter++;
 				if(newCounter > 1000)
 				{
-				  inTissue = 0;
+				  inTissue = false;
 				}
 
-				if(adjustMu == 0 && wrongSurface == 0)
+				if( (adjustMu == false) && (wrongSurface == false))
 				{
 					// Initial directional cosines set from normal of triangle (calculating dot-product of each axis with normal)
 					mu_x = grads[element][0];
@@ -644,7 +649,7 @@ int main( int argc, char *argv[] )
 				y_s = y;
 				z_s = z;
 				
-				wrongSurface = 0;			
+				wrongSurface = false;			
 				
 				//////////////////////////////
 				// Check for intersection with faces of current element
@@ -657,11 +662,16 @@ int main( int argc, char *argv[] )
 				// Creates a set with all nodes defining element
 				elemNodes.clear();
 				for(int n=0;n<4;n++)
-					elemNodes.insert(elems[element][n]);
+				{
+				  elemNodes.insert(elems[element][n]);
+				}
 
 				double Nmin[3];
 				for(int h=0;h<3;h++)
-					Nmin[h] = 0.0;
+				{
+				  Nmin[h] = 0.0;
+				}
+					
 				// Iterates over each triangle face
 				for(int n=0;n<4;n++)
 				{
@@ -682,7 +692,9 @@ int main( int argc, char *argv[] )
 					{
 						it_fr = faceRem.find(triNodes[m]);
 						if(it_fr != faceRem.end())
+						{
 							c++;
+            }
 					}
 					// Only if this isn't the face we've just interacted with do we now calculate an a value
 					if(c < 3)
@@ -705,8 +717,10 @@ int main( int argc, char *argv[] )
 						double a_n = normalDistanceOfPointToPlane(N,triNodes[0],coords,x_s,y_s,z_s);
 						//double dot = N[0]*grads[element][0] + N[1]*grads[element][1] + N[2]*grads[element][2];
 						if(a_n > 0)
-							problems++;
-
+						{
+						  problems++;
+						}
+							
 						while(a_n > 0)
 						{
 							
@@ -718,7 +732,9 @@ int main( int argc, char *argv[] )
 							v[2] = cents[element][2] - z;
 							double magV = sqrt(v[0]*v[0] + v[1]*v[1] + v[2]*v[2]);
 							for(int h=0;h<3;h++)
-								v[h] = v[h]/magV;
+							{
+							  v[h] = v[h]/magV;
+							}
 							
 							x = x + delta*v[0];
 							y = y + delta*v[1];
@@ -738,6 +754,7 @@ int main( int argc, char *argv[] )
               }
 						}
 						delete[] N;
+						N = NULL;
 					}
 					// Puts the erased node back
 					elemNodes.insert(elems[element][n]);
@@ -752,8 +769,9 @@ int main( int argc, char *argv[] )
 					// Defines each of 3 remaining nodes which now define the triangle face
 					faceRem.clear();
 					for(i2=elemNodes.begin();i2!=elemNodes.end();i2++)
-						faceRem.insert(*i2);
-
+					{
+					  faceRem.insert(*i2);
+					}
 
 					path[thisIllumTri] += aMin;
 
@@ -764,12 +782,12 @@ int main( int argc, char *argv[] )
             // Checks to see if this is part of the ground electrode
             if(groundTris.find(elemBoundaryTris[element][intFace]) != groundTris.end())
             {
-                inTissue = 0;
+                inTissue = false;
                 break;
             }
             else
             {
-							wrongSurface = 1;
+							wrongSurface = true;
 							// Move a small distance in towards the centroid
 							double delta = 1.0;
               double v[3];
@@ -788,11 +806,14 @@ int main( int argc, char *argv[] )
 							// Calculate the normal to the current gradient and the face normal
 							double w[3],u[3];
 							for(int h=0;h<3;h++)
-								u[h] = grads[element][h];
+							{
+							  u[h] = grads[element][h];
+							}
+								
 							double N1[3];
 							N1[0] = (u[1]*Nmin[2] - u[2]*Nmin[1]);
-						        N1[1] = (u[2]*Nmin[0] - u[0]*Nmin[2]);
-						        N1[2] = (u[0]*Nmin[1] - u[1]*Nmin[0]);
+              N1[1] = (u[2]*Nmin[0] - u[0]*Nmin[2]);
+						  N1[2] = (u[0]*Nmin[1] - u[1]*Nmin[0]);
 
 							// Calculate the normal to the face normal and this normal to get the vector parallel to the face
 							w[0] = (N1[1]*Nmin[2] - N1[2]*Nmin[1]);
@@ -800,19 +821,26 @@ int main( int argc, char *argv[] )
 							w[2] = (N1[0]*Nmin[1] - N1[1]*Nmin[0]);
 							double magW = sqrt(w[0]*w[0] + w[1]*w[1] + w[2]*w[2]);
 							for(int h=0;h<3;h++)
-								w[h] = w[h]/magW;
+							{
+							    w[h] = w[h]/magW;
+							}
+								
 
 							// Check using the dot product that this new vector is in the same direction as the previous gradient
 							double dot3 = w[0]*u[0] + w[1]*u[1] + w[2]*u[2];
 							if(dot3 < 0)
+							{
 								for(int h=0;h<3;h++)
-                  w[h] = -1.0*w[h];
+								{
+								  w[h] = -1.0*w[h];
+								}
+							}
 
 							mu_x_new = w[0];
               mu_y_new = w[1];
               mu_z_new = w[2];
-            }
-          }
+            }//end else (face boundary but not ground)
+          } //end if on face boundary
 
 					// We also update our 'current element' as the one we're moving into as we cross this boundary
 					int newElement = faceToFace[element][intFace];
@@ -828,7 +856,7 @@ int main( int argc, char *argv[] )
 						mu_z_new = grads[newElement][2];
 						if(Nmin[0]*mu_x_new + Nmin[1]*mu_y_new + Nmin[2]*mu_z_new >= 0)
 						{	
-							adjustMu = 1;
+							adjustMu = true;
 							mu_x_new = 0.5*grads[newElement][0] + 0.5*grads[oldElement][0];
 							mu_y_new = 0.5*grads[newElement][1] + 0.5*grads[oldElement][1];
 							mu_z_new = 0.5*grads[newElement][2] + 0.5*grads[oldElement][2];
@@ -839,7 +867,7 @@ int main( int argc, char *argv[] )
 						}
 						else
 						{
-						  adjustMu = 0;
+						  adjustMu = false;
 						}
 							
 
@@ -848,6 +876,7 @@ int main( int argc, char *argv[] )
             y = y_s + mu_y*aMin;
             z = z_s + mu_z*aMin;
 						
+						/*
 						// Instead of this, move a tiny amount into the new element
 						double v[3];
 						v[0] = cents[newElement][0] - x;
@@ -858,6 +887,7 @@ int main( int argc, char *argv[] )
 						x = x + delta*v[0]/vMag;
 						y = y + delta*v[1]/vMag;
 						z = z + delta*v[2]/vMag;
+						*/
 					}
 				}// end if on intface!=-1
 		}//end of while on inTissue
@@ -869,39 +899,50 @@ cout << "Total number of problems = " << problems << " ( or " << propProb << " )
 cout << "WRITING-OUT DATA FILES... \n";
 
 
+
+
+// I commented the following instructions since elemData is not used thereafter
+/*
 // Converts data for all illum tris onto a full element list basis
 double* elemData;
 elemData = new double[num_elems];
 for(unsigned int i=0;i<num_elems;i++)
-	elemData[i] = 0.0;
+{
+  elemData[i] = 0.0;
+}
 
-int elem_n = 0;
-int tri_n = 0;
 for(int i=0;i<numIllumTris;i++)
 {
-	elem_n = illumElemsWithTris[i][1];
-	tri_n = illumElemsWithTris[i][0];
+	int elem_n = illumElemsWithTris[i][1];
+	int tri_n = illumElemsWithTris[i][0];
 	elemData[elem_n] = path[tri_n];
 }
+*/
+
 
 // Maps data over to node list keeping track of how many surface triangles are associated with each node 
 double* surfPlotter;
 surfPlotter = new double[num_nodes];
 for(unsigned int i=0;i<num_nodes;i++)
-	surfPlotter[i] = 0.0;
+{
+  surfPlotter[i] = 0.0;
+}
+	
 
 int* surfPlotterCounter;
 surfPlotterCounter = new int[num_nodes];
 for(unsigned int i=0;i<num_nodes;i++)
+{
 	surfPlotterCounter[i] = 0;
+}
 
-int node_n;
+
 for(int i=0;i<numIllumTris;i++)
 {
-	tri_n = illumElemsWithTris[i][0];
+	int tri_n = illumElemsWithTris[i][0];
 	for(int j=0;j<3;j++)
 	{
-		node_n = tris[tri_n][j];
+		int node_n = tris[tri_n][j];
 		surfPlotter[node_n] += path[tri_n];
 		surfPlotterCounter[node_n]++;
 	}
@@ -910,7 +951,10 @@ for(int i=0;i<numIllumTris;i++)
 for(unsigned int i=0;i<num_nodes;i++)
 {
 	if(surfPlotterCounter[i] != 0)
-		surfPlotter[i] = surfPlotter[i]/double(surfPlotterCounter[i]);
+	{
+	  surfPlotter[i] = surfPlotter[i]/double(surfPlotterCounter[i]);
+	}
+		
 }
 
 //string output = "output.dat";
@@ -931,7 +975,7 @@ delete[] illumSurf;
 delete[] connNodes;
 delete[] elemBoundaryTris;		
 delete[] path;
-delete[] elemData;
+//delete[] elemData;
 delete[] surfPlotterCounter;
 delete[] surfPlotter;
 
