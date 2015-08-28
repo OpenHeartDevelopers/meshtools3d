@@ -7,7 +7,7 @@
 # see CGAL doc for meshing otpions.
 
 [segmentation]
-seg_dir = /home/cc14/Codes/meshtools3d/examples/sphereCoarse
+seg_dir = ./
 seg_name = sphere.inr
 
 [meshing]
@@ -30,7 +30,7 @@ eval_thickness  = 1
 
 
 [output]
-outdir          = /home/cc14/Codes/meshtools3d/examples/sphereCoarseOUT
+outdir          = ../sphereCoarseOUT
 name            = sphere
 out_medit       = 1
 out_carp        = 1
