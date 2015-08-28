@@ -59,10 +59,11 @@ void ThicknessEvaluation::evalThickness()
   const std::vector<Tetrahedron> & elems = _ptrmesh->Tet();
   const std::vector<Triangle> & tris = _ptrmesh->Tri();
   const std::vector<Point> & coords = _ptrmesh->Pt();
-  
+  Chrono chrono;
   std::cout << "*******************************"<<std::endl;
   std::cout << "* Computing wall thickness... *"<<std::endl;
   std::cout << "*******************************"<<std::endl;
+  chrono.start();
   for(facetype::iterator it=illumTris.begin();it!=illumTris.end();it++)
 	{
     // Picks-out particular triangle
@@ -393,7 +394,8 @@ void ThicknessEvaluation::evalThickness()
     }//end while on inTissue
 	}//end loop on endoTria
 
-
+  chrono.stop();
+  std::cout << "Done in "<<chrono<<std::endl;
   std::cout << "Total number of interactions = " << interactions << std::endl;
   double propProb = double(problems)/double(interactions);
   std::cout << "Total number of problems = " << problems << " ( or " << propProb << " ) "<<std::endl;
