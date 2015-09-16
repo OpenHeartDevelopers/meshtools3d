@@ -4,6 +4,10 @@
 #include "mgmres.hpp"
 #include<cmath>
 
+#ifndef OUTPREC
+#define OUTPREC 18
+#endif
+
 LaplaceSolver::LaplaceSolver()
 :_consistentState(false),
 _ptrmesh(NULL),
@@ -105,10 +109,12 @@ void LaplaceSolver::eval_pattern()
   {
     for(short int iPt=0; iPt<4; iPt++)
     {
-        for(short int jPt=iPt; jPt<4; jPt++)
+        long int iNode=_ptrmesh->Tet(iTet).vertex[iPt];
+        labelPerNode[iNode].insert(iNode);
+        
+        for(short int jPt=1+iPt; jPt<4; jPt++)
         {
-          size_t iNode=_ptrmesh->Tet(iTet).vertex[iPt];
-          size_t jNode=_ptrmesh->Tet(iTet).vertex[jPt];
+          long int jNode=_ptrmesh->Tet(iTet).vertex[jPt];
           labelPerNode[iNode].insert(jNode);
           labelPerNode[jNode].insert(iNode);
         }
@@ -161,7 +167,7 @@ std::vector<double> LaplaceSolver::localStiff(size_t iTet, double k)
   {
     for(short int jc=ir; jc<4; jc++)
     {
-      double entry=0;
+      double entry=0.0;
       for(short int icoor=0; icoor<3; icoor++)
       {
         entry=entry+((dphi[ir])[icoor])*((dphi[jc])[icoor]);
@@ -243,7 +249,7 @@ void LaplaceSolver::matrixAssembly(bool build_pattern)
     reordering[3]=3;
     std::vector<size_t> TetVertex(4,0);
     std::map<size_t,short int> vord;
-    std::map<size_t,short int>::iterator it;
+    std::map<size_t,short int>::iterator itOrd;
     for(short int iv=0; iv<4; iv++)
     {
       TetVertex[iv]=_ptrmesh->Tet(iTet).vertex[iv];
@@ -252,9 +258,9 @@ void LaplaceSolver::matrixAssembly(bool build_pattern)
     //Node reordering
     
     short int countv=0;
-    for(it=vord.begin(); it!=vord.end(); ++it)
+    for(itOrd=vord.begin(); itOrd!=vord.end(); ++itOrd)
     {
-      reordering[countv]=it->second;
+      reordering[countv]=itOrd->second;      // ordering according to global node labels
       countv=countv+1;
     }
     countv=0;
@@ -270,6 +276,7 @@ void LaplaceSolver::matrixAssembly(bool build_pattern)
         //there is a boundary condition
         if(!(itv==DirichletBC.end()))
         {
+          //element on the diagonal
           double aii=local_stiffness[RMIndex(iPt,iPt,4)];
           local_stiffness[RMIndex(iPt,iPt,4)]=0.0;
 
@@ -288,8 +295,6 @@ void LaplaceSolver::matrixAssembly(bool build_pattern)
     }//end for on local points
 
     // matrix and RHS connectivity
-  
-  
   
     for(short int iPt=0; iPt<4; iPt++)
     {
@@ -378,6 +383,27 @@ void LaplaceSolver::solve()
 }
 
 
+void LaplaceSolver::writeMatrixAndRHS(std::string filename)
+{
+  std::string matrixfileName = filename + ".matrix";
+  _Matrix.outputMatlab(matrixfileName);
+  std::string RHSfileName = filename + ".rhs";
+  std::ofstream rhsfile(RHSfileName.c_str());
+  if(!rhsfile)
+  {
+    std::cerr<<"WARNING: FILE "<<RHSfileName<<"NOT OPENED"<<std::endl;
+  }
+  else
+  {
+    for(size_t ir=0; ir<_RHS.size(); ir++)
+    {
+      rhsfile<<_RHS[ir]<<std::endl;
+    }
+    rhsfile.close();
+  }
+
+}
+
 
 void LaplaceSolver::writeSolution(std::string filename)
 {
@@ -389,12 +415,15 @@ void LaplaceSolver::writeSolution(std::string filename)
     exit(1);
   }
   size_t nPt=_ptrmesh->nPt();
+  fsol.precision(OUTPREC);
   for(size_t iPt=0; iPt<nPt; iPt++)
   {
-    fsol<<_sol[iPt]<<std::endl;
+    fsol<<std::scientific<<_sol[iPt]<<std::endl;
   }
   fsol.close();
 }
+
+
 
 void LaplaceSolver::writeVTKSolution(std::string filename, bool binary, double rescaling)
 {
@@ -667,12 +696,40 @@ void LaplaceSolver::writeVTKSolution(std::string filename, bool binary, double r
 std::vector<double> LaplaceSolver::ElementTetraGradient(size_t iTet,bool normalize) const
 {
   std::vector<double> gradient(3,0);
+  const Tetrahedron & Tet= _ptrmesh->Tet(iTet);
+  std::vector<double> invJt=(_ptrmesh->TetInvJacobianTransponse(iTet)); // 9X1
+  std::vector<std::vector<double> > dphi;
+  dphi.resize(4);
+  
+  // Evaluate derivatives of shape functions
+  for(short int jf=0; jf<4; jf++)
+  {
+    dphi[jf].resize(3,0);
+    for(short int ic=0; ic<3; ic++)
+    {
+      for(short int jc=0; jc<3; jc++)
+      {
+        (dphi[jf])[ic]=(dphi[jf])[ic]+invJt[RMIndex(ic,jc,3)]  *(dphi0[jf])[jc];
+      }
+    }
+  }
+
+  // Evaluate the gradient
+  for(short int iv=0; iv<4; iv++)
+  {
+      double sol_at_vertex =_sol[Tet.vertex[iv]];
+      for(short int jc=0; jc<3; jc++)
+      {
+        gradient[jc] = gradient[jc] + (dphi[iv])[jc] * sol_at_vertex;
+      }
+  }
+  
+  
+  /*
   double  gradient0[3];
   gradient0[0]=0.0;
   gradient0[1]=0.0;
   gradient0[2]=0.0;
-  const Tetrahedron & Tet= _ptrmesh->Tet(iTet);
-  std::vector<double> invJt=_ptrmesh->TetInvJacobianTransponse( iTet);
   //first: eval grad0
   for(short int iv=0; iv<4; iv++)
   {
@@ -689,15 +746,18 @@ std::vector<double> LaplaceSolver::ElementTetraGradient(size_t iTet,bool normali
     gradient[1]=gradient[1]+invJt[RMIndex(1,jc,3)]*gradient0[jc];
     gradient[2]=gradient[2]+invJt[RMIndex(2,jc,3)]*gradient0[jc];
   }
-  
+  */
+
   if(normalize)
   {
-    double norm=std::sqrt(gradient[0]*gradient[0]+gradient[1]*gradient[1]+gradient[2]*gradient[2]);
-    for(short int jc=0; jc<3; jc++)
+    double norm=sqrt(gradient[0]*gradient[0]+gradient[1]*gradient[1]+gradient[2]*gradient[2]);
+    if(norm>0.0)
     {
-      gradient[jc]=gradient[jc]/norm;
+      for(short int jc=0; jc<3; jc++)
+      {
+        gradient[jc]=gradient[jc]/norm;
+      }
     }
-  
   }
   return(gradient);
 }

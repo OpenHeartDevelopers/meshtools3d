@@ -219,8 +219,6 @@ int main(int argc,char **argv)
     ThicknessCompute.setBCValue(CarpMesh.Endocardium(), 1.0);  
     ThicknessCompute.setBCValue(CarpMesh.Epicardium(), 0.0);  
     ThicknessCompute.solve();
-    
-    
     std::string cfileoutName=out_dir+"/"+out_name;
     ThicknessCompute.writeElementGradient(cfileoutName);
     CarpMesh.writeTetraCentroids(cfileoutName);

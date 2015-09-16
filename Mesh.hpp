@@ -228,15 +228,15 @@ class Mesh
 
   private:
     void checkConnectivity();
-    void evalTriangles(mapfacetype bound_faces, size_t & nbTri);
+    void evalTriangles(mapfacetype bound_faces, size_t & nbTri, bool outwardNormOnBoundary = false);
     void writePoints(std::string outputFileName,double rescaling=1.0, bool binary=false);
     void writeElements(std::string outputFileName, bool binary=false);
+    void writeFakeFiebers(std::string outputFileName, bool binary=false);
     bool isLittleEndian();
     void SwapBytes(void *pv, size_t n);
     std::vector<double>InvertA3X3(const std::vector<double> & Mat0) const;
     short int RM3X3Ind(short int irow, short int jcol) const;
     bool consistentState;
-    bool outwardNormOnBoundary;
     std::vector<Point> points;
     std::vector<Triangle> triangles;
     std::vector<Tetrahedron> tetrahedra;

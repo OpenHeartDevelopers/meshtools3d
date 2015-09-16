@@ -2,6 +2,7 @@
 #define _LAPLACESOLVER_HPP
 
 #include <fstream>
+#include<iostream>
 #include <string>
 #include <vector>
 #include<map>
@@ -56,6 +57,30 @@ struct CSR_matrix
       K.resize(_pattern.n_zero,0);
     }
   }
+  void outputMatlab(std::string mfileName)
+  {
+    std::ofstream mfile(mfileName.c_str());
+    if(!mfile)
+    {
+      std::cerr<<"WARNING: FILE "<<mfileName<<"NOT OPENED"<<std::endl;
+    }
+    else
+    {
+      long int nrow = _pattern.I.size()-1;
+      for(long int irow=0; irow<nrow; irow++)
+      {
+        long int start=_pattern.I[irow];
+        long int end=_pattern.I[irow+1];
+        for(long int icol=start; icol<end; icol++)
+        {
+          mfile<<1+irow<<" "<<1+_pattern.J[icol]<<" "<<K[icol]<<std::endl;
+        }
+      
+      }
+      mfile.close();
+    }
+    
+  }
 };
 
 
@@ -85,6 +110,7 @@ class LaplaceSolver
   inline double & sol(size_t iP){return (_sol[iP]);};
   inline const std::vector<double> & sol() const {return _sol;};
   inline const double & sol(size_t iP) const {return _sol[iP];};
+  void writeMatrixAndRHS(std::string filename);
   void writeSolution(std::string filename);
   void writeVTKSolution(std::string filename, bool binary=false, double rescaling=1.0);
   void writeElementGradient(std::string filename);
@@ -94,12 +120,12 @@ class LaplaceSolver
   bool isLittleEndian();
   void SwapBytes(void *pv, size_t n);
   const Mesh *  _ptrmesh;
-std::vector<double> _sol;   
+  std::vector<double> _sol;   
  private: 
   //functions
   void eval_pattern();
   void evaldphi0();
-  void matrixAssembly(bool build_pattern=1);
+  void matrixAssembly(bool build_pattern=true);
   std::vector<double> localStiff(size_t iTet, double k=1.0);
   short int RMIndex(short int irow, short int jcol, short int rank=4) const;
    

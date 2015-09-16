@@ -17,7 +17,6 @@
 
 Mesh::Mesh()
 :consistentState(false),
-outwardNormOnBoundary(false),
 points(0),
 triangles(0),
 tetrahedra(0),
@@ -34,7 +33,6 @@ _epiLabel(-1)
 
 Mesh::Mesh(const  std::string & inputFileame)
 :consistentState(false),
-outwardNormOnBoundary(false),
 points(0),
 triangles(0),
 tetrahedra(0),
@@ -51,8 +49,7 @@ _epiLabel(-1)
 
 
 Mesh::Mesh(const  Mesh & srcMesh)
-:consistentState(false),
-outwardNormOnBoundary(false)
+:consistentState(false)
 {
   _faceToFace.clear(); 
   _elemBoundaryTris.clear();
@@ -265,7 +262,7 @@ void Mesh::readFromFile(const  std::string & inputFileame)
     
     if(nbTri==0)
     {
-      evalTriangles(bound_faces,  nbTri);
+      evalTriangles(bound_faces,  nbTri,true);
     }
     else
     {
@@ -294,7 +291,7 @@ void Mesh::readFromFile(const  std::string & inputFileame)
 
 
 
-void Mesh::evalTriangles(mapfacetype bound_faces, size_t & nbTri)
+void Mesh::evalTriangles(mapfacetype bound_faces, size_t & nbTri, bool outwardNormOnBoundary)
 {
   nbTri=bound_faces.size();
   triangles.resize(nbTri);
@@ -304,19 +301,19 @@ void Mesh::evalTriangles(mapfacetype bound_faces, size_t & nbTri)
   for(itmap=bound_faces.begin();itmap!=bound_faces.end();++itmap)
   {
     //extract the tetrahedra owners of the triangle
-    Tetrahedron Tet=tetrahedra[itmap->second.first];
+    const Tetrahedron & Tet=tetrahedra[(itmap->second).first];
     facetype_iter fiter;
     // extract triangle node labels
     Triangle Tria;
     short int ivertex=0;
-    for(fiter=itmap->second.second.begin();fiter!=itmap->second.second.end();++fiter)
+    for(fiter=(itmap->second).second.begin();fiter!=(itmap->second).second.end();++fiter)
     {
       Tria.vertex[ivertex]=*fiter;
       ivertex=ivertex+1;
     }
     Tria.regionLabel=Tet.regionLabel;
     
-    if(outwardNormOnBoundary)        
+    if(outwardNormOnBoundary)
     {
       short int notInTriaIndex=-1;
       for(short int ivTe=0; ivTe<4; ivTe++)
@@ -347,7 +344,7 @@ void Mesh::evalTriangles(mapfacetype bound_faces, size_t & nbTri)
       std::vector<double> v1(3,0),v2(3,0),v3(3,0);
       for(short int jcoord=0;jcoord<3;jcoord++)
       {
-        (teVertex[3]).coord[jcoord]=(points[notInTriaIndex]).coord[jcoord];
+        (teVertex[3]).coord[jcoord]=(points[Tet.vertex[notInTriaIndex]]).coord[jcoord];
         v1[jcoord] = teVertex[1].coord[jcoord]-teVertex[0].coord[jcoord];
         v2[jcoord] = teVertex[2].coord[jcoord]-teVertex[0].coord[jcoord];
         v3[jcoord] = teVertex[3].coord[jcoord]-teVertex[0].coord[jcoord];
@@ -356,21 +353,23 @@ void Mesh::evalTriangles(mapfacetype bound_faces, size_t & nbTri)
       normal[0]=v1[1]*v2[2]-v1[2]*v2[1];
       normal[1]=-1.0*(v1[0]*v2[2]-v1[2]*v2[0]);
       normal[2]=v1[0]*v2[1]-v1[1]*v2[0];
+      double vectormod=sqrt(normal[0]*normal[0]+normal[1]*normal[1]+normal[2]*normal[2]);
       for(short int jcoord=0;jcoord<3;jcoord++)
       {
-        normal[jcoord]=normal[jcoord]/sqrt(normal[0]*normal[0]+normal[1]*normal[1]+normal[2]*normal[2]);
+        normal[jcoord]=normal[jcoord]/vectormod;
       }
       //now evaluate the projection onto normal.
       // if projection>0, inward normal -> change point order
-      double proj=normal[0]*v3[0]+normal[2]*v3[1]+normal[2]*v3[2];
+      double proj=normal[0]*v3[0]+normal[1]*v3[1]+normal[2]*v3[2];
       if(proj>0)
       {
-        size_t tmp= Tria.vertex[0];
-        Tria.vertex[0]=Tria.vertex[1];
-        Tria.vertex[1]=tmp;
+        size_t tmp= Tria.vertex[1];
+        Tria.vertex[1]=Tria.vertex[2];
+        Tria.vertex[2]=tmp;
       }
-    }
-    triaToTet[jcount]=itmap->second.first;
+    }//end if on outwardNormOnBoundary
+    
+    triaToTet[jcount]=(itmap->second).first;
     //copy into triangle vector
     for(ivertex=0;ivertex<3;ivertex++)
     {
@@ -378,7 +377,7 @@ void Mesh::evalTriangles(mapfacetype bound_faces, size_t & nbTri)
     }
     triangles[jcount].regionLabel=Tria.regionLabel;
     jcount=jcount+1;        
-  }
+  }//end loop on itmap iterator
 
 }
 
@@ -602,14 +601,12 @@ double Mesh::VolTet(size_t iTet) const
       v3[ic]=TetPts[3].coord[ic]-TetPts[0].coord[ic];                
     }
     //2*face area normal
-    vprod[0]=v1[1]*v2[2]-v2[1]*v1[2];
-    vprod[1]=v1[2]*v2[0]-v2[2]*v1[0];
-    vprod[2]=v1[0]*v2[1]-v2[0]*v1[1];
-    volume=(vprod[0]*v3[0]+vprod[1]*v3[1]+vprod[2]*v3[2])/6.0;
-    // this to have a positive volume
-    bool sign(volume>=0);
-    volume=volume*(sign-1.0*(!sign));
+    vprod[0] =       v1[1]*v2[2] - v1[2]*v2[1];
+    vprod[1] = -1.0*(v1[0]*v2[2] - v1[2]*v2[0]);
+    vprod[2] =       v1[0]*v2[1] - v1[1]*v2[0];
     
+    volume=(vprod[0]*v3[0]+vprod[1]*v3[1]+vprod[2]*v3[2])/6.0;
+    volume=sqrt(volume*volume);
   }
   return(volume);
 }
@@ -627,6 +624,9 @@ void Mesh::evalBoundaryLabels()
     connectivityType connectivity; //connectivity of triangles (surface connectivity)
     nodeToRegionMapType NodeToregionMap;
     
+    // determine initial region labels; 
+    // determine initial region to node mapping
+    // fill connectivity of surface points (on triangles) and node to region mapping
     for(size_t iTri=0; iTri<nTri(); iTri++)
     {
       int labOfRegion=triangles[iTri].regionLabel;
@@ -634,8 +634,8 @@ void Mesh::evalBoundaryLabels()
       for(short int iv=0; iv<3; iv++)
       {
           size_t p0=triangles[iTri].vertex[iv];
-          pointRegions[labOfRegion].insert(p0);
-          NodeToregionMap[p0].insert(labOfRegion);
+          (pointRegions[labOfRegion]).insert(p0);
+          (NodeToregionMap[p0]).insert(labOfRegion);
           for(short int jv=iv+1; jv<3; jv++)
           {
             size_t p1=triangles[iTri].vertex[jv];
@@ -643,16 +643,16 @@ void Mesh::evalBoundaryLabels()
             connectivity[p1].insert(p0);
           }
       }
-    }
+    }//end loop on triangles
 
     //algo on divisions starts
-    
     for(regionSubdivisionTypeIterator itRegToNodeMap=pointRegions.begin(); itRegToNodeMap!=pointRegions.end(); ++itRegToNodeMap)
     {
       int labelOfRegions=itRegToNodeMap->first;
       // iterate on points belonging to the region labelOfRegions
       // extract the local connectivity of the region
       connectivityType regionconnect;
+      regionconnect.clear();
       for(connectSetTypeIterator cRegIt=(itRegToNodeMap->second).begin(); cRegIt!=(itRegToNodeMap->second).end(); ++cRegIt)
       {
         // node belonging to region
@@ -668,16 +668,16 @@ void Mesh::evalBoundaryLabels()
           {
             connections.insert(*connectiter);
           }
-        }
+        } //end loop with connectiter
         regionconnect.insert(std::pair<size_t, connectSetType> (node,connections) );
-      }
+      }// end loop with cRegIt iterator
 
       //first: determine a seed point
-      size_t seed= *(itRegToNodeMap->second.begin());
-      for(connectSetTypeIterator seedIter=itRegToNodeMap->second.begin(); seedIter!=itRegToNodeMap->second.end(); ++seedIter)
+      size_t seed= *((itRegToNodeMap->second).begin());
+      for(connectSetTypeIterator seedIter=(itRegToNodeMap->second).begin(); seedIter!=(itRegToNodeMap->second).end(); ++seedIter)
       {
-        seed=*seedIter;
-        //full inside the region (not on a boundary of two)
+        seed = *seedIter;
+        // full inside the region (not on a boundary of two)
         if(NodeToregionMap[seed].size()==1)
         {
           break;
@@ -750,11 +750,11 @@ void Mesh::evalBoundaryLabels()
 
     for(regionSubdivisionTypeIterator iter=pointRegions.begin(); iter!=pointRegions.end(); ++iter)
     {
-      size_t sizereg=(iter->second).size();
       int labreg=iter->first;
+      size_t sizereg=(iter->second).size();
       nbElToRegionLab.insert(std::pair<size_t,int>(sizereg,labreg));
     }
-    //now endo and epi of type lonh int for Laplace solver
+    //now endo and epi of type long int for Laplace solver
     std::multimap<size_t,int>::const_reverse_iterator it=++(nbElToRegionLab.rbegin());
     _endoLabel =it->second;
     for(connectSetTypeIterator ite=pointRegions.at(_endoLabel).begin();ite!=pointRegions.at(_endoLabel).end(); ++ite)
@@ -768,8 +768,6 @@ void Mesh::evalBoundaryLabels()
     {
       _Epi.insert(static_cast<long int>(*ite));
     }
-    
-    
   }// end if on consistence of mesh
 }
 
@@ -777,7 +775,7 @@ void Mesh::evalBoundaryLabels()
 
 void Mesh::writeBoundaryLabels(std::string & fileDir, std::string & FileName)
 {
-    
+
     for(regionSubdivisionTypeIterator regIter=pointRegions.begin();regIter!=pointRegions.end();++regIter)
     {
         std::ofstream surfLabFile;
@@ -986,9 +984,6 @@ void Mesh::initializeConnectivities()
       }
     }
 
-
-
-
   }//end if on consistent state
 }
 
@@ -996,6 +991,7 @@ void Mesh::writeCarpMesh(std::string outputFileName, bool binary, double rescali
 {
   writePoints(outputFileName,rescaling, binary);  
   writeElements(outputFileName, binary);
+  writeFakeFiebers(outputFileName, binary);
 }
 
 void Mesh::writePoints(std::string outputFileName, double rescaling, bool binary)
@@ -1169,6 +1165,67 @@ void Mesh::writeElements(std::string outputFileName, bool binary)
   elFile.close();
 }
 
+
+
+void Mesh::writeFakeFiebers(std::string outputFileName, bool binary)
+{
+  short int precision=12;
+  short int width=11;
+  size_t nElem=0;
+  
+  if(this->nTet()>0)
+  {
+    nElem=this->nTet();
+  }
+  else
+  {
+    nElem=this->nTri();
+  }
+
+  std::ofstream fFibFile;
+
+  if(binary)
+  {
+    std::string elfileName=outputFileName+".blon";
+    fFibFile.open(elfileName.c_str(),std::ios::out | std::ios::binary);
+    fFibFile<<"1"<<std::endl;
+  }
+  else
+  {
+    std::string elfileName=outputFileName+".lon";
+    fFibFile.open(elfileName.c_str(),std::ios::out );
+    fFibFile<<"1"<<std::endl;
+  }
+  
+  for(size_t iElem=0; iElem<nElem; iElem++)
+  {
+    
+    std::vector<double> fakefib(3,0);
+    fakefib[0]=1.0;
+    for(short int icomp=0; icomp<2; icomp++)
+    {
+      double component=fakefib[icomp];
+      if(binary) 
+      {
+        fFibFile.write((char*) &component, sizeof(double));
+      }
+      else
+      {
+        fFibFile<<std::setw(width)<<std::setprecision(precision)<<component<<" ";
+      }
+    }
+    double component=fakefib[2];
+      if(binary) 
+      {
+        fFibFile.write((char*) &component, sizeof(double));
+      }
+      else
+      {
+        fFibFile<<std::setw(width)<<std::setprecision(precision)<<component<<std::endl;
+      }
+  }
+  fFibFile.close();
+}
 
 void Mesh::writeVTKMesh(std::string outputFileName, bool binary, double rescaling)
 {
@@ -1442,7 +1499,6 @@ void Mesh::clear()
   _endoTris.clear();
   _epiTris.clear();
 
-  outwardNormOnBoundary=false;
   consistentState=false;
 }
 
@@ -1472,7 +1528,8 @@ void Mesh::extractBoundary()
         permutation[jface][jf]=rem;
       }
     }
-    mapfacetype bound_faces;  
+    mapfacetype bound_faces;
+    bound_faces.clear();
     for(size_t iTet=0; iTet<nTet; iTet++)
     {
       std::vector<facetype> ordered_faces;    
@@ -1492,7 +1549,7 @@ void Mesh::extractBoundary()
       {
         size_t key=*(ordered_faces[jface].begin());
         bool value_to_insert=true;
-        if(bound_faces.count(key))          
+        if((bound_faces.count(key))>0)
         {
             // range of elements having the same key
             range_iter_type itmapRange=bound_faces.equal_range(key);
@@ -1511,12 +1568,12 @@ void Mesh::extractBoundary()
         if(value_to_insert)
         {
           facetype face=ordered_faces[jface];
-          faceLabtype labeledFace=std::make_pair(iTet,face);
+          faceLabtype labeledFace(iTet,face);
           bound_faces.insert(std::pair<size_t, faceLabtype > (key,labeledFace) );
         }
       }//end loop on jface
 
-    }
+    }//end loop on Tetra
 
     for(short int jface=0; jface<4; jface++)
     {
@@ -1524,7 +1581,7 @@ void Mesh::extractBoundary()
       permutation[jface] = NULL;
     }
     permutation.clear();
-    evalTriangles(bound_faces, nbTri);
+    evalTriangles(bound_faces, nbTri, true);
   }//end if on consistent state
 
 }
@@ -1567,7 +1624,7 @@ void Mesh::checkConnectivity()
   {
     //first extract all the vertex labels within tetrahedra and triangles
     std::set<size_t> connected_vertices;
-    for(size_t iTet=0; iTet<(this->nTet()); iTet++)
+    for(size_t iTet=0; iTet<nTet(); iTet++)
     {
       for(short int iv=0; iv<4; iv++)
       {
@@ -1575,7 +1632,7 @@ void Mesh::checkConnectivity()
       }
     }
   
-    for(size_t iTri=0; iTri<(this->nTri()); iTri++)
+    for(size_t iTri=0; iTri<nTri(); iTri++)
     {
       for(short int iv=0; iv<3; iv++)
       {
@@ -1583,12 +1640,12 @@ void Mesh::checkConnectivity()
       }
     }
     //if there are not connected points
-    if((this->nPt())!=connected_vertices.size() )
+    if(nPt()!=connected_vertices.size() )
     {
       size_t count=0;
       std::set<size_t>::iterator it;
       std::map<size_t,size_t> renumbering;
-      std::vector<bool> is_connected(this->nPt(),false);
+      std::vector<bool> is_connected(nPt(),false);
       //I creeate a mapping between the connected nodes and the new reordering
       for(it=connected_vertices.begin();it!=connected_vertices.end(); ++it)
       {
@@ -1596,32 +1653,30 @@ void Mesh::checkConnectivity()
         count++;
       }
       //First I renumber the Tetra Vertices
-      for(size_t iTet=0; iTet<(this->nTet()); iTet++)
+      for(size_t iTet=0; iTet<nTet(); iTet++)
       {
         for(short int iv=0; iv<4; iv++)
         {
           size_t old_index=tetrahedra[iTet].vertex[iv];
+          is_connected[old_index]=true;
 #ifndef NDEBUG
-          is_connected.at(old_index)=true;
           size_t new_index=(renumbering.at(old_index));          
 #else
-          is_connected[old_index]=true;
           size_t new_index=(renumbering[old_index]);          
 #endif
           tetrahedra[iTet].vertex[iv]=new_index;
         }
       }
       //After I renumber Tria Vertex
-      for(size_t iTri=0; iTri<(this->nTri()); iTri++)
+      for(size_t iTri=0; iTri<nTri(); iTri++)
       {
         for(short int iv=0; iv<3; iv++)
         {
           size_t old_index=triangles[iTri].vertex[iv];
+          is_connected[old_index]=true;
 #ifndef NDEBUG
-          is_connected.at(old_index)=true;
           size_t new_index=(renumbering.at(old_index));
 #else
-          is_connected[old_index]=true;
           size_t new_index=(renumbering[old_index]);
 #endif
           triangles[iTri].vertex[iv]=new_index;
@@ -1682,9 +1737,9 @@ std::vector<double> Mesh::TetJacobianTransponse(size_t iTet) const
   if(consistentState)
   {
     const Tetrahedron & Tetra=tetrahedra[iTet];
-    for(short int jv=0; jv<3; jv++)
+    for(short int jc=0; jc<3; jc++)
     {
-      for(short int jc=0; jc<3; jc++)
+      for(short int jv=0; jv<3; jv++)
       {
         JacobianT[3*(jv)+jc]=points[Tetra.vertex[1+jv]].coord[jc]-points[Tetra.vertex[0]].coord[jc];
       }
@@ -1698,23 +1753,40 @@ std::vector<double>Mesh::InvertA3X3(const std::vector<double> & Mat0) const
 {
   //matrix is considered as row major
   
-  double det=0.0;
   std::vector<double> inverted(9,0);
   
   //rowMajor3X3Index(short int irow, short int jcol)
   
-  for(short int ir=0; ir<3; ir++)
+  double det =    Mat0[RM3X3Ind(0,0)]*( Mat0[RM3X3Ind(1,1)]*Mat0[RM3X3Ind(2,2)] - Mat0[RM3X3Ind(1,2)]*Mat0[RM3X3Ind(2,1)] ) +
+             -1.0*Mat0[RM3X3Ind(0,1)]*( Mat0[RM3X3Ind(1,0)]*Mat0[RM3X3Ind(2,2)] - Mat0[RM3X3Ind(1,2)]*Mat0[RM3X3Ind(2,0)] ) +
+                  Mat0[RM3X3Ind(0,2)]*( Mat0[RM3X3Ind(1,0)]*Mat0[RM3X3Ind(2,1)] - Mat0[RM3X3Ind(2,0)]*Mat0[RM3X3Ind(1,1)] ) ;
+
+  
+  
+  
+  /*for(short int ir=0; ir<3; ir++)
   {
-    det = det+(Mat0[RM3X3Ind(0,ir)]*(Mat0[RM3X3Ind(1,(ir+1)%3)]*Mat0[RM3X3Ind(2,(ir+2)%3)]-Mat0[RM3X3Ind(1,(ir+2)%3)]*Mat0[RM3X3Ind(2,(ir+1)%3)]));
     for(short int jc=0; jc<3; jc++)
     {
-      double entry=(Mat0[RM3X3Ind((ir+1)%3,(jc+1)%3)]*Mat0[RM3X3Ind((ir+2)%3,(jc+2)%3)]) - (Mat0[RM3X3Ind((ir+1)%3,(jc+2)%3)]*Mat0[RM3X3Ind((ir+2)%3,(jc+1)%3)] );
-      inverted[RM3X3Ind(ir,jc)]=entry;
+      double entry = (Mat0[RM3X3Ind((ir+1)%3,(jc+1)%3)]*Mat0[RM3X3Ind((ir+2)%3,(jc+2)%3)]) - (Mat0[RM3X3Ind((ir+1)%3,(jc+2)%3)]*Mat0[RM3X3Ind((ir+2)%3,(jc+1)%3)] );
+      inverted[RM3X3Ind(jc,ir)]=entry;
     }
-  }
+  }*/
 
-  if(std::sqrt(det*det)>0.0)
+  if(sqrt(det*det)>0.0)
   {
+    inverted[RM3X3Ind(0,0)] =        Mat0[RM3X3Ind(1,1)]*Mat0[RM3X3Ind(2,2)] - Mat0[RM3X3Ind(1,2)]*Mat0[RM3X3Ind(2,1)];
+    inverted[RM3X3Ind(0,1)] = -1.0*( Mat0[RM3X3Ind(0,1)]*Mat0[RM3X3Ind(2,2)] - Mat0[RM3X3Ind(2,1)]*Mat0[RM3X3Ind(0,2)]);
+    inverted[RM3X3Ind(0,2)] =        Mat0[RM3X3Ind(0,1)]*Mat0[RM3X3Ind(1,2)] - Mat0[RM3X3Ind(0,2)]*Mat0[RM3X3Ind(1,1)];
+    
+    inverted[RM3X3Ind(1,0)] = -1.0*( Mat0[RM3X3Ind(1,0)]*Mat0[RM3X3Ind(2,2)] - Mat0[RM3X3Ind(1,2)]*Mat0[RM3X3Ind(2,0)] );
+    inverted[RM3X3Ind(1,1)] =        Mat0[RM3X3Ind(0,0)]*Mat0[RM3X3Ind(2,2)] - Mat0[RM3X3Ind(0,2)]*Mat0[RM3X3Ind(2,0)];
+    inverted[RM3X3Ind(1,2)] = -1.0*( Mat0[RM3X3Ind(0,0)]*Mat0[RM3X3Ind(1,2)] - Mat0[RM3X3Ind(0,2)]*Mat0[RM3X3Ind(1,0)]);
+    
+    inverted[RM3X3Ind(2,0)] =        Mat0[RM3X3Ind(1,0)]*Mat0[RM3X3Ind(2,1)] - Mat0[RM3X3Ind(2,0)]*Mat0[RM3X3Ind(1,1)];
+    inverted[RM3X3Ind(2,1)] = -1.0*( Mat0[RM3X3Ind(0,0)]*Mat0[RM3X3Ind(2,1)] - Mat0[RM3X3Ind(2,0)]*Mat0[RM3X3Ind(0,1)]);
+    inverted[RM3X3Ind(2,2)] =        Mat0[RM3X3Ind(1,1)]*Mat0[RM3X3Ind(0,0)] - Mat0[RM3X3Ind(1,0)]*Mat0[RM3X3Ind(0,1)];
+    
     std::vector<double>::iterator it;
     for(it=inverted.begin(); it!=inverted.end(); ++it)
     {
@@ -1733,7 +1805,7 @@ std::vector<double>Mesh::InvertA3X3(const std::vector<double> & Mat0) const
 
 short int Mesh::RM3X3Ind(short int irow, short int jcol) const
 {
-  short int index=irow*3+jcol;
+  short int index=3*irow + jcol;
   return(index);
 }
 
@@ -1743,7 +1815,7 @@ std::vector<double> Mesh::TetInvJacobian(size_t iTet) const
   std::vector<double> invJacobian(9,0);
   if(consistentState)
   {
-    const std::vector<double> Jacobian=this->TetJacobian(iTet);
+    const std::vector<double> Jacobian=TetJacobian(iTet);
     invJacobian=InvertA3X3(Jacobian);
   }
   return(invJacobian);
@@ -1755,7 +1827,7 @@ std::vector<double> Mesh::TetInvJacobianTransponse(size_t iTet) const
   std::vector<double> invJacobianT(9,0);
   if(consistentState)
   {
-    const std::vector<double> JacobianT=this->TetJacobianTransponse(iTet);
+    const std::vector<double> JacobianT=TetJacobianTransponse(iTet);
     invJacobianT=InvertA3X3(JacobianT);
   }
   return(invJacobianT);
