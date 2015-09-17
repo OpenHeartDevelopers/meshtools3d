@@ -573,7 +573,7 @@ int main( int argc, char *argv[] )
 		// Defines some counters and flags
 		bool inTissue = true;
 		int newCounter = 0;
-		int notInElement = 0;
+		bool notInElement = false;
 		bool adjustMu = false;
 		bool wrongSurface = false;
 		double lastaMin = 0.0;
@@ -599,12 +599,13 @@ int main( int argc, char *argv[] )
 				///////////////////////////////
 				// Quick check to see if we are not in the element we should be in
 				///////////////////////////////                 
+				// This part seems not used
 				double * r = NULL;
 				r = new double[3];
 				r[0] = x;
 				r[1] = y;
 				r[2] = z;
-				notInElement = 0;
+				notInElement = false;
 				for(int q=0;q<3;q++)
 				{
 					int qA = 0;
@@ -618,7 +619,7 @@ int main( int argc, char *argv[] )
 					}
 					if(qA > 3 || qB > 3)
 					{
-						notInElement = 1;
+						notInElement = true;
 					}	
 				}
         delete [] r;
@@ -711,7 +712,10 @@ int main( int argc, char *argv[] )
 							// Defines closest intersecting face
 							intFace = n;
 							for(int h=0;h<3;h++)
-								Nmin[h] = N[h];
+							{
+							  Nmin[h] = N[h];
+							}
+								
 						}
 						// Calculates NORMAL distance of point to plane
 						double a_n = normalDistanceOfPointToPlane(N,triNodes[0],coords,x_s,y_s,z_s);

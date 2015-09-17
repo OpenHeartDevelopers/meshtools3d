@@ -64,7 +64,7 @@ void ThicknessEvaluation::evalThickness()
   const std::vector<Point> & coords = _ptrmesh->Pt();
   Chrono chrono;
   std::cout << "******************************************************"<<std::endl;
-  std::cout << "* Computing wall thickness (M. Bishop Algorithm) ... *"<<std::endl;
+  std::cout << "* Computing wall thickness (Martin's  Algorithm) ... *"<<std::endl;
   std::cout << "******************************************************"<<std::endl;
   chrono.start();
   for(facetype::iterator it=illumTris.begin();it!=illumTris.end();it++)
@@ -165,9 +165,7 @@ void ThicknessEvaluation::evalThickness()
       //////////////////////////////////////////////////////////
       // Check for intersection with faces of current element //
       //////////////////////////////////////////////////////////
-      
       // Defines things to define closest face
-      //double aMin = DBL_MAX;
       double aMin = 1000000.0;
       
       short int intFace = -1;
@@ -241,13 +239,9 @@ void ThicknessEvaluation::evalThickness()
 							  for(short int hCoord=0; hCoord<3; hCoord++)
 							  {
 							    v[hCoord] = v[hCoord]/magV;
-							  }
-							  //x=x+dlta*v
-							  for(short int hCoord=0; hCoord<3; hCoord++)
-							  {
+							    //x=x+delta*v
 							    x_coord[hCoord] =x_coord[hCoord] + delta*v[hCoord];	
 							  }
-							  
                 a_n = normalDistanceOfPointToPlane(geoQuant.N,coords[triNodes[0]],x_coord);
                 a   = distanceOfPointToPlane(geoQuant.N,coords[triNodes[0]],x_coord, mu);
 							  if(a >= 0 && a<aMin)
@@ -355,8 +349,8 @@ void ThicknessEvaluation::evalThickness()
             if( (Nmin[0]*mu_new[0] + Nmin[1]*mu_new[1] + Nmin[2]*mu_new[2]) >= 0)
 						{	
 							  adjustMu = true;
-							  mu_new = ElementTetraGradient(newElement);
 							  std::vector<double> mu_old = ElementTetraGradient(oldElement);
+							  mu_new = ElementTetraGradient(newElement);
 							  for(short int hCoord=0; hCoord<3; hCoord++)
 							  {
 							    mu_new[hCoord] = 0.5*(mu_new[hCoord] + mu_old[hCoord]);
@@ -374,7 +368,7 @@ void ThicknessEvaluation::evalThickness()
             // Move-up to face of element and update position
             
             //x = x_s +aMin*mu
-            x_coord=waxpy(mu, x_coord_s,aMin);
+            x_coord=waxpy(mu, x_coord_s, aMin);
 						
 						
 						////////////////////////////////////////////////////////////////
@@ -530,6 +524,7 @@ GrahmOperatorOutput ThicknessEvaluation::GrahmOperations( const Point & p0, cons
   std::vector<double> N(3,0);
   std::vector<double> p0p1(3,0), p0p2(3,0);
   std::vector<double> p0pxc(3,0);
+  GrahmOperatorOutput result;
   for(short int jCoord=0;jCoord<3;jCoord++)
   {
 		p0p1[jCoord] = p0.coord[jCoord] - p1.coord[jCoord];
@@ -564,14 +559,13 @@ GrahmOperatorOutput ThicknessEvaluation::GrahmOperations( const Point & p0, cons
     }
     dist=-1.0*dist;
   }
+	result.N=N;
+	result.dist=dist;
 	std::vector<double> projPt(3,0);
 	for(short int jCoord=0;jCoord<3;jCoord++)
 	{
 	  projPt[jCoord] = p0.coord[jCoord]+(p0pxc[jCoord]-dist*N[jCoord]);
 	}
-	GrahmOperatorOutput result;
-	result.N=N;
-	result.dist=dist;
 	result.projPt=projPt;
 	
 	return(result);
