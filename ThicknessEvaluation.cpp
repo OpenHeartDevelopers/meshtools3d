@@ -705,7 +705,8 @@ void ThicknessEvaluation::evalThicknessAlternativeMethod()
           const Point & p1= coords[*itcon];
           double dist = pointDistances(p1,p0);
           distances.insert(std::pair<double,size_t>(dist,*itcon));
-          double dphidl=(_sol[*itcon]-_sol[pstart])/dist;
+          //Cesare: put -1 because direction of gradient is changed (now increase from endo to epi
+          double dphidl=-1.0*(_sol[*itcon]-_sol[pstart])/dist;
           dphi.insert(std::pair<double,size_t>(dphidl,*itcon));
         }
       }
@@ -721,7 +722,7 @@ void ThicknessEvaluation::evalThicknessAlternativeMethod()
       
       std::multimap<double,size_t>::iterator phiIter = dphi.begin(), 
                                              distIter = distances.begin();
-      if((phiIter->first)>=0) //case 1) not on a dewcent dir: choose the nearest point and go ahead
+      if((phiIter->first)>=0) //case 1) not on a descent dir: choose the nearest point and go ahead
       {
         pend=(distIter->second);
       }

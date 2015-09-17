@@ -27,7 +27,7 @@ verbose         = 1
 
 [others]
 eval_thickness  = 1
-
+thickalgo       = 2 #1: Martin's algo; 2: Cesare's algo
 
 [output]
 outdir          = ../sphereCoarse4ThicknessOUT
