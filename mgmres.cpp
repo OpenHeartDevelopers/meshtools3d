@@ -1200,14 +1200,32 @@ void pmgmres_ilu_cr ( long int n, long int nz_num, long int ia[], long int ja[],
   v = new double[(mr+1)*n];
   y = new double[mr+1];
 
+  if ( verbose>1 )
+  {
+	std::cout<<"Rearranging CR..."<<std::endl;
+  }
   rearrange_cr ( n, nz_num, ia, ja, a );
 
+  if ( verbose>1 )
+  {
+	std::cout<<"...done, diagonal pointer to cr..."<<std::endl;
+  }
+
   diagonal_pointer_cr ( n, nz_num, ia, ja, ua );
+
+  if ( verbose>1 )
+  {
+	std::cout<<"...done, ilu_cr..."<<std::endl;
+  }
 
   ilu_cr ( n, nz_num, ia, ja, a, ua, l );
 
   if ( verbose>0 )
   {
+	if ( verbose>1 )
+	{
+		std::cout<<"...done"<<std::endl;
+	}
     cout << "\n";
     cout << "PMGMRES_ILU_CR\n";
     cout << "  Number of unknowns = " << n << "\n";
