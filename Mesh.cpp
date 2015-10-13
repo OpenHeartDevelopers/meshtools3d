@@ -768,6 +768,90 @@ void Mesh::evalBoundaryLabels()
     {
       _Epi.insert(static_cast<long int>(*ite));
     }
+    
+    //now check that endo and epi are correct
+    
+    Point endoBar, epiBar;
+    for(std::set<long int>::iterator endo_iter=_Endo.begin(); endo_iter !=_Endo.end(); ++endo_iter)
+    {
+      for(short int  jcoord=0; jcoord<3; jcoord++)
+      {
+        endoBar.coord[jcoord] = endoBar.coord[jcoord] + (points[*endo_iter]).coord[jcoord];
+      }
+    }
+    
+    for(std::set<long int>::iterator epi_iter=_Epi.begin(); epi_iter !=_Epi.end(); ++epi_iter)
+    {
+      for(short int  jcoord=0; jcoord<3; jcoord++)
+      {
+        epiBar.coord[jcoord] = epiBar.coord[jcoord] + (points[*epi_iter]).coord[jcoord];
+      }
+    }
+    
+    for(short int  jcoord=0; jcoord<3; jcoord++)
+    {
+      endoBar.coord[jcoord] = endoBar.coord[jcoord]/_Endo.size();
+      epiBar.coord[jcoord] =  epiBar.coord[jcoord]/_Epi.size();
+    }
+
+    //now the distances
+    std::vector<double>endodist(2,1.e32);
+    std::vector<double>epidist(2,1.e32);
+    
+    for(std::set<long int>::iterator endo_iter=_Endo.begin(); endo_iter !=_Endo.end(); ++endo_iter)
+    {
+      std::vector<double> dist(2,0.0);
+      for(short int  jcoord=0; jcoord<3; jcoord++)
+      {
+        dist[0] = dist[0] + (points[*endo_iter].coord[jcoord]-endoBar.coord[jcoord])*(points[*endo_iter].coord[jcoord]-endoBar.coord[jcoord]);
+        dist[1] = dist[1] + (points[*endo_iter].coord[jcoord]-epiBar.coord[jcoord])*(points[*endo_iter].coord[jcoord]-epiBar.coord[jcoord]);
+      }
+      dist[0] = sqrt(dist[0]);
+      dist[1] = sqrt(dist[1]);
+      for(short int jdist=0; jdist<2; jdist++)
+      {
+        if(dist[jdist]<endodist[jdist])
+        {
+          endodist[jdist] = dist[jdist];
+        }
+      }
+    }
+    
+    for(std::set<long int>::iterator epi_iter=_Epi.begin(); epi_iter !=_Epi.end(); ++epi_iter)
+    {
+      std::vector<double> dist(2,0.0);
+      for(short int  jcoord=0; jcoord<3; jcoord++)
+      {
+        dist[0] = dist[0] + (points[*epi_iter].coord[jcoord]-endoBar.coord[jcoord])*(points[*epi_iter].coord[jcoord]-endoBar.coord[jcoord]);
+        dist[1] = dist[1] + (points[*epi_iter].coord[jcoord]-epiBar.coord[jcoord])*(points[*epi_iter].coord[jcoord]-epiBar.coord[jcoord]);
+      }
+      dist[0] = sqrt(dist[0]);
+      dist[1] = sqrt(dist[1]);
+      for(short int jdist=0; jdist<2; jdist++)
+      {
+        if(dist[jdist]<endodist[jdist])
+        {
+          epidist[jdist] = dist[jdist];
+        }
+      }
+    }
+
+  //now: endodist: distance of endocardium point form endo center and epicenter
+  //now: epidist: distance of endocardium point form endo center and epicenter
+  std::vector<bool> cmpVec(2,false);
+  cmpVec[0]=(endodist[0]<=epidist[0]);
+  cmpVec[1]=(endodist[1]<=epidist[1]);
+  if(!(cmpVec[0] | cmpVec[1]))
+  {
+    std::set<long int> _endotmp(_Epi);
+    _Epi.clear();
+    _Epi=_Endo;
+    _Endo.clear();
+    _Endo=_endotmp;
+     _endotmp.clear();
+  }
+    
+    
   }// end if on consistence of mesh
 }
 
