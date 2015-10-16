@@ -200,8 +200,7 @@ void atx_st ( long int n, long int nz_num, long int ia[], long int ja[], double 
 }
 //****************************************************************************80
 
-void ax_cr ( long int n, long int nz_num, long int ia[], long int ja[], double a[], double x[],
-  double w[] )
+void ax_cr ( const long int & n, const long int & nz_num, const long int * ia, const long int * ja, const double * a, const double *x,  double * w )
 
 //****************************************************************************80
 //
@@ -389,7 +388,7 @@ void ax_st ( long int n, long int nz_num, long int ia[], long int ja[], double a
 }
 //****************************************************************************80
 
-void diagonal_pointer_cr ( long int n, long int nz_num, long int ia[], long int ja[], long int ua[] )
+void diagonal_pointer_cr ( const long int & n, const long int & nz_num, const long int * ia, const long int * ja, long int * ua )
 
 //****************************************************************************80
 //
@@ -462,8 +461,7 @@ void diagonal_pointer_cr ( long int n, long int nz_num, long int ia[], long int 
 }
 //****************************************************************************80
 
-void ilu_cr ( long int n, long int nz_num, long int ia[], long int ja[], double a[], long int ua[],
-  double l[] )
+void ilu_cr ( const long int & n, const long int & nz_num, const long int * ia, const long int * ja, const double * a, long int * ua,  double * l )
 
 //****************************************************************************80
 //
@@ -598,8 +596,7 @@ void ilu_cr ( long int n, long int nz_num, long int ia[], long int ja[], double 
 }
 //****************************************************************************80
 
-void lus_cr ( long int n, long int nz_num, long int ia[], long int ja[], double l[], long int ua[], 
-  double r[], double z[] )
+void lus_cr ( const long int & n, const long int & nz_num, const long int *ia, const long int *ja, const double *l, const long int *ua,   const double *r, double * z )
 
 //****************************************************************************80
 //
@@ -998,7 +995,7 @@ void mgmres_st ( long int n, long int nz_num, long int ia[], long int ja[], doub
 }
 //****************************************************************************80
 
-void mult_givens ( double c, double s, long int k, double g[] )
+void mult_givens ( const double & c, const double & s, const long int & k, double * g )
 
 //****************************************************************************80
 //
@@ -1400,7 +1397,7 @@ void pmgmres_ilu_cr ( long int n, long int nz_num, long int ia[], long int ja[],
 }
 //****************************************************************************80
 
-double r8vec_dot ( long int n, double a1[], double a2[] )
+double r8vec_dot ( const long int & n, const double * a1, const double * a2 )
 
 //****************************************************************************80
 //
@@ -1441,7 +1438,7 @@ double r8vec_dot ( long int n, double a1[], double a2[] )
 }
 //****************************************************************************80
 
-double *r8vec_uniform_01 ( long int n, long int *seed )
+double *r8vec_uniform_01 ( const long int & n, long int *seed )
 
 //****************************************************************************80
 //
@@ -1541,7 +1538,7 @@ double *r8vec_uniform_01 ( long int n, long int *seed )
 }
 //****************************************************************************80
 
-void rearrange_cr ( long int n, long int nz_num, long int ia[], long int ja[], double a[] )
+void rearrange_cr ( const long int & n, const long int & nz_num, const long int * ia, long int * ja, double * a )
 
 //****************************************************************************80
 //
