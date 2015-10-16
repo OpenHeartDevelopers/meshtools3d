@@ -209,6 +209,12 @@ int main(int argc,char **argv)
 
   CarpMesh.writeBoundaryLabels(out_dir, out_name);
   CarpMesh.meshRescaling(rescaling); //rescale the whole mesh; not on output. So output of rescaling is 1 now
+  if(out_carp)
+  {
+      std::string cfileoutName=out_dir+"/"+out_name;
+      CarpMesh.writeCarpMesh(cfileoutName,out_carp_binary);
+  }
+
   
   VtkWriter writerVTK(& CarpMesh, out_vtk_binary);
   if(out_vtk)
@@ -264,12 +270,6 @@ int main(int argc,char **argv)
     
   }
   
-  if(out_carp)
-  {
-      std::string cfileoutName=out_dir+"/"+out_name;
-      CarpMesh.writeCarpMesh(cfileoutName,out_carp_binary);
-  }
-
   
   if(out_vtk)
   {
