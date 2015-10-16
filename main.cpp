@@ -118,6 +118,17 @@ int main(int argc,char **argv)
     
     const Tr & triang= c3t3.triangulation();  
     size_t nbPt=static_cast<size_t>(triang.number_of_vertices());
+    size_t nbTet=static_cast<size_t>(c3t3.number_of_cells_in_complex());
+    if(nbPt<3 ||nbTet<1)
+    {
+      std::cerr<<"Problem with Triangulations, only "<<nbPt<<" Vertices"<<std::endl;
+      exit(1);
+    }
+    else
+    {
+      std::cout<<"Vertices: "<<nbPt<<std::endl;
+      std::cout<<"Tetra:    "<<nbTet<<std::endl;
+    }
     CarpMesh.initializePtVector(nbPt);
     size_t icount=0;
     std::map<Tr::Vertex_handle, size_t> Vertices;
@@ -152,7 +163,7 @@ int main(int argc,char **argv)
     }
 
 //TETRA
-    size_t nbTet=static_cast<size_t>(c3t3.number_of_cells_in_complex());
+    
     
     CarpMesh.initializeTetraVector(nbTet);
     icount=0;
