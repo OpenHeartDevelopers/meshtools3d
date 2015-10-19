@@ -855,6 +855,14 @@ void Mesh::evalBoundaryLabels()
   }// end if on consistence of mesh
 }
 
+//clear all except endo and epi; used to free memory
+void Mesh::unsetBoundaryLabels()
+{
+  pointRegions.clear();
+  regionLabels.clear();
+  nbElToRegionLab.clear();
+
+}
 
 
 void Mesh::writeBoundaryLabels(std::string & fileDir, std::string & FileName)

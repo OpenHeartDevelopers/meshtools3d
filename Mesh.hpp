@@ -155,6 +155,7 @@ class Mesh
     void preprocessingOperations();
     void extractBoundary();
     void evalBoundaryLabels();
+    void unsetBoundaryLabels();
     void clear();
     void initializeConnectivities();
     void writeCarpMesh(std::string outputFileName, bool binary=false, double rescaling=1.0);
