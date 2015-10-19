@@ -226,7 +226,7 @@ int main(int argc,char **argv)
   if(eval_thickness)
   {
     
-    if(param_file("others/thickalgo",1))
+    if(!(param_file("others/thickalgo",1)==2))
     {
       CarpMesh.initializeConnectivities();
     }
