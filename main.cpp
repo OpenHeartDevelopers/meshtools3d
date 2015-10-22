@@ -120,7 +120,7 @@ int main(int argc,char **argv)
       size_t nbTet=static_cast<size_t>(c3t3.number_of_cells_in_complex());
       if(nbPt<3 ||nbTet<1)
       {
-        std::cerr<<"Problem with Triangulations, only "<<nbPt<<" Vertices"<<std::endl;
+        std::cerr<<"Problem with Triangulations, only "<<nbPt<<" Vertices and "<<nbTet<<"Thetraedra"<<std::endl;
         exit(1);
       }
       else
