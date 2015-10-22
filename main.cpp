@@ -121,6 +121,10 @@ int main(int argc,char **argv)
       if(nbPt<3 ||nbTet<1)
       {
         std::cerr<<"Problem with Triangulations, only "<<nbPt<<" Vertices and "<<nbTet<<"Thetraedra"<<std::endl;
+        std::string mfileoutName=out_dir+"/"+out_name+".mesh";
+        std::ofstream medit_file(mfileoutName.c_str());
+        c3t3.output_to_medit(medit_file);
+        medit_file.close();
         exit(1);
       }
       else
