@@ -87,11 +87,11 @@ public:
   //     -- search for option and get argument at cursor++
   int          follow(int           Default, const char* Option);
   double       follow(const double& Default, const char* Option);
-  const char*  follow(const char*   Default, const char* Option);
+  std::string  follow(std::string  Default, const char* Option);
   //     -- search for one of the given options and get argument that follows it
   int          follow(int           Default, unsigned No, const char* Option, ...);
   double       follow(const double& Default, unsigned No, const char* Option, ...);
-  const char*  follow(const char*   Default, unsigned No, const char* Option, ...);
+  std::string  follow(std::string   Default, unsigned No, const char* Option, ...);
   //     -- directly followed arguments
   int          direct_follow(int           Default, const char* Option);
   double       direct_follow(const double& Default, const char* Option);

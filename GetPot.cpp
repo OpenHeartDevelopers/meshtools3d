@@ -531,11 +531,11 @@ GetPot::follow(const double& Default, const char* Option)
     return next(Default);
 }
 
-inline const char*
-GetPot::follow(const char* Default, const char* Option)
+std::string
+GetPot::follow(std::string Default, const char* Option)
 {
     if( search(Option) == false ) return Default;
-    return next(Default);
+    return next(Default.c_str());
 }
 
 //     -- second follow() function group
@@ -578,20 +578,30 @@ GetPot::follow(const double& Default, unsigned No, const char* P, ...)
     return Default;
 }
 
-inline const char*
-GetPot::follow(const char* Default, unsigned No, const char* P, ...)
+inline std::string //const char*
+GetPot::follow(std::string Default, unsigned No, const char* P, ...)
 {
-    if( No == 0 ) return Default;
-    if( search(P) == true ) return next(Default);
+    if( No == 0 )
+    {
+      return Default;
+    }
+    if( search(P) == true )
+    {
+      std::string res=next(Default.c_str());
+      return(res);
+    }
 
     va_list ap;
     va_start(ap, P);
-    for(unsigned i=1; i<No; i++) {
-	char* Opt = va_arg(ap, char *);
-	if( search(Opt) == true ) {
-	    va_end(ap);
-	    return next(Default);
-	}
+    for(unsigned i=1; i<No; i++)
+    {
+      char* Opt = va_arg(ap, char *);
+      if( search(Opt) == true )
+      {
+        va_end(ap);
+        std::string res=next(Default.c_str());
+        return(res);
+      }
     }
     va_end(ap);
     return Default;
@@ -645,24 +655,18 @@ GetPot::match_starting_string(const char* StartString)
     {
       if( strncmp(StartString, argv[c].c_str(), N) == 0)
       {
-        cursor = c;
-        search_failed_f = false;
+        cursor = c; search_failed_f = false;
         return &(argv[c].c_str()[N]);
       }
     }
 
-    if( ! search_loop_f )
-      return 0;
+    if( ! search_loop_f ) return(NULL);
 
     // (*) second loop from 0 to old cursor position
-    for(c = 1; c < OldCursor; c++)
-    {
-      if( strncmp(StartString, argv[c].c_str(), N) == 0)
-      {
-        cursor = c;
-        search_failed_f = false;
-        return &(argv[c].c_str()[N]); }
-      }
+    for(c = 1; c < OldCursor; c++) {
+	if( strncmp(StartString, argv[c].c_str(), N) == 0)
+	{ cursor = c; search_failed_f = false; return &(argv[c].c_str()[N]); }
+    }
     return 0;
 }
 ///////////////////////////////////////////////////////////////////////////////
