@@ -24,8 +24,8 @@ int main(int argc,char **argv)
 {
 
   GetPot command_line(argc,argv);
-	const char* data_file_name = command_line.follow("data", 2,  "-f","--file");
-	GetPot param_file(data_file_name);
+	std::string data_file_name = command_line.follow("data", 2,  "-f","--file");
+	GetPot param_file(data_file_name.c_str());
 	if( command_line.search(2, "-i","--info") ) 
 	{
 		param_file.print();
