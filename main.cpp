@@ -50,7 +50,12 @@ int main(int argc,char **argv)
   bool out_vtk_binary        = param_file("output/out_vtk_binary",false);
   bool out_potential         = param_file("output/out_potential",false);
   double rescaling           = param_file("meshing/rescaleFactor",1.0);
-  
+
+  seg_dir  = command_line.follow(seg_dir, 2,  "-seg_dir","--segmentation_directory");
+  seg_name = command_line.follow(seg_name, 2,  "-seg_name","--segmentation_name");
+
+  out_dir  = command_line.follow(out_dir, 2,  "-out_dir","--output_directory");
+  out_name = command_line.follow(out_name, 2,  "-out_name","--output_name");
 
 #ifdef CGAL_LINKED_WITH_TBB
   int numThreads = 1;
