@@ -72,7 +72,6 @@ Remark: TBB_NUM_THREADS is NOT a environment variable of TBB; it will affects on
 * Mesh class can evaluate Tetra and Tria centroids
 * Laplace solver can evaluate Tetra Gradients for post-processing
 * vtk visualize also output regions
-<<<<<<< HEAD
 * added a routine to write Laplace solution in a VTK file
 
 22 May 2015
