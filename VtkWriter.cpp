@@ -156,7 +156,7 @@ void VtkWriter::writeVariable(const unkVecType &  dvar, std::string nameVar, Typ
 //Write the header of the file
 void VtkWriter::M_write_header( std::ofstream & VTKFile,std::string infoStr )
 {
-  VTKFile<<"# vtk DataFile Version 4.2"<<std::endl;
+  VTKFile<<"# vtk DataFile Version 4.0"<<std::endl;
   VTKFile<<infoStr<<std::endl;
   if(M_is_binary)
   {

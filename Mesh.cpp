@@ -1,4 +1,5 @@
 #include "Mesh.hpp"
+#include "VtkWriter.hpp"
 #include<string>
 #include<iostream>
 #include<iomanip>
@@ -293,6 +294,13 @@ void Mesh::readFromFile(const  std::string & inputFileame)
 
 void Mesh::evalTriangles(mapfacetype bound_faces, size_t & nbTri, bool outwardNormOnBoundary)
 {
+  /* This routine extracts the triangles (faces) on the boundary and fills the triangle 
+     attribute and the triaToTet attribute, that maps the triangle to the tetrahedra the face 
+     belongs to; the region label of the triangle is the same of the tetra it belongs to
+     if Flags outwardNormOnBoundary is settet to True, then the triangle nodes are re-oriented
+     in such a way the normal vector points outside the tetraedron
+  */
+  
   nbTri=bound_faces.size();
   triangles.resize(nbTri);
   triaToTet.resize(nbTri);
@@ -611,8 +619,15 @@ double Mesh::VolTet(size_t iTet) const
   return(volume);
 }
 
-void Mesh::evalBoundaryLabels()
+void Mesh::evalBoundaryLabels(bool debug,std::string debugDir,size_t print_interval)
 {
+  /*
+    This routine evaluates the boundary labels
+    - regionLabels is the set with the list of all the boundary label values
+    - pointRegions is a map (region subdivision type) that, for each region label, 
+        maps the point IDs with that label. Two regions can share points a priori
+  */
+  
   if(consistentState && nTri())
   {
     nbElToRegionLab.clear();
@@ -622,11 +637,14 @@ void Mesh::evalBoundaryLabels()
     typedef std::map<size_t, connectSetType> connectivityType;
         
     connectivityType connectivity; //connectivity of triangles (surface connectivity)
+    
+    //NodeToregionMap is a map between a  point and its regions; a point at the beginning can have more than one region
     nodeToRegionMapType NodeToregionMap;
     
     // determine initial region labels; 
     // determine initial region to node mapping
     // fill connectivity of surface points (on triangles) and node to region mapping
+    // INITIALIZATION
     for(size_t iTri=0; iTri<nTri(); iTri++)
     {
       int labOfRegion=triangles[iTri].regionLabel;
@@ -644,13 +662,30 @@ void Mesh::evalBoundaryLabels()
           }
       }
     }//end loop on triangles
-
-    //algo on divisions starts
+    
+    std::set<int> regionsDebug;
+    VtkWriter * writerVTK=NULL;
+    if(debug)
+    {
+        size_t nMax=0;
+        int ireg=-1;
+        for(regionSubdivisionTypeIterator itRegToNodeMap=pointRegions.begin(); itRegToNodeMap!=pointRegions.end(); ++itRegToNodeMap)
+        {
+            size_t nPtReg=(itRegToNodeMap->second).size();
+            if(nPtReg>nMax)
+            {
+                ireg=itRegToNodeMap->first;
+            }
+        }
+        regionsDebug.insert(ireg);
+    }
+        
+    //algo on divisions starts; iterate on the region labels
     for(regionSubdivisionTypeIterator itRegToNodeMap=pointRegions.begin(); itRegToNodeMap!=pointRegions.end(); ++itRegToNodeMap)
     {
       int labelOfRegions=itRegToNodeMap->first;
       // iterate on points belonging to the region labelOfRegions
-      // extract the local connectivity of the region
+      // extract the local connectivity of the region regionconnect
       connectivityType regionconnect;
       regionconnect.clear();
       for(connectSetTypeIterator cRegIt=(itRegToNodeMap->second).begin(); cRegIt!=(itRegToNodeMap->second).end(); ++cRegIt)
@@ -686,20 +721,65 @@ void Mesh::evalBoundaryLabels()
       std::set<size_t> RegionNodes, Queue;
       Queue.insert(seed);
       RegionNodes.insert(seed);
+      /* Here the algorithm grows: expands the region RegionNodes using the regional connectivity
+         it iterates until all the nodes connected are covered
+      */
+      
+      size_t localCounter=0;
       while(!Queue.empty())
       {
         size_t candidate= *(Queue.begin());
         Queue.erase(candidate);
-
-        //regionconnect : map<size_t, connectSetType>
+        //regionconnect : map<size_t, connectSetType> isw the local connectivity on the region
         for(connectSetTypeIterator countNode=regionconnect.at(candidate).begin(); countNode!=regionconnect.at(candidate).end(); ++countNode)
         {
-          //check that countNode is inside the region
+          //check if countNode is inside the region
           if(RegionNodes.find(*countNode)==RegionNodes.end())
           {
             //if not member of nodesRegion, add it
             RegionNodes.insert(*countNode);
             Queue.insert(*countNode);
+          }
+        }
+        //debug (printing of the output)
+        if(debug)
+        {
+          if (regionsDebug.find(labelOfRegions) != regionsDebug.end())
+          {//
+              
+              bool printSol=false;
+              size_t nPtLabeled=RegionNodes.size();
+              size_t nQuotient= std::floor(nPtLabeled/print_interval);
+              if(nQuotient>localCounter)
+              {
+                  localCounter=nQuotient;
+                  printSol=true;
+              }
+              if(Queue.empty())
+              {
+                localCounter=localCounter+1;
+              }
+              if(Queue.empty()|| printSol )
+              { 
+                  // label the points
+                  std::vector<double> meshLabels(this->nPt(),NAN);
+                  for(std::set<size_t>::iterator debugit = RegionNodes.begin(); debugit!=RegionNodes.end(); ++debugit)
+                  {
+                      meshLabels[*debugit]=labelOfRegions;
+                  }
+                  VtkWriter writerVTK(this,true);
+                  writerVTK.setOutputDir(debugDir);
+                  std::ostringstream indexIte, indexReg;
+                  indexReg<<labelOfRegions;
+                  indexIte<<nQuotient;
+                  std::string fName="regions_debug_"+indexReg.str()+"_"+indexIte.str();
+                  writerVTK.setPrefixName(fName);
+                  // now open the files and write the mesh geometry
+                  writerVTK.openFileForOutput();
+                  std::string varName="debugVar_"+indexReg.str();
+                  writerVTK.writeVariable(meshLabels, varName,VtkWriter::Scalar);
+                  writerVTK.CloseFile();
+              }
           }
         }
       }//end of while
@@ -711,6 +791,14 @@ void Mesh::evalBoundaryLabels()
         //first: create a new label region
         int newRegionLabel=1+(*(regionLabels.rbegin()));
         regionLabels.insert(newRegionLabel);
+        if(debug)
+        {
+          if (regionsDebug.find(labelOfRegions) != regionsDebug.end())
+          {
+              regionsDebug.insert(newRegionLabel);
+          }
+          
+        }
         
         //copy inside newSet the whole set of point belonging to the current region 
         connectSetType newSet=(itRegToNodeMap->second);
@@ -836,22 +924,21 @@ void Mesh::evalBoundaryLabels()
       }
     }
 
-  //now: endodist: distance of endocardium point form endo center and epicenter
-  //now: epidist: distance of endocardium point form endo center and epicenter
-  std::vector<bool> cmpVec(2,false);
-  cmpVec[0]=(endodist[0]<=epidist[0]);
-  cmpVec[1]=(endodist[1]<=epidist[1]);
-  if(!(cmpVec[0] | cmpVec[1]))
-  {
-    std::set<long int> _endotmp(_Epi);
-    _Epi.clear();
-    _Epi=_Endo;
-    _Endo.clear();
-    _Endo=_endotmp;
-     _endotmp.clear();
-  }
-    
-    
+    //now: endodist: distance of endocardium point form endo center and epicenter
+    //now: epidist: distance of endocardium point form endo center and epicenter
+    std::vector<bool> cmpVec(2,false);
+    cmpVec[0]=(endodist[0]<=epidist[0]);
+    cmpVec[1]=(endodist[1]<=epidist[1]);
+    if(!(cmpVec[0] | cmpVec[1]))
+    {
+      std::set<long int> _endotmp(_Epi);
+      _Epi.clear();
+      _Epi=_Endo;
+      _Endo.clear();
+      _Endo=_endotmp;
+       _endotmp.clear();
+    }
+
   }// end if on consistence of mesh
 }
 
@@ -1603,6 +1690,19 @@ Mesh::~Mesh()
 
 void Mesh::extractBoundary()
 {
+  /* This routine extracts the boundary faces and fill a bound_faces
+     type  that is a multi-map; for each face the entries are:
+     key:    among the faces nodes, is the smaller node global label
+     value:  a pair, composed by:
+             - the label of the Tetrahedra element the face belongs to
+             - the list of the Global label of the nodes of the face
+    This routine iterates on all the tetra, then:
+    - extract the faces of the tetra;
+    -- if the face of the tetra is not in the boundary faces list, the face is added
+    -- if the face of the tetra is in the boundary faces list, the face is removed
+    At the end of the execution, the remaining faces are those on the boundary
+  */
+  
   typedef std::pair <mapfacetype::iterator, mapfacetype::iterator> range_iter_type;
   if(consistentState)
   { 
@@ -1621,6 +1721,9 @@ void Mesh::extractBoundary()
       }
     }
     mapfacetype bound_faces;
+    // a multi-list of pairs:
+    // the first argument is a search key corresponding to the point with smaller global label
+    // the second argument is compose by a pair: element lable and node global labels
     bound_faces.clear();
     for(size_t iTet=0; iTet<nTet; iTet++)
     {

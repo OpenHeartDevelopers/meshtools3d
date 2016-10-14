@@ -49,6 +49,9 @@ int main(int argc,char **argv)
   bool out_vtk               = param_file("output/out_vtk",false);
   bool out_vtk_binary        = param_file("output/out_vtk_binary",false);
   bool out_potential         = param_file("output/out_potential",false);
+  bool debug_output          = param_file("output/debug_output",false);
+  size_t debug_frequency     = param_file("output/debug_frequency",100000);
+  
   double rescaling           = param_file("meshing/rescaleFactor",1.0);
 
   seg_dir  = command_line.follow(seg_dir, 2,  "-seg_dir","--segmentation_directory");
@@ -204,7 +207,7 @@ int main(int argc,char **argv)
 
   std::cout<<"boundary re-labeling..."<<std::flush;
   chrono2.start();
-  CarpMesh.evalBoundaryLabels();
+  CarpMesh.evalBoundaryLabels(debug_output,out_dir,debug_frequency);
   chrono2.stop();
   std::cout<<" done in "<<chrono2<<std::endl;
   chrono2.reset();

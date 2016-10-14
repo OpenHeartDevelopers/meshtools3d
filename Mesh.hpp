@@ -154,7 +154,7 @@ class Mesh
     void initializeTetraVector(size_t dim);
     void preprocessingOperations();
     void extractBoundary();
-    void evalBoundaryLabels();
+    void evalBoundaryLabels(bool debug=false,std::string debugDir="",size_t print_interval=100000);
     void unsetBoundaryLabels();
     void clear();
     void initializeConnectivities();
