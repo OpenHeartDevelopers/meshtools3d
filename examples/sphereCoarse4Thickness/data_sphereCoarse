@@ -27,7 +27,7 @@ verbose         = 1
 
 [others]
 eval_thickness  = 1
-thickalgo       = 2 #1: Martin's algo; 2: Cesare's algo
+thickalgo       = 1 #1: Martin's algo; 2: Cesare's algo
 
 [output]
 outdir          = ../sphereCoarse4ThicknessOUT
@@ -38,3 +38,5 @@ out_carp_binary = 0
 out_vtk         = 1
 out_vtk_binary  = 1
 out_potential   = 1
+debug_output    = 0
+debug_frequency = 500
