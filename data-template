@@ -7,19 +7,17 @@
 # see CGAL doc for meshing otpions.
 
 [segmentation]
-seg_dir = /home/cc14/Desktop/wallthicknessMaps/wallthicknessMaps/901001/INR
-seg_name = LA.inr
+seg_dir = /home/common/CGAL-4.6/examples/Mesh_3/data
+seg_name = liver.inr.gz
 
 
 [meshing]
 facet_angle         = 30
-facet_size          = 0.2
-facet_distance      = 6
+facet_size          = 6.0
+facet_distance      = 4
 cell_rad_edge_ratio = 1.4
-cell_size           = 0.2
-
-# rescaling for carp and vtk output 
-rescaleFactor       = 1000
+cell_size           = 8.0
+rescaleFactor       = 1.0  # rescaling for carp and vtk output 
 
 [laplacesolver]
 abs_toll        = 1e-6
@@ -34,11 +32,13 @@ thickalgo       = 1  #1: Martin Bishop Algorithm; 2: Cesare Corrado Algorithm
 
 
 [output]
-outdir          = /home/cc14/cgalTests/LA2
-name            = LA
+outdir          = /home/cc14/cgalTests/liver
+name            = liver
 out_medit       = 1
 out_carp        = 1
 out_carp_binary = 0
 out_vtk         = 1
 out_vtk_binary  = 1
 out_potential   = 1
+debug_output    = 0
+debug_frequency = 100

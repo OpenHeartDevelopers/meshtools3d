@@ -664,19 +664,22 @@ void Mesh::evalBoundaryLabels(bool debug,std::string debugDir,size_t print_inter
     }//end loop on triangles
     
     std::set<int> regionsDebug;
-    VtkWriter * writerVTK=NULL;
     if(debug)
     {
-        size_t nMax=0;
-        int ireg=-1;
-        for(regionSubdivisionTypeIterator itRegToNodeMap=pointRegions.begin(); itRegToNodeMap!=pointRegions.end(); ++itRegToNodeMap)
+        regionSubdivisionTypeIterator itRegToNodeMap=pointRegions.begin();
+        int ireg=itRegToNodeMap->first;
+        size_t nMax=(itRegToNodeMap->second).size();
+        
+        
+        for(itRegToNodeMap=pointRegions.begin(); itRegToNodeMap!=pointRegions.end(); ++itRegToNodeMap)
         {
             size_t nPtReg=(itRegToNodeMap->second).size();
             if(nPtReg>nMax)
             {
-                ireg=itRegToNodeMap->first;
+                ireg=itRegToNodeMap->first;    
             }
         }
+        
         regionsDebug.insert(ireg);
     }
         
@@ -744,9 +747,8 @@ void Mesh::evalBoundaryLabels(bool debug,std::string debugDir,size_t print_inter
         //debug (printing of the output)
         if(debug)
         {
-          if (regionsDebug.find(labelOfRegions) != regionsDebug.end())
-          {//
-              
+          if (regionsDebug.find(labelOfRegions) != regionsDebug.end()) //region inside the list of regions to post-process
+          {
               bool printSol=false;
               size_t nPtLabeled=RegionNodes.size();
               size_t nQuotient= std::floor(nPtLabeled/print_interval);
@@ -758,8 +760,9 @@ void Mesh::evalBoundaryLabels(bool debug,std::string debugDir,size_t print_inter
               if(Queue.empty())
               {
                 localCounter=localCounter+1;
+                printSol=true;
               }
-              if(Queue.empty()|| printSol )
+              if(printSol )
               { 
                   // label the points
                   std::vector<double> meshLabels(this->nPt(),NAN);
@@ -793,11 +796,10 @@ void Mesh::evalBoundaryLabels(bool debug,std::string debugDir,size_t print_inter
         regionLabels.insert(newRegionLabel);
         if(debug)
         {
-          if (regionsDebug.find(labelOfRegions) != regionsDebug.end())
+          if (regionsDebug.find(labelOfRegions) != regionsDebug.end()) //"mother region" is inside the list of regions to post-process
           {
               regionsDebug.insert(newRegionLabel);
           }
-          
         }
         
         //copy inside newSet the whole set of point belonging to the current region 
