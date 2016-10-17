@@ -14,6 +14,7 @@ struct MeshInfo{
   std::vector<double> baricenter;
   std::vector<std::vector<double> > bbox;
   std::vector<float> checksum;
+  bool _allocated;
   MeshInfo()
   :baricenter(3,0.0),
   bbox(3),
@@ -30,14 +31,28 @@ struct MeshInfo{
   }
   void clear()
   {
-    for(short int jdim=0; jdim<3; jdim++)
+    if(_allocated)
     {
-        (bbox[jdim])[0]= DBL_MAX;
-        (bbox[jdim])[1]=-DBL_MAX;
-        baricenter[jdim]=0.0;
-        checksum[jdim]=0.0;
+      for(short int jdim=0; jdim<3; jdim++)
+      {
+          (bbox[jdim])[0]= DBL_MAX;
+          (bbox[jdim])[1]=-DBL_MAX;
+          baricenter[jdim]=0.0;
+          checksum[jdim]=0.0;
+      }
     }
   }
+  void emptyMem()
+  {
+    baricenter.clear();
+    checksum.clear();
+    bbox[0].clear();
+    bbox[1].clear();
+    bbox[2].clear();
+    bbox.clear();
+    _allocated=false;
+  }
+  
   inline double & bx(){return baricenter[0];};
   inline double & by(){return baricenter[1];};
   inline double & bz(){return baricenter[2];};
@@ -156,6 +171,7 @@ class Mesh
     void extractBoundary();
     void evalBoundaryLabels(bool debug=false,std::string debugDir="",size_t print_interval=100000);
     void unsetBoundaryLabels();
+    void unsetEndoEpiSets();
     void clear();
     void initializeConnectivities();
     void writeCarpMesh(std::string outputFileName, bool binary=false, double rescaling=1.0);

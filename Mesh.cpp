@@ -950,9 +950,14 @@ void Mesh::unsetBoundaryLabels()
   pointRegions.clear();
   regionLabels.clear();
   nbElToRegionLab.clear();
-
+  info.emptyMem();
 }
 
+void Mesh::unsetEndoEpiSets()
+{
+  _Endo.clear();
+  _Epi.clear();
+}
 
 void Mesh::writeBoundaryLabels(std::string & fileDir, std::string & FileName)
 {
@@ -1023,7 +1028,7 @@ void Mesh::initializeConnectivities()
     _conn_nodes.resize(this->nPt());
     for(size_t iTetra=0; iTetra<nTet(); iTetra++)
     {
-      Tetrahedron & Tetra = tetrahedra[iTetra];
+      const Tetrahedron & Tetra = tetrahedra[iTetra];
       for(short int iVertex=0; iVertex<4; iVertex++)
       {
         _conn_nodes[Tetra.vertex[iVertex]].insert(iTetra);
@@ -1078,7 +1083,7 @@ void Mesh::initializeConnectivities()
       connectSetType elemConnElem;
       connectSetTypeIterator it_ce;
       elemConnElem.clear();
-      Tetrahedron & Tetra = tetrahedra[iTetra];
+      const Tetrahedron & Tetra = tetrahedra[iTetra];
       // Iterates over each node in current element
 		  for(short int iVertex=0; iVertex<4; iVertex++)
 		  {
