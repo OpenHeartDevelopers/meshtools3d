@@ -363,6 +363,7 @@ void LaplaceSolver::matrixAssembly(bool build_pattern)
   chrono.stop();
   std::cout<<" done in "<<chrono<<std::endl;
   chrono.reset();
+  DirichletBC.clear();
 }
 
 

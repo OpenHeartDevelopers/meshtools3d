@@ -75,11 +75,9 @@ struct CSR_matrix
         {
           mfile<<1+irow<<" "<<1+_pattern.J[icol]<<" "<<K[icol]<<std::endl;
         }
-      
       }
       mfile.close();
     }
-    
   }
 };
 
