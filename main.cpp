@@ -60,6 +60,7 @@ int main(int argc,char **argv)
   out_dir  = command_line.follow(out_dir, 2,  "-out_dir","--output_directory");
   out_name = command_line.follow(out_name, 2,  "-out_name","--output_name");
 
+
 #ifdef CGAL_LINKED_WITH_TBB
   int numThreads = 1;
   char * nthr=NULL;
@@ -238,20 +239,22 @@ int main(int argc,char **argv)
   if(eval_thickness)
   {
     
-    if(!(param_file("others/thickalgo",1)==2))
+    ThicknessEvaluation ThicknessCompute(param_file, &CarpMesh );
+    
+    ThicknessCompute.setBCValue(CarpMesh.Endocardium(), 0.0);  
+    ThicknessCompute.setBCValue(CarpMesh.Epicardium(), 1.0);  
+    
+    ThicknessCompute.solve();
+    if(ThicknessCompute.algorithm()!=static_cast<unsigned char>(2)  )
     {
       CarpMesh.initializeConnectivities();
     }
     
-    ThicknessEvaluation ThicknessCompute(param_file, &CarpMesh );
-    ThicknessCompute.setBCValue(CarpMesh.Endocardium(), 0.0);  
-    ThicknessCompute.setBCValue(CarpMesh.Epicardium(), 1.0);  
-    ThicknessCompute.solve();
+    ThicknessCompute.evalThickness();
     std::string cfileoutName=out_dir+"/"+out_name;
     ThicknessCompute.writeElementGradient(cfileoutName);
     CarpMesh.writeTetraCentroids(cfileoutName);
     CarpMesh.writeTris(cfileoutName);
-    
     if(out_potential)
     {
       if(out_vtk)
@@ -272,20 +275,16 @@ int main(int argc,char **argv)
       writerVTK.writeVariable(ThicknessCompute.thickness(), "Thickness",VtkWriter::Scalar);
     }
    
-   
    if(out_carp || !out_vtk) 
    {
       ThicknessCompute.writeThickness(out_dir+"/"+out_name);
    }
-    
-  }
-  
+  }// end if on eval thickness
   
   if(out_vtk)
   {
     writerVTK.CloseFile();
   }
-  
   return 0;
   
   

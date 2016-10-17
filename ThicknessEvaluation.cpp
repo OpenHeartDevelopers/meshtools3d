@@ -18,27 +18,27 @@
 
 ThicknessEvaluation::ThicknessEvaluation()
 :LaplaceSolver(),
-algorithm(1)
+_algorithm(1)
 {}
 
 ThicknessEvaluation::ThicknessEvaluation(const Mesh *  _mesh)
 :LaplaceSolver(_mesh),
-algorithm(1)
+_algorithm(1)
 {
-  _thickness.resize(_ptrmesh->nPt(),0);
+  _thickness.clear();
 }
 
 void ThicknessEvaluation::setMesh(const Mesh * _mesh)
 {
   LaplaceSolver::setMesh(_mesh);
-  _thickness.resize(_ptrmesh->nPt(),0);
+  _thickness.clear();
 }
 
 ThicknessEvaluation::ThicknessEvaluation(const GetPot & dfile, const Mesh * _mesh)
 :LaplaceSolver(dfile, _mesh)
 {
-  algorithm = dfile("others/thickalgo",1);
-  _thickness.resize(_ptrmesh->nPt(),0);
+  _algorithm = dfile("others/thickalgo",1);
+  _thickness.clear();
 }
 
 ThicknessEvaluation::~ThicknessEvaluation()
@@ -46,7 +46,7 @@ ThicknessEvaluation::~ThicknessEvaluation()
   _thickness.clear();
 }
 
-void ThicknessEvaluation::evalThickness()
+void ThicknessEvaluation::evalThicknessMethodMartin()
 {
   typedef std::set<size_t> facetype;
   typedef std::map<short int, size_t> boundaryFaceInTetraType;
@@ -87,7 +87,7 @@ void ThicknessEvaluation::evalThickness()
 			// Calculates centroid of triangle
 			for(short int iCoord=0; iCoord<3; iCoord++)
 			{
-			  x_coord_epi[iCoord] +=coords[node].coord[iCoord]/3.0;
+			  x_coord_epi[iCoord] +=(coords[node].coord[iCoord])/3.0;
 			}
 		}
 		
@@ -436,15 +436,15 @@ void ThicknessEvaluation::evalThickness()
 
 }
 
-void ThicknessEvaluation::solve()
+
+
+void ThicknessEvaluation::evalThickness()
 {
-  LaplaceSolver::solve();
-  
-  switch(algorithm)
+  switch(_algorithm)
   {
     case 1: // Martin Bishop Algorithm
     {
-      evalThickness();
+      evalThicknessMethodMartin();
 	    break;
     }
     case 2:
