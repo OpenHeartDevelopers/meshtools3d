@@ -22,6 +22,30 @@ byteLen(0),
 data(NULL)
 {
     nzeroEntryIndexes.clear();
+    readSegmentation(filename);
+}
+
+INRreader::INRreader()
+:nb_Of_Pixels(0),
+px_per_Plane(0),
+byteLen(0),
+data(NULL)
+{
+    nzeroEntryIndexes.clear();
+}
+
+INRreader::~INRreader()
+{
+  delete [] data;
+  data=NULL;
+  byteLen=0;
+  nzeroEntryIndexes.clear();
+  nb_Of_Pixels=0;
+  px_per_Plane=0;
+}
+
+void INRreader::readSegmentation(const std::string & filename)
+{
     std::ifstream INRfile(filename.c_str(),std::ios::in |std::ios::binary);
     if(!INRfile)
     {
@@ -46,21 +70,11 @@ data(NULL)
             std::cerr<<"ERROR: PROBLEMS WITH THE IMAGE VALUES"<<std::endl;
             exit(1);
     }
-    
-
     INRfile.close();
-    
 }
 
-INRreader::~INRreader()
-{
-  delete [] data;
-  data=NULL;
-  byteLen=0;
-  nzeroEntryIndexes.clear();
-  nb_Of_Pixels=0;
-  px_per_Plane=0;
-}
+
+
 
 IndexCoord INRreader::voxelCoordInterp(const double & x, const double & y, const double & z)
 {

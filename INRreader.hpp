@@ -119,13 +119,15 @@ class INRreader
 {
   public:
     INRreader(std::string filename);
+    INRreader();
     ~INRreader();
-    inline const INRInfo & info() const {return (_info);};
+    void readSegmentation(const std::string & filename);
     IndexCoord voxelCoordInterp(const double & x, const double & y, const double & z);
     IndexCoord voxelCoordInterpNonZero(const double & x, const double & y, const double & z);
     std::vector<double> interpolatedVoxelValue (const double & x, const double & y, const double & z);
     std::vector<double> interpolatedNonZeroVoxelValue (const double & x, const double & y, const double & z);
     double pickVoxelValue(const size_t & ix,const size_t & iy,const size_t & iz,size_t iv=0);
+    inline const INRInfo & info() const {return (_info);};
     void printHeader();
     std::vector<double> extractPointCloud();
     std::vector<double> extractVoxelValues();
