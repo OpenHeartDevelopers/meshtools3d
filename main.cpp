@@ -12,6 +12,7 @@
 #include "LaplaceSolver.hpp"
 #include "ThicknessEvaluation.hpp"
 #include "VtkWriter.hpp"
+#include "INRreader.hpp"
 #include "GetPot.hpp"
 #include<CGALDataType.hpp>
 #include<set>
@@ -95,6 +96,7 @@ int main(int argc,char **argv)
     Cell_criteria cell_criteria(cR_E_ratio, csize); 
     std::string imageName=seg_dir+"/"+seg_name;
     CGAL::Image_3 image1;
+    INRreader Segmentation(imageName);
   
     if(image1.read(imageName.c_str()))
     {
