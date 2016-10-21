@@ -7,9 +7,9 @@
 # see CGAL doc for meshing otpions.
 
 [segmentation]
-seg_dir = /home/common/CGAL-4.6/examples/Mesh_3/data
-seg_name = liver.inr.gz
-
+seg_dir                = /home/common/CGAL-4.6/examples/Mesh_3/data
+seg_name               = liver.inr.gz
+mesh_from_segmentation = true  # tells is read directly segmentation or use a special treatment (mneshing with no-labels, then labeling)
 
 [meshing]
 facet_angle         = 30

@@ -33,9 +33,9 @@ int main(int argc,char **argv)
 		exit(0);
 	}
   
-  bool mesh_from_segmentation=true;
   std::string seg_dir            = param_file("segmentation/seg_dir",".");
   std::string seg_name           = param_file("segmentation/seg_name","image.inr");
+  bool mesh_from_segmentation    = param_file("segmentation/mesh_from_segmentation",true);
 
   FaceNumericalType fangle      = param_file("meshing/facet_angle",30);
   FaceNumericalType fsize       = param_file("meshing/facet_size",0.8);
@@ -192,7 +192,7 @@ int main(int argc,char **argv)
             CarpMesh.Tet(icount).regionLabel=static_cast<int>(itc->subdomain_index());
             icount++;
           }
-      } // Segmentation is read by vtkreader; mesh domain implemented through a function wrapper with no labels
+      } // Segmentation is read by INRreader; mesh domain implemented through a function wrapper with no labels
       else
       {
           Segmentation.readSegmentation(imageName);
@@ -279,7 +279,8 @@ int main(int argc,char **argv)
               size_t vindex= Vertices.at(itc->vertex(iv)) ;
               CarpMesh.Tet(icount).vertex[iv]=vindex;
             }
-            CarpMesh.Tet(icount).regionLabel=static_cast<int>(itc->subdomain_index());
+            //CarpMesh.Tet(icount).regionLabel=static_cast<int>(itc->subdomain_index());
+            CarpMesh.Tet(icount).regionLabel=static_cast<int>(1); //label =1 by default: this is used as myocardium value
             icount++;
           }
       }
@@ -298,6 +299,16 @@ int main(int argc,char **argv)
   chrono2.stop();
   std::cout<<" done in "<<chrono2<<std::endl;
   chrono2.reset();
+
+  if(!mesh_from_segmentation)
+  {
+    // HERE GOES RELABELING 
+    // NB: AT this point algorthm expects that tria are defined
+    // and that have the same label of the tetra they belongs to
+    // If you are here, all of your tetra have a label = 1, since
+    // you used a un-labeled segmentation
+    // Perhaps it is worth to discard tetra label at this point
+  }
 
   std::cout<<"boundary re-labeling..."<<std::flush;
   chrono2.start();
