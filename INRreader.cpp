@@ -132,7 +132,7 @@ IndexCoord INRreader::voxelCoordInterp(const double & x, const double & y, const
 IndexCoord INRreader::voxelCoordInterpNonZero(const double & x, const double & y, const double & z)
 {
     IndexCoord Ixyz=voxelCoordInterp(x,y,z);
-    bool iszero=true;
+    bool iszero=!(isPointInsideSegmentation(x,y,z));
     for(size_t iv=0; iv<_info.VDIM; iv++)
     {
       long long int voxval=static_cast<long long int>(pickVoxelValue(Ixyz.ix,Ixyz.iy,Ixyz.iz,iv));
