@@ -108,8 +108,8 @@ int main(int argc,char **argv)
         {
           Mesh_domain domain(image1);
           Sizing_field cellsize(csize);  //genneral marked as csize; PVs=3
-          cellsize.set_size(0.7*csize, 3, domain.index_from_subdomain_index(3));
-          cellsize.set_size(0.7*csize, 3, domain.index_from_subdomain_index(2));
+          cellsize.set_size(0.4*csize, 3, domain.index_from_subdomain_index(3));
+          cellsize.set_size(0.4*csize, 3, domain.index_from_subdomain_index(2));
         
           //Cell_criteria cell_criteria(cR_E_ratio, csize);
           Cell_criteria cell_criteria(cR_E_ratio, cellsize);  
