@@ -88,7 +88,7 @@ void INRreader::readSegmentation(const std::string & filename)
     INRfile.close();
 }
 
-bool INRreader::isPointInsideSegmentation(const double & x, const double & y, const double & z)
+bool INRreader::isPointInsideSegmentation(const double & x, const double & y, const double & z) const
 {
   bool is_inside=false;
   IndexCoord Ixyz=voxelCoordInterp(x,y,z);
@@ -105,7 +105,7 @@ bool INRreader::isPointInsideSegmentation(const double & x, const double & y, co
 }
 
 
-IndexCoord INRreader::voxelCoordInterp(const double & x, const double & y, const double & z)
+IndexCoord INRreader::voxelCoordInterp(const double & x, const double & y, const double & z) const
 {
   IndexCoord Ixyz;
   Ixyz.iv=0;
@@ -246,7 +246,7 @@ std::vector<double> INRreader::interpolatedNonZeroVoxelValue (const double & x, 
   return(voxvalue);
 }
 
-double INRreader::pickVoxelValue(const size_t & ix,const size_t & iy,const size_t & iz,size_t iv)
+double INRreader::pickVoxelValue(const size_t & ix,const size_t & iy,const size_t & iz,const size_t iv) const
 {
     char * value= new char[byteLen];
     size_t byte_offset=byteLen*index(ix,iy,iz, iv);
@@ -581,7 +581,7 @@ bool INRreader::readValues(std::ifstream & ImageFile)
 }
 
 
-size_t INRreader::index(const size_t & ix,const size_t & iy,const size_t & iz,const size_t & iv)
+size_t INRreader::index(const size_t & ix,const size_t & iy,const size_t & iz,const size_t & iv) const
 {
   //Returns the index within the data array. The figure is usually written as follows:
   // Each component is composed by nb_of_pixels data; so (nb_of_pixels)_comp1,..,(nb_of_pixels)compNV
@@ -595,7 +595,7 @@ size_t INRreader::index(const size_t & ix,const size_t & iy,const size_t & iz,co
 }
 
 
-IndexCoord INRreader::reverseIndex(const size_t & index )
+IndexCoord INRreader::reverseIndex(const size_t & index ) const
 {
   IndexCoord reverseIndexing;
   // first the vector component;

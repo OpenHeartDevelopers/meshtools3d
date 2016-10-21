@@ -6,7 +6,8 @@
 #include <CGAL/Labeled_image_mesh_domain_3.h>
 #include <CGAL/make_mesh_3.h>
 #include <CGAL/Image_3.h>
-
+#include <My_Labeled_image_mesh_domain_3.hpp>
+#include <MyImageWrapper.hpp>
 
 // Domain
 typedef CGAL::Exact_predicates_inexact_constructions_kernel K;
@@ -28,9 +29,40 @@ typedef CGAL::Mesh_criteria_3<Tr> Mesh_criteria;
 typedef CGAL::Mesh_facet_criteria_3<Tr> Facet_criteria;
 typedef CGAL::Mesh_cell_criteria_3<Tr> Cell_criteria;
 
-typedef CGAL::Mesh_constant_domain_field_3<Mesh_domain::R,Mesh_domain::Index> Sizing_field;
 
 typedef C3t3::Cells_in_complex_iterator Cell_iterator;
 
 typedef Tr::Geom_traits::FT 	FaceNumericalType;
 typedef Tr::Geom_traits::FT 	CellNumericalType; // in the guide was Tr::FT but compiler says does not name a type
+
+
+
+// Personalised data types for domain with manual segmentation
+// Domain
+typedef CGAL::My_Labeled_image_mesh_domain_3<K> Mesh_domain_manualseg;
+// Triangulation
+#ifdef CGAL_LINKED_WITH_TBB
+  typedef CGAL::Mesh_triangulation_3< Mesh_domain_manualseg,
+    CGAL::Kernel_traits<Mesh_domain_manualseg>::Kernel, // Same as sequential
+    CGAL::Parallel_tag                        // Tag to activate parallelism
+  >::type Tr_manualseg;
+#else
+  typedef CGAL::Mesh_triangulation_3<Mesh_domain_manualseg>::type Tr_manualseg;
+#endif
+typedef CGAL::Mesh_complex_3_in_triangulation_3<Tr_manualseg> C3t3_manualseg;
+// Criteria
+typedef CGAL::Mesh_criteria_3<Tr_manualseg> Mesh_criteria_manualseg;
+typedef CGAL::Mesh_facet_criteria_3<Tr_manualseg> Facet_criteria_manualseg;
+typedef CGAL::Mesh_cell_criteria_3<Tr_manualseg> Cell_criteria_manualseg;
+
+typedef C3t3_manualseg::Cells_in_complex_iterator Cell_iterator_manualseg;
+
+
+
+
+
+
+
+
+
+

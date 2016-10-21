@@ -137,13 +137,21 @@ class INRreader
     INRreader();
     ~INRreader();
     void readSegmentation(const std::string & filename);
-    bool isPointInsideSegmentation(const double & x, const double & y, const double & z);
-    IndexCoord voxelCoordInterp(const double & x, const double & y, const double & z);
+    
+    bool isPointInsideSegmentation(const double & x, const double & y, const double & z) const;
+    IndexCoord voxelCoordInterp(const double & x, const double & y, const double & z) const; 
     IndexCoord voxelCoordInterpNonZero(const double & x, const double & y, const double & z);
     std::vector<double> interpolatedVoxelValue (const double & x, const double & y, const double & z);
     std::vector<double> interpolatedNonZeroVoxelValue (const double & x, const double & y, const double & z);
-    double pickVoxelValue(const size_t & ix,const size_t & iy,const size_t & iz,size_t iv=0);
+    double pickVoxelValue(const size_t & ix,const size_t & iy,const size_t & iz,const size_t iv=0) const;
+    
     inline const INRInfo & info() const {return (_info);};
+    inline const double & vx() const {return (_info.RESOLUTION[0]); };
+    inline const double & vy() const {return (_info.RESOLUTION[1]); };
+    inline const double & vz() const {return (_info.RESOLUTION[2]); };
+    inline const size_t & xdim() const {return (_info.SHAPE[0]); };
+    inline const size_t & ydim() const {return (_info.SHAPE[1]); };
+    inline const size_t & zdim() const {return (_info.SHAPE[2]); };
     void printHeader();
     std::vector<double> extractPointCloud();
     std::vector<double> extractVoxelValues();
@@ -151,8 +159,8 @@ class INRreader
   private:
     bool readHeader(std::ifstream & ImageFile);
     bool readValues(std::ifstream & ImageFile);
-    size_t index(const size_t & ix,const size_t & iy,const size_t & iz,const size_t & iv);
-    IndexCoord reverseIndex(const size_t & index );
+    size_t index(const size_t & ix,const size_t & iy,const size_t & iz,const size_t & iv) const;
+    IndexCoord reverseIndex(const size_t & index ) const;
     std::vector<double>evalBarycenter(const size_t & index);
     double EuclideanDist(const double * P1, const double * P2);
     bool isLittleEndian();
