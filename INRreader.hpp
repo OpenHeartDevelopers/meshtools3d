@@ -1,3 +1,18 @@
+//  -*- c++ -*-
+//  INRreader version 1.0                                     Oct/21/2016
+//
+//
+//  This library  is distributed in the  hope that it will  be useful, but
+//  WITHOUT   ANY  WARRANTY;   without  even   the  implied   warranty  of
+//  MERCHANTABILITY  or FITNESS  FOR A  PARTICULAR PURPOSE.   See  the GNU
+//  Lesser General Public License for more details.
+//
+//  This library is used to extract data from .inr segmentations, the 
+//  INRIA segmentation format
+//
+//  Developer: Cesare Corrado cesare.corrado@kcl.ac.uk
+//==========================================================================
+
 #ifndef _INRREADER_H_
 #define _INRREADER_H_
 
@@ -122,6 +137,7 @@ class INRreader
     INRreader();
     ~INRreader();
     void readSegmentation(const std::string & filename);
+    bool isPointInsideSegmentation(const double & x, const double & y, const double & z);
     IndexCoord voxelCoordInterp(const double & x, const double & y, const double & z);
     IndexCoord voxelCoordInterpNonZero(const double & x, const double & y, const double & z);
     std::vector<double> interpolatedVoxelValue (const double & x, const double & y, const double & z);
@@ -151,20 +167,5 @@ class INRreader
 };
 #endif
 
-
-/*
-
-if(strcmp(type,'unsigned fixed') && pixel==8)
-   dtype='uint8';
-elseif(strcmp(type,'unsigned fixed') && pixel==16)
-   dtype='uint16';
-elseif(strcmp(type,'float') && pixel==32)
-   dtype='float';
-elseif(strcmp(type,'float') && pixel==64)
-   dtype='double';
-else
-   error('volume format not supported');
-end
-*/
 
 

@@ -1,3 +1,18 @@
+//  -*- c++ -*-
+//  INRreader version 1.0                                     Oct/21/2016
+//
+//
+//  This library  is distributed in the  hope that it will  be useful, but
+//  WITHOUT   ANY  WARRANTY;   without  even   the  implied   warranty  of
+//  MERCHANTABILITY  or FITNESS  FOR A  PARTICULAR PURPOSE.   See  the GNU
+//  Lesser General Public License for more details.
+//
+//  This library is used to extract data from .inr segmentations, the 
+//  INRIA segmentation format
+//
+//  Developer: Cesare Corrado cesare.corrado@kcl.ac.uk
+//==========================================================================
+
 #include<stdio.h>
 #include <fstream>
 #include <sstream>
@@ -73,16 +88,30 @@ void INRreader::readSegmentation(const std::string & filename)
     INRfile.close();
 }
 
-
+bool INRreader::isPointInsideSegmentation(const double & x, const double & y, const double & z)
+{
+  bool is_inside=false;
+  IndexCoord Ixyz=voxelCoordInterp(x,y,z);
+  for(size_t iv=0; iv<_info.VDIM; iv++)
+  {
+      long long int voxval=static_cast<long long int>(pickVoxelValue(Ixyz.ix,Ixyz.iy,Ixyz.iz,iv));
+      if(voxval>0)
+      {
+        is_inside=true;
+        break;
+      }
+  }
+  return(is_inside);
+}
 
 
 IndexCoord INRreader::voxelCoordInterp(const double & x, const double & y, const double & z)
 {
   IndexCoord Ixyz;
   Ixyz.iv=0;
-  Ixyz.ix=static_cast<size_t>(x/_info.RESOLUTION[0]);
-  Ixyz.iy=static_cast<size_t>(y/_info.RESOLUTION[1]);
-  Ixyz.iz=static_cast<size_t>(z/_info.RESOLUTION[2]);
+  Ixyz.ix=static_cast<size_t>(std::floor(x/_info.RESOLUTION[0]));
+  Ixyz.iy=static_cast<size_t>(std::floor(y/_info.RESOLUTION[1]));
+  Ixyz.iz=static_cast<size_t>(std::floor(z/_info.RESOLUTION[2]));
   if(Ixyz.ix>=_info.SHAPE[0])
   {
     Ixyz.ix=_info.SHAPE[0]-1;
