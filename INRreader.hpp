@@ -25,7 +25,8 @@
 #include<iostream>
 #include<iomanip>
 #include<set>
-
+#include<map>
+#include<limits>
 
 typedef enum{
     VX_FLOAT, // floating point
@@ -128,6 +129,35 @@ class INRInfo
 
 };
 
+class BoundingBox
+{
+  public:
+    BoundingBox()
+    :_bbox(3,0)
+    {
+      for(unsigned char j=0; j<3; j++)
+      {
+        _bbox[j].clear();
+        _bbox[j].resize(2);
+        (_bbox[j])[0]=DBL_MAX;
+        (_bbox[j])[1]=0.0;
+      }
+    }
+    ~BoundingBox()
+    {
+      emptyMemory();
+    }
+    void emptyMemory()
+    {
+      _bbox.clear();
+    }
+    inline const std::vector<std::vector<double> > & bbox() const {return(_bbox)};
+    inline const std::vector<double> & x() const {return(_bbox[0]);};
+    inline const std::vector<double> & y() const {return(_bbox[1]);};
+    inline const std::vector<double> & z() const {return(_bbox[2]);};
+  private:
+    std::vector<std::vector<double> >_bbox;
+}
 
 
 class INRreader
@@ -137,7 +167,7 @@ class INRreader
     INRreader();
     ~INRreader();
     void readSegmentation(const std::string & filename);
-    
+    void createBoundingBoxes();
     bool isPointInsideSegmentation(const double & x, const double & y, const double & z) const;
     IndexCoord voxelCoordInterp(const double & x, const double & y, const double & z) const; 
     IndexCoord voxelCoordInterpNonZero(const double & x, const double & y, const double & z);
@@ -159,6 +189,9 @@ class INRreader
   private:
     bool readHeader(std::ifstream & ImageFile);
     bool readValues(std::ifstream & ImageFile);
+    void evalLabeledRegionsBounds();
+    double pickValue(const size_t & _index) const;
+    void setValue(const size_t & _index, const double & _value);
     size_t index(const size_t & ix,const size_t & iy,const size_t & iz,const size_t & iv) const;
     IndexCoord reverseIndex(const size_t & index ) const;
     std::vector<double>evalBarycenter(const size_t & index);
@@ -171,6 +204,7 @@ class INRreader
     size_t byteLen;
     char * data;
     std::set<size_t> nzeroEntryIndexes;
+    std::map<double,BoundingBox> bboxlabels;
 
 };
 #endif

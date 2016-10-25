@@ -24,6 +24,7 @@
 #include <algorithm>
 #include <iomanip>
 #include<cmath>
+#include<map>
 
 #include "INRreader.hpp"
 #ifndef DELTAMAX
@@ -38,6 +39,7 @@ data(NULL)
 {
     nzeroEntryIndexes.clear();
     readSegmentation(filename);
+    bboxlabels.clear();
 }
 
 INRreader::INRreader()
@@ -47,6 +49,7 @@ byteLen(0),
 data(NULL)
 {
     nzeroEntryIndexes.clear();
+    bboxlabels.clear();
 }
 
 INRreader::~INRreader()
@@ -55,6 +58,7 @@ INRreader::~INRreader()
   data=NULL;
   byteLen=0;
   nzeroEntryIndexes.clear();
+  bboxlabels.clear();
   nb_Of_Pixels=0;
   px_per_Plane=0;
 }
@@ -88,6 +92,11 @@ void INRreader::readSegmentation(const std::string & filename)
     INRfile.close();
 }
 
+void INRreader::createBoundingBoxes()
+{
+  evalLabeledRegionsBounds();
+}
+
 bool INRreader::isPointInsideSegmentation(const double & x, const double & y, const double & z) const
 {
   bool is_inside=false;
@@ -103,7 +112,6 @@ bool INRreader::isPointInsideSegmentation(const double & x, const double & y, co
   }
   return(is_inside);
 }
-
 
 IndexCoord INRreader::voxelCoordInterp(const double & x, const double & y, const double & z) const
 {
@@ -248,45 +256,7 @@ std::vector<double> INRreader::interpolatedNonZeroVoxelValue (const double & x, 
 
 double INRreader::pickVoxelValue(const size_t & ix,const size_t & iy,const size_t & iz,const size_t iv) const
 {
-    char * value= new char[byteLen];
-    size_t byte_offset=byteLen*index(ix,iy,iz, iv);
-    for(size_t ibyte=0; ibyte<byteLen; ibyte++ )
-    {
-        value[ibyte]=data[byte_offset+ibyte];
-    }
-    double res=0.0;    
-
-    switch(_info.TYPE)
-    {
-        case VX_FLOAT:
-        {
-          memcpy (&res, value, byteLen);      
-          break;
-        }
-        case VX_FIXED:
-        {
-          long long int lintres=0;
-          memcpy (&lintres, value, byteLen);      
-          res=static_cast<double>(lintres);
-          break;
-        }
-        case VX_UFIXED:
-        {
-          long long unsigned luires=0;
-          memcpy (&luires, value, byteLen);
-          res=static_cast<double>(luires);      
-          break;
-        }
-        default:
-        {
-          std::cerr<<"unknown type"<<std::endl;
-          exit(1);
-          break;
-        }
-    }
-    delete [] value;
-    value = NULL;
-    return(res);
+    return(pickValue(index(ix,iy,iz, iv)));
 }
 
 void INRreader::printHeader()
@@ -580,6 +550,303 @@ bool INRreader::readValues(std::ifstream & ImageFile)
   return(readerisok);
 }
 
+void INRreader::evalLabeledRegionsBounds()
+{
+  // Evaluates bounding box of regions with label different from 0 and 1;
+  // Implemented for VDIM=1 only
+  // bboxlabels is a map that, for each region label different from 1 assign a bounding box
+  if(info.VDIM == 1)
+  {
+    typedef std::set<size_t> setPointType;
+    typedef setPointType::iterator setPointTypeIterator;
+    typedef std::set<long long int> regionSetType;
+    typedef std::map<size_t, regionSetType > voxelToRegionMapType;
+    typedef std::map<long long int, setPointType> regionSubdivisionType;
+    typedef regionSubdivisionType::iterator regionSubdivisionTypeIterator;
+    typedef std::map<size_t,setPointType> voxConnectType;
+
+    regionSubdivisionType voxelRegions;
+    regionSetType regionLabels;
+    
+    //voxelToregionMap is a map between a  voxel and its regions
+    voxelToRegionMapType voxelToregionMap;
+    
+    // Initialize the map setpointtype that describes the set of indices with the same label
+    for (setPointTypeIterator it=nzeroEntryIndexes.begin(); it=nzeroEntryIndexes.end(); ++it)
+    {
+      long long int voxLabel=static_cast<long long int >(pickValue(*it));
+      voxelRegions[voxLabel].insert(*it);
+    }
+    // Delete elements with index label =1
+    voxelRegions.erase(voxelRegions.find(1));
+    // create a set of only non-zero and non-one elements
+    setPointType boundVoxels;
+    for(regionSubdivisionTypeIterator mapit=voxelRegions.begin(); mapit!=voxelRegions.end();++mapit)
+    {
+      regionLabels.insert(mapit->first);
+      for(setPointTypeIterator itset=((mapit->second).begin());itset!=((mapit->second).end());++itset)
+      {
+        boundVoxels.insert(*itset);
+        (voxelToregionMap[*itset]).insert(mapit->first);
+      }
+    }
+    // Now I create a voxel connectivity
+    voxConnectType connectivity;
+    for(setPointTypeIterator it=boundVoxels.begin(); it!=boundVoxels.end(); ++it)
+    {
+      IndexCoord Ixyz=reverseIndex(*it);
+      if(Ixyz.ix>0)
+      {
+        size_t jind=index((Ixyz.ix-1),Ixyz.iy,Ixyz.iz);
+        if(boundVoxels.find(jind)!=boundVoxels.end())
+        {
+          connectivity[*it].insert(jind);
+        }
+      }
+      if(Ixyz.ix<(info.SHAPE[0]-1))
+      {
+        size_t jind=index((Ixyz.ix+1),Ixyz.iy,Ixyz.iz);
+        if(boundVoxels.find(jind)!=boundVoxels.end())
+        {
+          connectivity[*it].insert(jind);
+        }
+      }
+
+      if(Ixyz.iy>0)
+      {
+        size_t jind=index(Ixyz.ix,(Ixyz.iy-1),Ixyz.iz);
+        if(boundVoxels.find(jind)!=boundVoxels.end())
+        {
+          connectivity[*it].insert(jind);
+        }
+      }
+      if(Ixyz.iy<(info.SHAPE[1]-1))
+      {
+        size_t jind=index(Ixyz.ix,(Ixyz.iy+1),Ixyz.iz);
+        if(boundVoxels.find(jind)!=boundVoxels.end())
+        {
+          connectivity[*it].insert(jind);
+        }
+      }
+      
+      if(Ixyz.iz>0)
+      {
+        size_t jind=index(Ixyz.ix,Ixyz.iy,(Ixyz.iz-1));
+        if(boundVoxels.find(jind)!=boundVoxels.end())
+        {
+          connectivity[*it].insert(jind);
+        }
+      }
+      if(Ixyz.iz<(info.SHAPE[2]-1))
+      {
+        size_t jind=index(Ixyz.ix,Ixyz.iy,(Ixyz.iz+1));
+        if(boundVoxels.find(jind)!=boundVoxels.end())
+        {
+          connectivity[*it].insert(jind);
+        }
+      }
+    }
+    // At this point, I have a voxel connectivity structure of the
+    // Domain items that falls on the PVs and the MV
+    // Now the meat of the subdivision algorithm
+    for(regionSubdivisionTypeIterator itRegToNodeMap=voxelRegions.begin(); itRegToNodeMap!=voxelRegions.end(); ++itRegToNodeMap)
+    {
+      int labelOfRegions=itRegToNodeMap->first;
+      // iterate on points belonging to the region labelOfRegions
+      // extract the local connectivity of the region regionconnect
+      voxConnectType regionconnect;
+      regionconnect.clear();
+      for(setPointTypeIterator cRegIt=(itRegToNodeMap->second).begin(); cRegIt!=(itRegToNodeMap->second).end(); ++cRegIt)
+      {
+        // node belonging to region
+        size_t voxel=*cRegIt;
+        // explore connectivity of node; extract only connections belonging to the same region
+        setPointType connections;
+        for(setPointTypeIterator connectiter=connectivity[voxel].begin(); connectiter!=connectivity[voxel].end(); ++connectiter)
+        {
+          //voxelToregionMap[*connectiter]: set<long long int> of region labels
+          // connectiter belongs to the region under study
+          if((voxelToregionMap[*connectiter].find(labelOfRegions))!=(voxelToregionMap[*connectiter].end()))
+          {
+            connections.insert(*connectiter);
+          }
+        } //end loop with connectiter
+        regionconnect.insert(std::pair<size_t, connectSetType> (voxel,connections) );
+      }// end loop with cRegIt iterator
+      //first: determine a seed point
+      size_t seed= *((itRegToNodeMap->second).begin());
+      for(setPointTypeIterator seedIter=(itRegToNodeMap->second).begin(); seedIter!=(itRegToNodeMap->second).end(); ++seedIter)
+      {
+        seed = *seedIter;
+        // full inside the region (not on a boundary of two)
+        if(voxelToregionMap[seed].size()==1)
+        {
+          break;
+        }
+      }
+      setPointType RegionVoxels, Queue;
+      Queue.insert(seed);
+      RegionVoxels.insert(seed);
+      /* Here the algorithm grows: expands the region RegionVoxels using the regional connectivity
+       it iterates until all the connected voxels are covered
+       */
+      size_t localCounter=0;
+      while(!Queue.empty())
+      {
+        size_t candidate= *(Queue.begin());
+        Queue.erase(candidate);
+        //regionconnect : map<size_t, connectSetType> isw the local connectivity on the region
+        for(setPointTypeIterator countNode=regionconnect.at(candidate).begin(); countNode!=regionconnect.at(candidate).end(); ++countNode)
+        {
+          //check if countNode is inside the region
+          if(RegionVoxels.find(*countNode)==RegionVoxels.end())
+          {
+            //if not member of nodesRegion, add it
+            RegionVoxels.insert(*countNode);
+            Queue.insert(*countNode);
+          }
+        }
+      }//end of while
+      //RegionVoxels: voxels of the connected region with label itRegToNodeMap->first
+      //check if ... itRegToNodeMap->second : list of points belonging to (set)
+      //if is the case, there are some point to move
+      if((itRegToNodeMap->second).size() !=RegionNodes.size()  )
+      {
+        //first: create a new label region
+        int newRegionLabel=1+(*(regionLabels.rbegin()));
+        regionLabels.insert(newRegionLabel);
+
+        //copy inside newSet the whole set of point belonging to the current region
+        setPointType newSet=(itRegToNodeMap->second);
+        
+        //Delete points identified to the current region
+        for(setPointTypeIterator reg_iter=RegionVoxels.begin();reg_iter!=RegionVoxels.end(); ++reg_iter)
+        {
+          newSet.erase(*reg_iter);
+        }
+        //insert the new region inside pointRegions
+        voxelRegions.insert(std::pair<long long int, setPointType>(newRegionLabel,newSet) );
+        //nodeToRegionMapType = <size_t, set<long long int> >
+        //remove point not belonging to region
+        for(setPointTypeIterator reg_iter=newSet.begin();reg_iter!=newSet.end(); ++reg_iter)
+        {
+          (itRegToNodeMap->second).erase(*reg_iter);
+          voxelToregionMap[*reg_iter].erase(labelOfRegions);
+          voxelToregionMap[*reg_iter].insert(newRegionLabel);
+        }
+      }// end if on size
+    }//algo division ends
+    //now re-labeling of voxels
+    for(regionSubdivisionTypeIterator itRegToNodeMap=voxelRegions.begin(); itRegToNodeMap!=voxelRegions.end(); ++itRegToNodeMap)
+    {
+       double voxValue = static_cast<double>(itRegToNodeMap->first);
+       BoundingBox localbbox;
+       for(setPointTypeIterator vox_iter=(itRegToNodeMap->second).begin();vox_iter!=(itRegToNodeMap->second).end(); ++vox_iter)
+       {
+         setValue(*vox_iter, voxValue);
+         double barycenter=evalBarycenter(*vor_iter);
+         for(unsigned char jcoord=0; jcoord<3; jcoord++)
+         {
+            if(barycenter[jcoord]<( (localbbox.bbox()[jcoord])[0] )  )
+            {
+                (localbbox.bbox()[jcoord])[0]=barycenter[jcoord];
+            }
+            if(barycenter[jcoord]> ( (localbbox.bbox()[jcoord])[1] ) )
+            {
+                (localbbox.bbox()[jcoord])[1]=barycenter[jcoord];
+            }
+         }
+         for(unsigned char jcoord=0; jcoord<3; jcoord++)
+         {
+           (localbbox.bbox()[jcoord])[0]=(localbbox.bbox()[jcoord])[0]-0.5*info.RESOLUTION[jcoord];
+           (localbbox.bbox()[jcoord])[1]=(localbbox.bbox()[jcoord])[1]+0.5*info.RESOLUTION[jcoord];
+         }
+       }
+       bboxlabels.insert(std::pair<double,BoundingBox >(voxValue,localbbox) );
+    }
+  }
+}
+
+double INRreader::pickValue(const size_t & _index) const
+{
+  char * value= new char[byteLen];
+  size_t byte_offset=byteLen*_index;
+  for(size_t ibyte=0; ibyte<byteLen; ibyte++ )
+  {
+    value[ibyte]=data[byte_offset+ibyte];
+  }
+  double res=0.0;
+  
+  switch(_info.TYPE)
+  {
+    case VX_FLOAT:
+    {
+      memcpy (&res, value, byteLen);
+      break;
+    }
+    case VX_FIXED:
+    {
+      long long int lintres=0;
+      memcpy (&lintres, value, byteLen);
+      res=static_cast<double>(lintres);
+      break;
+    }
+    case VX_UFIXED:
+    {
+      long long unsigned luires=0;
+      memcpy (&luires, value, byteLen);
+      res=static_cast<double>(luires);
+      break;
+    }
+    default:
+    {
+      std::cerr<<"unknown type"<<std::endl;
+      exit(1);
+      break;
+    }
+  }
+  delete [] value;
+  value = NULL;
+  return(res);
+}
+
+void INRreader::setValue(const size_t & _index, const double & _value)
+{
+  char * buffer= new char[byteLen];
+  switch(_info.TYPE)
+  {
+    case VX_FLOAT:
+    {
+      memcpy (buffer, &_value, byteLen);
+      break;
+    }
+    case VX_FIXED:
+    {
+      long long int lintres=static_cast<long long int>(_value);
+      memcpy ( buffer, &lintres, byteLen);
+      break;
+    }
+    case VX_UFIXED:
+    {
+      long long unsigned luires=static_cast<long long unsigned>(_value);
+      memcpy ( buffer, &luires, byteLen);
+      break;
+    }
+    default:
+    {
+      std::cerr<<"unknown type"<<std::endl;
+      exit(1);
+      break;
+    }
+  }
+  size_t byte_offset=byteLen*_index;
+  for(size_t ibyte=0; ibyte<byteLen; ibyte++ )
+  {
+    data[byte_offset+ibyte]=buffer[ibyte];
+  }
+  delete [] buffer;
+  buffer=NULL;
+}
 
 size_t INRreader::index(const size_t & ix,const size_t & iy,const size_t & iz,const size_t & iv) const
 {
@@ -593,7 +860,6 @@ size_t INRreader::index(const size_t & ix,const size_t & iy,const size_t & iz,co
   _index=vdimcompStart+zPlaneStart+(iy*_info.SHAPE[0])+ix  ;
   return(_index);
 }
-
 
 IndexCoord INRreader::reverseIndex(const size_t & index ) const
 {
