@@ -27,6 +27,7 @@
 #include<set>
 #include<map>
 #include<limits>
+#include<cfloat>
 
 typedef enum{
     VX_FLOAT, // floating point
@@ -133,7 +134,7 @@ class BoundingBox
 {
   public:
     BoundingBox()
-    :_bbox(3,0)
+    :_bbox(3)
     {
       for(unsigned char j=0; j<3; j++)
       {
@@ -151,13 +152,14 @@ class BoundingBox
     {
       _bbox.clear();
     }
-    inline const std::vector<std::vector<double> > & bbox() const {return(_bbox)};
+    inline std::vector<std::vector<double> > & bbox() {return(_bbox);};
+    inline const std::vector<std::vector<double> > & bbox() const {return(_bbox);};
     inline const std::vector<double> & x() const {return(_bbox[0]);};
     inline const std::vector<double> & y() const {return(_bbox[1]);};
     inline const std::vector<double> & z() const {return(_bbox[2]);};
   private:
     std::vector<std::vector<double> >_bbox;
-}
+};
 
 
 class INRreader

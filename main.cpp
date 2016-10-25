@@ -302,6 +302,7 @@ int main(int argc,char **argv)
 
   if(!mesh_from_segmentation)
   {
+    Segmentation.createBoundingBoxes();
     // HERE GOES RELABELING 
     // NB: AT this point algorthm expects that tria are defined
     // and that have the same label of the tetra they belongs to

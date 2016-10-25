@@ -555,7 +555,7 @@ void INRreader::evalLabeledRegionsBounds()
   // Evaluates bounding box of regions with label different from 0 and 1;
   // Implemented for VDIM=1 only
   // bboxlabels is a map that, for each region label different from 1 assign a bounding box
-  if(info.VDIM == 1)
+  if(_info.VDIM == 1)
   {
     typedef std::set<size_t> setPointType;
     typedef setPointType::iterator setPointTypeIterator;
@@ -572,7 +572,7 @@ void INRreader::evalLabeledRegionsBounds()
     voxelToRegionMapType voxelToregionMap;
     
     // Initialize the map setpointtype that describes the set of indices with the same label
-    for (setPointTypeIterator it=nzeroEntryIndexes.begin(); it=nzeroEntryIndexes.end(); ++it)
+    for (setPointTypeIterator it=nzeroEntryIndexes.begin(); it!=nzeroEntryIndexes.end(); ++it)
     {
       long long int voxLabel=static_cast<long long int >(pickValue(*it));
       voxelRegions[voxLabel].insert(*it);
@@ -597,15 +597,15 @@ void INRreader::evalLabeledRegionsBounds()
       IndexCoord Ixyz=reverseIndex(*it);
       if(Ixyz.ix>0)
       {
-        size_t jind=index((Ixyz.ix-1),Ixyz.iy,Ixyz.iz);
+        size_t jind=index((Ixyz.ix-1),Ixyz.iy,Ixyz.iz,Ixyz.iv);
         if(boundVoxels.find(jind)!=boundVoxels.end())
         {
           connectivity[*it].insert(jind);
         }
       }
-      if(Ixyz.ix<(info.SHAPE[0]-1))
+      if(Ixyz.ix<(_info.SHAPE[0]-1))
       {
-        size_t jind=index((Ixyz.ix+1),Ixyz.iy,Ixyz.iz);
+        size_t jind=index((Ixyz.ix+1),Ixyz.iy,Ixyz.iz,Ixyz.iv);
         if(boundVoxels.find(jind)!=boundVoxels.end())
         {
           connectivity[*it].insert(jind);
@@ -614,15 +614,15 @@ void INRreader::evalLabeledRegionsBounds()
 
       if(Ixyz.iy>0)
       {
-        size_t jind=index(Ixyz.ix,(Ixyz.iy-1),Ixyz.iz);
+        size_t jind=index(Ixyz.ix,(Ixyz.iy-1),Ixyz.iz,Ixyz.iv);
         if(boundVoxels.find(jind)!=boundVoxels.end())
         {
           connectivity[*it].insert(jind);
         }
       }
-      if(Ixyz.iy<(info.SHAPE[1]-1))
+      if(Ixyz.iy<(_info.SHAPE[1]-1))
       {
-        size_t jind=index(Ixyz.ix,(Ixyz.iy+1),Ixyz.iz);
+        size_t jind=index(Ixyz.ix,(Ixyz.iy+1),Ixyz.iz,Ixyz.iv);
         if(boundVoxels.find(jind)!=boundVoxels.end())
         {
           connectivity[*it].insert(jind);
@@ -631,15 +631,15 @@ void INRreader::evalLabeledRegionsBounds()
       
       if(Ixyz.iz>0)
       {
-        size_t jind=index(Ixyz.ix,Ixyz.iy,(Ixyz.iz-1));
+        size_t jind=index(Ixyz.ix,Ixyz.iy,(Ixyz.iz-1),Ixyz.iv);
         if(boundVoxels.find(jind)!=boundVoxels.end())
         {
           connectivity[*it].insert(jind);
         }
       }
-      if(Ixyz.iz<(info.SHAPE[2]-1))
+      if(Ixyz.iz<(_info.SHAPE[2]-1))
       {
-        size_t jind=index(Ixyz.ix,Ixyz.iy,(Ixyz.iz+1));
+        size_t jind=index(Ixyz.ix,Ixyz.iy,(Ixyz.iz+1),Ixyz.iv);
         if(boundVoxels.find(jind)!=boundVoxels.end())
         {
           connectivity[*it].insert(jind);
@@ -671,7 +671,7 @@ void INRreader::evalLabeledRegionsBounds()
             connections.insert(*connectiter);
           }
         } //end loop with connectiter
-        regionconnect.insert(std::pair<size_t, connectSetType> (voxel,connections) );
+        regionconnect.insert(std::pair<size_t, setPointType> (voxel,connections) );
       }// end loop with cRegIt iterator
       //first: determine a seed point
       size_t seed= *((itRegToNodeMap->second).begin());
@@ -690,7 +690,6 @@ void INRreader::evalLabeledRegionsBounds()
       /* Here the algorithm grows: expands the region RegionVoxels using the regional connectivity
        it iterates until all the connected voxels are covered
        */
-      size_t localCounter=0;
       while(!Queue.empty())
       {
         size_t candidate= *(Queue.begin());
@@ -710,7 +709,7 @@ void INRreader::evalLabeledRegionsBounds()
       //RegionVoxels: voxels of the connected region with label itRegToNodeMap->first
       //check if ... itRegToNodeMap->second : list of points belonging to (set)
       //if is the case, there are some point to move
-      if((itRegToNodeMap->second).size() !=RegionNodes.size()  )
+      if((itRegToNodeMap->second).size() !=RegionVoxels.size()  )
       {
         //first: create a new label region
         int newRegionLabel=1+(*(regionLabels.rbegin()));
@@ -744,7 +743,7 @@ void INRreader::evalLabeledRegionsBounds()
        for(setPointTypeIterator vox_iter=(itRegToNodeMap->second).begin();vox_iter!=(itRegToNodeMap->second).end(); ++vox_iter)
        {
          setValue(*vox_iter, voxValue);
-         double barycenter=evalBarycenter(*vor_iter);
+         std::vector<double>  barycenter=evalBarycenter(*vox_iter);
          for(unsigned char jcoord=0; jcoord<3; jcoord++)
          {
             if(barycenter[jcoord]<( (localbbox.bbox()[jcoord])[0] )  )
@@ -758,8 +757,8 @@ void INRreader::evalLabeledRegionsBounds()
          }
          for(unsigned char jcoord=0; jcoord<3; jcoord++)
          {
-           (localbbox.bbox()[jcoord])[0]=(localbbox.bbox()[jcoord])[0]-0.5*info.RESOLUTION[jcoord];
-           (localbbox.bbox()[jcoord])[1]=(localbbox.bbox()[jcoord])[1]+0.5*info.RESOLUTION[jcoord];
+           (localbbox.bbox()[jcoord])[0]=(localbbox.bbox()[jcoord])[0]-0.5*_info.RESOLUTION[jcoord];
+           (localbbox.bbox()[jcoord])[1]=(localbbox.bbox()[jcoord])[1]+0.5*_info.RESOLUTION[jcoord];
          }
        }
        bboxlabels.insert(std::pair<double,BoundingBox >(voxValue,localbbox) );
