@@ -57,6 +57,7 @@ class INRInfo
     VOX_KIND TYPE;
     size_t PIXSIZE;
     bool littleEndian;               // Endianness
+    
     INRInfo()
     :SHAPE(3,0),
     RESOLUTION(3,0.0),
@@ -68,6 +69,24 @@ class INRInfo
     PIXSIZE(0),
     littleEndian(false)    
     {}
+    
+    ~INRInfo()
+    {
+      freeMemory();
+    }
+    void freeMemory()
+    {
+      SHAPE.clear();
+      RESOLUTION.clear();
+      TOFFSET.clear();
+      ROTATION.clear();
+      CENTER.clear();
+      VDIM=0;
+      TYPE=VX_UNKNOWN;
+      PIXSIZE=0;
+      littleEndian=false;
+    }    
+
     inline size_t nbOfData(){return(SHAPE[0]*SHAPE[1]*SHAPE[2]*VDIM);}
     inline size_t nbOfPixels(){return(SHAPE[0]*SHAPE[1]*SHAPE[2]);}
     inline size_t PxPerPlane(){return(SHAPE[0]*SHAPE[1]);}
@@ -127,7 +146,6 @@ class INRInfo
       }
       std::cout<<std::endl;
     }
-
 };
 
 class BoundingBox
@@ -136,11 +154,12 @@ class BoundingBox
     BoundingBox()
     :_bbox(3)
     {
+      _bbox.resize(3);
       for(unsigned char j=0; j<3; j++)
       {
         _bbox[j].clear();
         _bbox[j].resize(2);
-        (_bbox[j])[0]=DBL_MAX;
+        (_bbox[j])[0]=1.e32;
         (_bbox[j])[1]=0.0;
       }
     }
@@ -165,10 +184,13 @@ class BoundingBox
 class INRreader
 {
   public:
+    typedef std::map<double,BoundingBox> BboxMapType;
+    
     INRreader(std::string filename);
     INRreader();
     ~INRreader();
     void readSegmentation(const std::string & filename);
+    void freeMemory();
     void createBoundingBoxes();
     bool isPointInsideSegmentation(const double & x, const double & y, const double & z) const;
     IndexCoord voxelCoordInterp(const double & x, const double & y, const double & z) const; 
@@ -184,6 +206,7 @@ class INRreader
     inline const size_t & xdim() const {return (_info.SHAPE[0]); };
     inline const size_t & ydim() const {return (_info.SHAPE[1]); };
     inline const size_t & zdim() const {return (_info.SHAPE[2]); };
+    inline const BboxMapType & bboxlabels() const {return(_bboxlabels); };
     void printHeader();
     std::vector<double> extractPointCloud();
     std::vector<double> extractVoxelValues();
@@ -200,13 +223,14 @@ class INRreader
     double EuclideanDist(const double * P1, const double * P2);
     bool isLittleEndian();
     void SwapBytes(void *pv, size_t n);
+    bool _isAllocated;
     INRInfo _info;
     size_t nb_Of_Pixels;
     size_t px_per_Plane;
     size_t byteLen;
     char * data;
     std::set<size_t> nzeroEntryIndexes;
-    std::map<double,BoundingBox> bboxlabels;
+    BboxMapType _bboxlabels;
 
 };
 #endif
