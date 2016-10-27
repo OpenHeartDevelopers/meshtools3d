@@ -316,9 +316,10 @@ int main(int argc,char **argv)
     // If you are here, all of your tetra have a label = 1, since
     // you used a un-labeled segmentation
     // Perhaps it is worth to discard tetra label at this point
+    std::cout<<"Re-apply labels on triangles"<<std::endl;
+    chrono2.start();
     Segmentation.createBoundingBoxes();
     const INRreader::BboxMapType & bboxmap=Segmentation.bboxlabels();
-    std::cout<<"Re-apply labels on triangles"<<std::endl;
     for(INRreader::BboxMapCIterType mapit=bboxmap.begin(); mapit!=bboxmap.end(); ++mapit)
     {
       std::cout<<"Relabeling region "<<mapit->first<<std::endl;
@@ -331,6 +332,8 @@ int main(int argc,char **argv)
           CarpMesh.Tri(*tr_it).regionLabel=regionLabel;
       }
     }
+    chrono2.stop();
+    std::cout<<" done in "<<chrono2<<std::endl;
   }
 
   std::cout<<"boundary re-labeling..."<<std::flush;
