@@ -122,7 +122,8 @@ bool INRreader::isPointInsideSegmentation(const double & x, const double & y, co
     IndexCoord Ixyz=voxelCoordInterp(x,y,z);
     for(size_t iv=0; iv<_info.VDIM; iv++)
     {
-        long long int voxval=static_cast<long long int>(pickVoxelValue(Ixyz.ix,Ixyz.iy,Ixyz.iz,iv));
+        double vox=pickVoxelValue(Ixyz.ix,Ixyz.iy,Ixyz.iz,iv);
+        long long int voxval=static_cast<long long int>(vox);
         if(voxval>0)
         {
           is_inside=true;

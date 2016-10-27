@@ -31,7 +31,7 @@
 #endif
 
 #ifndef TREECSIZE
-#define TREECSIZE 200
+#define TREECSIZE 201
 #endif
 
 Mesh::Mesh()
@@ -323,7 +323,7 @@ void Mesh::evalTriangles(mapfacetype bound_faces, size_t & nbTri,bool build_sear
   */
   if(build_search_tree)
   {
-    _searchTree.resize(TREECSIZE);
+    _searchTree.resize(TREECSIZE*TREECSIZE*TREECSIZE);
   }
   nbTri=bound_faces.size();
   triangles.resize(nbTri);
@@ -2072,7 +2072,7 @@ size_t Mesh::evalHashKey(const std::vector<double> & coordVec) const
     std::vector<size_t> IJK(3,0);
     for(unsigned char jc=0; jc<3; jc++)
     {
-        IJK[jc]=std::floor(TREECSIZE*aCoord[jc]);
+        IJK[jc]=std::floor((TREECSIZE-1)*aCoord[jc]);
     }
     hashKey=TensorIJKtoIndex(IJK[0], IJK[1], IJK[2],TREECSIZE, TREECSIZE);
     return(hashKey);
@@ -2088,13 +2088,14 @@ Mesh::IDsetType Mesh::extractSIDFromBBOX( const std::vector<std::vector<double> 
   {
     c0[jc]=(bb[jc])[0];
     c1[jc]=(bb[jc])[1];
+    IJKbbox[jc].resize(2,0);
   }
   std::vector<double> c0adim=dimensionlessCoord(c0);
   std::vector<double> c1adim=dimensionlessCoord(c1);
   for(unsigned char jc=0; jc<3; jc++)
   {
-    (IJKbbox[jc])[0]=std::floor(TREECSIZE*c0adim[jc]);
-    (IJKbbox[jc])[1]=std::floor(TREECSIZE*c1adim[jc]);
+    (IJKbbox[jc])[0]=std::floor((TREECSIZE-1)*c0adim[jc]);
+    (IJKbbox[jc])[1]=std::floor((TREECSIZE-1)*c1adim[jc]);
   }
   for(size_t I=(IJKbbox[0])[0]; I<=(IJKbbox[0])[1]; I++)
   {

@@ -136,7 +136,7 @@ int main(int argc,char **argv)
           size_t nbTet=static_cast<size_t>(c3t3.number_of_cells_in_complex());
           if(nbPt<3 ||nbTet<1)
           {
-              std::cerr<<"Problem with Triangulations, only "<<nbPt<<" Vertices and "<<nbTet<<"Thetraedra"<<std::endl;
+              std::cerr<<"Problem with Triangulations, only "<<nbPt<<" Vertices and "<<nbTet<<" Thetraedra"<<std::endl;
               if(!out_medit)
               {
                   std::string mfileoutName=out_dir+"/"+out_name+".mesh";
@@ -226,7 +226,7 @@ int main(int argc,char **argv)
           size_t nbTet=static_cast<size_t>(c3t3.number_of_cells_in_complex());
           if(nbPt<3 ||nbTet<1)
           {
-              std::cerr<<"Problem with Triangulations, only "<<nbPt<<" Vertices and "<<nbTet<<"Thetraedra"<<std::endl;
+              std::cerr<<"Problem with Triangulations, only "<<nbPt<<" Vertices and "<<nbTet<<" Thetraedra"<<std::endl;
               if(!out_medit)
               {
                   std::string mfileoutName=out_dir+"/"+out_name+".mesh";
@@ -297,11 +297,11 @@ int main(int argc,char **argv)
   chrono2.start();
   if(!mesh_from_segmentation)
   {
-    CarpMesh.extractBoundary();
+    CarpMesh.extractBoundary(true);
   }
   else
   {
-    CarpMesh.extractBoundary(true);
+    CarpMesh.extractBoundary();
   }
   
   chrono2.stop();
@@ -316,12 +316,12 @@ int main(int argc,char **argv)
     // If you are here, all of your tetra have a label = 1, since
     // you used a un-labeled segmentation
     // Perhaps it is worth to discard tetra label at this point
-
     Segmentation.createBoundingBoxes();
-    INRreader::BboxMapType bboxmap=Segmentation.bboxlabels();
-    for(INRreader::BboxMapIterType mapit=bboxmap.begin(); mapit!=bboxmap.end(); ++mapit)
+    const INRreader::BboxMapType & bboxmap=Segmentation.bboxlabels();
+    std::cout<<"Re-apply labels on triangles"<<std::endl;
+    for(INRreader::BboxMapCIterType mapit=bboxmap.begin(); mapit!=bboxmap.end(); ++mapit)
     {
-      
+      std::cout<<"Relabeling region "<<mapit->first<<std::endl;
       Mesh::IDsetType candidateSet=CarpMesh.extractTrianglesFromBBOX((mapit->second).bbox());
       for(Mesh::IDiteratorType tr_it=candidateSet.begin(); tr_it!=candidateSet.end(); ++tr_it)
       {

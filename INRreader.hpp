@@ -186,6 +186,7 @@ class INRreader
   public:
     typedef std::map<double,BoundingBox> BboxMapType;
     typedef BboxMapType::iterator BboxMapIterType;
+    typedef BboxMapType::const_iterator BboxMapCIterType;
     
     INRreader(std::string filename);
     INRreader();
