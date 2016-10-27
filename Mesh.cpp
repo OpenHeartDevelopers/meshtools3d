@@ -1,3 +1,17 @@
+//  -*- c++ -*-
+//  Mesh.cpp version 1.0                                     Oct/27/2016
+//
+//
+//  This library  is distributed in the  hope that it will  be useful, but
+//  WITHOUT   ANY  WARRANTY;   without  even   the  implied   warranty  of
+//  MERCHANTABILITY  or FITNESS  FOR A  PARTICULAR PURPOSE.   See  the GNU
+//  Lesser General Public License for more details.
+//
+//  Implementation of the Mesh class
+//
+//  Developer: Cesare Corrado cesare.corrado@kcl.ac.uk
+//==========================================================================
+
 #include "Mesh.hpp"
 #include "VtkWriter.hpp"
 #include<string>
@@ -16,6 +30,10 @@
 #define HEADER_SIZE 1024
 #endif
 
+#ifndef TREECSIZE
+#define TREECSIZE 200
+#endif
+
 Mesh::Mesh()
 :consistentState(false),
 points(0),
@@ -29,8 +47,8 @@ _epiLabel(-1)
   _elemBoundaryTris.clear();
   _endoTris.clear();
   _epiTris.clear();
+  _searchTree.clear();
 }
-
 
 Mesh::Mesh(const  std::string & inputFileame)
 :consistentState(false),
@@ -45,9 +63,9 @@ _epiLabel(-1)
   _elemBoundaryTris.clear();
   _endoTris.clear();
   _epiTris.clear();
+  _searchTree.clear();
   readFromFile(inputFileame);
 }
-
 
 Mesh::Mesh(const  Mesh & srcMesh)
 :consistentState(false)
@@ -56,6 +74,7 @@ Mesh::Mesh(const  Mesh & srcMesh)
   _elemBoundaryTris.clear();
   _endoTris.clear();
   _epiTris.clear();
+  _searchTree.clear();
   points.resize(srcMesh.nPt());
   triangles.resize(srcMesh.nTri());
   triaToTet.resize(srcMesh.nTri());
@@ -263,7 +282,7 @@ void Mesh::readFromFile(const  std::string & inputFileame)
     
     if(nbTri==0)
     {
-      evalTriangles(bound_faces,  nbTri,true);
+      evalTriangles(bound_faces,  nbTri,false,true);
     }
     else
     {
@@ -292,15 +311,20 @@ void Mesh::readFromFile(const  std::string & inputFileame)
 
 
 
-void Mesh::evalTriangles(mapfacetype bound_faces, size_t & nbTri, bool outwardNormOnBoundary)
+void Mesh::evalTriangles(mapfacetype bound_faces, size_t & nbTri,bool build_search_tree, bool outwardNormOnBoundary)
 {
   /* This routine extracts the triangles (faces) on the boundary and fills the triangle 
      attribute and the triaToTet attribute, that maps the triangle to the tetrahedra the face 
      belongs to; the region label of the triangle is the same of the tetra it belongs to
      if Flags outwardNormOnBoundary is settet to True, then the triangle nodes are re-oriented
      in such a way the normal vector points outside the tetraedron
+     in case build_search_tree is true, it also produces the search tree: a structure that,
+     given a point with coordinate x,y,z gives a set of nearest triangle candidates.
   */
-  
+  if(build_search_tree)
+  {
+    _searchTree.resize(TREECSIZE);
+  }
   nbTri=bound_faces.size();
   triangles.resize(nbTri);
   triaToTet.resize(nbTri);
@@ -313,7 +337,7 @@ void Mesh::evalTriangles(mapfacetype bound_faces, size_t & nbTri, bool outwardNo
     facetype_iter fiter;
     // extract triangle node labels
     Triangle Tria;
-    short int ivertex=0;
+    unsigned char ivertex=0;
     for(fiter=(itmap->second).second.begin();fiter!=(itmap->second).second.end();++fiter)
     {
       Tria.vertex[ivertex]=*fiter;
@@ -377,6 +401,12 @@ void Mesh::evalTriangles(mapfacetype bound_faces, size_t & nbTri, bool outwardNo
       }
     }//end if on outwardNormOnBoundary
     
+    if(build_search_tree)
+    {
+        std::vector<double > centroid=ElemCentroid(Tria);
+        size_t hkey=evalHashKey(centroid);
+        _searchTree[hkey].insert(jcount);
+    }
     triaToTet[jcount]=(itmap->second).first;
     //copy into triangle vector
     for(ivertex=0;ivertex<3;ivertex++)
@@ -388,7 +418,6 @@ void Mesh::evalTriangles(mapfacetype bound_faces, size_t & nbTri, bool outwardNo
   }//end loop on itmap iterator
 
 }
-
 
 double Mesh::hTri(size_t iTri )
 {
@@ -950,6 +979,7 @@ void Mesh::unsetBoundaryLabels()
   pointRegions.clear();
   regionLabels.clear();
   nbElToRegionLab.clear();
+  _searchTree.clear();
   info.emptyMem();
 }
 
@@ -961,7 +991,6 @@ void Mesh::unsetEndoEpiSets()
 
 void Mesh::writeBoundaryLabels(std::string & fileDir, std::string & FileName)
 {
-
     for(regionSubdivisionTypeIterator regIter=pointRegions.begin();regIter!=pointRegions.end();++regIter)
     {
         std::ofstream surfLabFile;
@@ -1242,7 +1271,7 @@ void Mesh::writeElements(std::string outputFileName, bool binary)
   bool is_3D=false;
   std::string elType;
   size_t * vertex=NULL;
-  short int nbV=0;
+  unsigned char nbV=0;
   
   if(this->nTet()>0)
   {
@@ -1293,7 +1322,7 @@ void Mesh::writeElements(std::string outputFileName, bool binary)
   for(size_t iElem=0; iElem<nElem; iElem++)
   {
     int regionLabel=0;
-    for(short int iV=0; iV<nbV; iV++ )
+    for(unsigned char iV=0; iV<nbV; iV++ )
     {
       if(is_3D)
       {
@@ -1313,7 +1342,7 @@ void Mesh::writeElements(std::string outputFileName, bool binary)
       
       chksum_tags=chksum_tags+regionLabel;
       elFile.write((char*) &elemType, sizeof(int));
-      for(short int iV=0; iV<nbV; iV++ )
+      for(unsigned char iV=0; iV<nbV; iV++ )
       {
         chksum_elems=chksum_elems+vertex[iV];
         int iVertex=static_cast<int>(vertex[iV]);
@@ -1325,7 +1354,7 @@ void Mesh::writeElements(std::string outputFileName, bool binary)
     else
     {
       elFile<<elType;
-      for(short int iV=0; iV<nbV; iV++)
+      for(unsigned char iV=0; iV<nbV; iV++)
       {
         elFile<<" "<<vertex[iV];
       }
@@ -1684,6 +1713,7 @@ void Mesh::clear()
   _elemBoundaryTris.clear();
   _endoTris.clear();
   _epiTris.clear();
+  _searchTree.clear();
 
   consistentState=false;
 }
@@ -1695,7 +1725,7 @@ Mesh::~Mesh()
 }
 
 
-void Mesh::extractBoundary()
+void Mesh::extractBoundary(bool build_search_tree)
 {
   /* This routine extracts the boundary faces and fill a bound_faces
      type  that is a multi-map; for each face the entries are:
@@ -1783,11 +1813,15 @@ void Mesh::extractBoundary()
       permutation[jface] = NULL;
     }
     permutation.clear();
-    evalTriangles(bound_faces, nbTri, true);
+    evalTriangles(bound_faces, nbTri,build_search_tree, true);
   }//end if on consistent state
 
 }
 
+Mesh::IDsetType Mesh::extractTrianglesFromBBOX(const std::vector<std::vector<double> > & bb)
+{
+  return(extractSIDFromBBOX(bb));
+}
 
 //used to evaluate endianess
 bool Mesh::isLittleEndian()
@@ -1994,7 +2028,6 @@ std::vector<double>Mesh::InvertA3X3(const std::vector<double> & Mat0) const
     {
       *it=*it/det;
     }
-    
   }
   else
   {
@@ -2004,13 +2037,82 @@ std::vector<double>Mesh::InvertA3X3(const std::vector<double> & Mat0) const
   return(inverted);      
 }
 
-
 short int Mesh::RM3X3Ind(short int irow, short int jcol) const
 {
   short int index=3*irow + jcol;
   return(index);
 }
 
+size_t Mesh::TensorIJtoIndex(const size_t & I, const size_t & J,  const size_t & JDIM ) const
+{
+  size_t index= J+(JDIM*I);
+  return(index);
+}
+
+size_t Mesh::TensorIJKtoIndex(const size_t & I, const size_t & J,  const size_t & K,const size_t & IDIM, const size_t & JDIM ) const
+{
+  size_t index= JDIM*(K*IDIM+I)+ J;
+  return(index);
+}
+
+std::vector<double> Mesh::dimensionlessCoord(const std::vector<double> & coordVec) const
+{
+  std::vector<double> aCoord(3,0);
+  for(unsigned char jc=0; jc<3; jc++)
+  {
+    aCoord[jc]=(coordVec[jc]-(info.bbox[jc])[0])/( (info.bbox[jc])[1]-(info.bbox[jc])[0] );
+  }
+  return(aCoord);
+}
+
+size_t Mesh::evalHashKey(const std::vector<double> & coordVec) const 
+{
+    size_t hashKey=0;
+    std::vector<double> aCoord=dimensionlessCoord(coordVec);
+    std::vector<size_t> IJK(3,0);
+    for(unsigned char jc=0; jc<3; jc++)
+    {
+        IJK[jc]=std::floor(TREECSIZE*aCoord[jc]);
+    }
+    hashKey=TensorIJKtoIndex(IJK[0], IJK[1], IJK[2],TREECSIZE, TREECSIZE);
+    return(hashKey);
+}
+
+
+Mesh::IDsetType Mesh::extractSIDFromBBOX( const std::vector<std::vector<double> > & bb ) const
+{
+  IDsetType setID;
+  std::vector<std::vector<size_t> > IJKbbox(3);
+  std::vector<double> c0(3,0),c1(3,0);
+  for(unsigned char jc=0; jc<3; jc++)
+  {
+    c0[jc]=(bb[jc])[0];
+    c1[jc]=(bb[jc])[1];
+  }
+  std::vector<double> c0adim=dimensionlessCoord(c0);
+  std::vector<double> c1adim=dimensionlessCoord(c1);
+  for(unsigned char jc=0; jc<3; jc++)
+  {
+    (IJKbbox[jc])[0]=std::floor(TREECSIZE*c0adim[jc]);
+    (IJKbbox[jc])[1]=std::floor(TREECSIZE*c1adim[jc]);
+  }
+  for(size_t I=(IJKbbox[0])[0]; I<=(IJKbbox[0])[1]; I++)
+  {
+      for(size_t J=(IJKbbox[1])[0]; J<=(IJKbbox[1])[1]; J++)
+      {
+        for(size_t K=(IJKbbox[2])[0]; K<=(IJKbbox[2])[1]; K++)
+        {
+            size_t index=TensorIJKtoIndex(I, J, K,TREECSIZE, TREECSIZE);
+            for(IDiteratorType it=_searchTree[index].begin();it!=_searchTree[index].end(); ++it)
+            {
+                setID.insert(*it);
+            }
+        }
+      }
+  }
+  return(setID);
+
+}
 
 std::vector<double> Mesh::TetInvJacobian(size_t iTet) const
 {
@@ -2041,9 +2143,9 @@ std::vector<double> Mesh::TetraCentroid(size_t iTet) const
   if(consistentState && this->nTet())
   {
     const Tetrahedron & Tetra= tetrahedra[iTet];
-    for(short int jv=0; jv<4; jv++)
+    for(unsigned char jv=0; jv<4; jv++)
     {
-      for(short int ic=0; ic<3; ic++)
+      for(unsigned char ic=0; ic<3; ic++)
       {
         centroid[ic]=centroid[ic]+0.25*points[Tetra.vertex[jv]].coord[ic];
       }
@@ -2060,18 +2162,40 @@ std::vector<double> Mesh::TriaCentroid(size_t iTri) const
   if(consistentState && this->nTri())
   {
     const Triangle & Tria= triangles[iTri];
-    for(short int jv=0; jv<3; jv++)
+    for(unsigned char jv=0; jv<3; jv++)
     {
-      for(short int ic=0; ic<3; ic++)
+      for(unsigned char ic=0; ic<3; ic++)
       {
         centroid[ic]=centroid[ic]+points[Tria.vertex[jv]].coord[ic];
       }
     }
-    for(short int ic=0; ic<3; ic++)
+    for(unsigned char ic=0; ic<3; ic++)
     {
       centroid[ic]=centroid[ic]/3.0;
     }
   }
+  return(centroid);
+}
+
+std::vector<double> Mesh::ElemCentroid(const Element & Elem) const
+{
+  std::vector<double> centroid(3,0);
+  if(consistentState)
+  {
+      for(unsigned char jv=0; jv<Elem.nbV(); jv++)
+      {
+        for(unsigned char ic=0; ic<3; ic++)
+        {
+          centroid[ic]=centroid[ic]+points[Elem.vertex[jv]].coord[ic];
+        }
+      }
+
+      for(unsigned char ic=0; ic<3; ic++)
+      {
+        centroid[ic]=centroid[ic]/static_cast<double>(Elem.nbV());
+      }
+  }
+
   return(centroid);
 }
 

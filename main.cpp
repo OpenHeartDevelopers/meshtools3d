@@ -295,20 +295,42 @@ int main(int argc,char **argv)
   
   std::cout<<"boundary extraction..."<<std::flush;
   chrono2.start();
-  CarpMesh.extractBoundary();
+  if(!mesh_from_segmentation)
+  {
+    CarpMesh.extractBoundary();
+  }
+  else
+  {
+    CarpMesh.extractBoundary(true);
+  }
+  
   chrono2.stop();
   std::cout<<" done in "<<chrono2<<std::endl;
   chrono2.reset();
 
   if(!mesh_from_segmentation)
   {
-    Segmentation.createBoundingBoxes();
     // HERE GOES RELABELING 
     // NB: AT this point algorthm expects that tria are defined
     // and that have the same label of the tetra they belongs to
     // If you are here, all of your tetra have a label = 1, since
     // you used a un-labeled segmentation
     // Perhaps it is worth to discard tetra label at this point
+
+    Segmentation.createBoundingBoxes();
+    INRreader::BboxMapType bboxmap=Segmentation.bboxlabels();
+    for(INRreader::BboxMapIterType mapit=bboxmap.begin(); mapit!=bboxmap.end(); ++mapit)
+    {
+      
+      Mesh::IDsetType candidateSet=CarpMesh.extractTrianglesFromBBOX((mapit->second).bbox());
+      for(Mesh::IDiteratorType tr_it=candidateSet.begin(); tr_it!=candidateSet.end(); ++tr_it)
+      {
+          std::vector<double> cgT=CarpMesh.TriaCentroid(*tr_it);
+          std::vector<double> voxval=Segmentation.interpolatedNonZeroVoxelValue(cgT);
+          int regionLabel=static_cast<int>(voxval[0]);
+          CarpMesh.Tri(*tr_it).regionLabel=regionLabel;
+      }
+    }
   }
 
   std::cout<<"boundary re-labeling..."<<std::flush;

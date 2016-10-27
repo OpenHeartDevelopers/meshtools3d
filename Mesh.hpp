@@ -1,3 +1,18 @@
+//  -*- c++ -*-
+//  Mesh.hpp version 1.0                                     Oct/27/2016
+//
+//
+//  This library  is distributed in the  hope that it will  be useful, but
+//  WITHOUT   ANY  WARRANTY;   without  even   the  implied   warranty  of
+//  MERCHANTABILITY  or FITNESS  FOR A  PARTICULAR PURPOSE.   See  the GNU
+//  Lesser General Public License for more details.
+//
+//  This library is used to handle a mesh object
+//
+//  Developer: Cesare Corrado cesare.corrado@kcl.ac.uk
+//==========================================================================
+
+
 #ifndef _MESH_HPP
 #define _MESH_HPP
 
@@ -23,7 +38,7 @@ struct MeshInfo{
     bbox[0].resize(2);
     bbox[1].resize(2);
     bbox[2].resize(2);
-    for(short int jdim=0; jdim<3; jdim++)
+    for(unsigned char jdim=0; jdim<3; jdim++)
     {
         (bbox[jdim])[0]= DBL_MAX;
         (bbox[jdim])[1]=-DBL_MAX;
@@ -33,7 +48,7 @@ struct MeshInfo{
   {
     if(_allocated)
     {
-      for(short int jdim=0; jdim<3; jdim++)
+      for(unsigned char jdim=0; jdim<3; jdim++)
       {
           (bbox[jdim])[0]= DBL_MAX;
           (bbox[jdim])[1]=-DBL_MAX;
@@ -82,19 +97,22 @@ class Element
     Element()
       :regionLabel(0),
       vertex(0),
-      _vtkCellType(0)
+      _vtkCellType(0),
+      _nbV(0)
       {};
   ~Element()
     {
       vertex.clear();
       regionLabel=0;
       _vtkCellType=0;
+      _nbV=0;
     };
 
-  inline const short int nbV() const {return static_cast<short int>(vertex.size());};
+  inline const unsigned char nbV() const {return _nbV;};
   int regionLabel;
   std::vector<size_t> vertex;
   int _vtkCellType;
+  unsigned char _nbV;
 };
 
 
@@ -106,10 +124,12 @@ class Triangle
     :Element()
     {
         _vtkCellType=5;
-        vertex.resize(3);
-        vertex[0]=0;
-        vertex[1]=0;
-        vertex[2]=0;
+        _nbV=3;
+        vertex.resize(_nbV);
+        for(unsigned char iv=0; iv<_nbV; iv++)
+        {
+          vertex[iv]=0;
+        }
     }
     inline size_t & p0(){return vertex[0];};
     inline size_t & p1(){return vertex[1];};
@@ -125,11 +145,12 @@ class Tetrahedron
     :Element()
     {
         _vtkCellType=10;
-        vertex.resize(4);
-        vertex[0]=0;
-        vertex[1]=0;
-        vertex[2]=0;
-        vertex[3]=0;
+        _nbV=4;
+        vertex.resize(_nbV);
+        for(unsigned char iv=0; iv<_nbV; iv++)
+        {
+          vertex[iv]=0;
+        }
     }
     inline size_t & p0(){return vertex[0];};
     inline size_t & p1(){return vertex[1];};
@@ -155,7 +176,11 @@ class Mesh
   // type for elemBoundaryTris  
   typedef std::map<short int, size_t> boundaryFaceInTetraType;
   typedef std::vector<boundaryFaceInTetraType> ElemToBoundaryFaceConnectionType;
-
+  // Search tree type
+  public:
+    typedef std::set<size_t> IDsetType;
+    typedef IDsetType::iterator IDiteratorType;
+    typedef std::vector<IDsetType > searchTreeType;
 
 
   public:
@@ -168,7 +193,8 @@ class Mesh
     void initializePtVector(size_t dim);
     void initializeTetraVector(size_t dim);
     void preprocessingOperations();
-    void extractBoundary();
+    void extractBoundary(bool build_search_tree=false);
+    IDsetType extractTrianglesFromBBOX(const std::vector<std::vector<double> > & bb);
     void evalBoundaryLabels(bool debug=false,std::string debugDir="",size_t print_interval=100000);
     void unsetBoundaryLabels();
     void unsetEndoEpiSets();
@@ -194,7 +220,7 @@ class Mesh
     inline const std::vector<Point>  & Pt() const {return points;};
     inline const std::vector<Triangle> & Tri() const {return triangles;};
     inline const std::vector<Tetrahedron> & Tet() const {return tetrahedra;};
-
+    
     
     std::vector<double> copyLabelVectorForVTKOutput();
     
@@ -241,11 +267,12 @@ class Mesh
 
     std::vector<double> TetraCentroid(size_t iTet) const;
     std::vector<double> TriaCentroid(size_t iTri) const;
+    std::vector<double> ElemCentroid(const Element & Elem) const;
 
 
   private:
     void checkConnectivity();
-    void evalTriangles(mapfacetype bound_faces, size_t & nbTri, bool outwardNormOnBoundary = false);
+    void evalTriangles(mapfacetype bound_faces, size_t & nbTri, bool build_search_tree, bool outwardNormOnBoundary );
     void writePoints(std::string outputFileName,double rescaling=1.0, bool binary=false);
     void writeElements(std::string outputFileName, bool binary=false);
     void writeFakeFiebers(std::string outputFileName, bool binary=false);
@@ -253,6 +280,11 @@ class Mesh
     void SwapBytes(void *pv, size_t n);
     std::vector<double>InvertA3X3(const std::vector<double> & Mat0) const;
     short int RM3X3Ind(short int irow, short int jcol) const;
+    size_t TensorIJtoIndex(const size_t & I, const size_t & J,  const size_t & JDIM ) const;
+    size_t TensorIJKtoIndex(const size_t & I, const size_t & J,  const size_t & K,const size_t & IDIM, const size_t & JDIM ) const;
+    std::vector<double> dimensionlessCoord(const std::vector<double> & coordVec) const;
+    size_t evalHashKey(const std::vector<double> & coordVec) const ;
+    IDsetType extractSIDFromBBOX(const std::vector<std::vector<double> > & bb ) const;
     bool consistentState;
     std::vector<Point> points;
     std::vector<Triangle> triangles;
@@ -272,6 +304,7 @@ class Mesh
     ElemToBoundaryFaceConnectionType _elemBoundaryTris;
     facetype _endoTris;
     facetype _epiTris;
+    searchTreeType _searchTree;
 };
 
 #endif
