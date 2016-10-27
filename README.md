@@ -53,9 +53,24 @@ defined; for using for example 4 cores, on a shell window type:
 
 Remark: TBB_NUM_THREADS is NOT a environment variable of TBB; it will affects only meshtools3d code
 
+## Notes
+* To disable TBB when compile, comment (with a # at the beginning of each line) the following lines in CMakeLists.txt:
+```sh
+if( TBB_FOUND ) 
+  include(${TBB_USE_FILE}) 
+  list(APPEND CGAL_3RD_PARTY_LIBRARIES ${TBB_LIBRARIES}) 
+endif() 
+```
+* To create a debug version of the code, first generate the Makefile with:
+```sh
+cmake -DCMAKE_BUILD_TYPE=Debug -DCGAL_DONT_OVERRIDE_CMAKE_FLAGS=FALSE -DCGAL_DISABLE_ROUNDING_MATH_CHECK=ON
+```
+rounding mat checks have to be disabled if one want to use valgrind (look in https://github.com/openscad/openscad/issues/1340 for a similar problem) 
+and overriding of cmake flags has to be allowed
+
 ## TO DO
 
-* check and in case icorrect binary output for carp meshes
+* check and in case correct binary output for carp meshes
 * implement output for .mesh file also in Mesh class (could be useful?)
 * implement output also for triangles (boundary elements)
 
@@ -76,12 +91,20 @@ Remark: TBB_NUM_THREADS is NOT a environment variable of TBB; it will affects on
 
 22 May 2015
 
-* Added some examples
-=======
-* added a routine to write Laplace solution in a VTK file
+* added some examples
+* added a routine to the thickness in a VTK file
 
 11 Aug 2015
+
 * Added parallel run facilities
 
+27 Oct 2016
+
+* deleted some variables when no longer needed to free memory before the evaluation of the potential 
+* implemented a class for read and handle .inr files
+* implemented a search tree to localise boundary triangles within a specified bounding box
+* implemented some CGAL extensions to use wrap the segmentation in a function that tells if a point is within the segmented domain or not
+* created a new mode for mesh switching off segmentation labels during meshing and then labeling triangles only
+* created a new example (sphereMultilabel) for meshing and then re-labeling
 
 
