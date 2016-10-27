@@ -185,6 +185,7 @@ class INRreader
 {
   public:
     typedef std::map<double,BoundingBox> BboxMapType;
+    typedef BboxMapType::iterator BboxMapIterType;
     
     INRreader(std::string filename);
     INRreader();
@@ -197,8 +198,9 @@ class INRreader
     IndexCoord voxelCoordInterpNonZero(const double & x, const double & y, const double & z);
     std::vector<double> interpolatedVoxelValue (const double & x, const double & y, const double & z);
     std::vector<double> interpolatedNonZeroVoxelValue (const double & x, const double & y, const double & z);
+    inline std::vector<double> interpolatedVoxelValue(std::vector<double>& Pt) {return(interpolatedVoxelValue(Pt[0],Pt[1],Pt[2]) ); };
+    inline std::vector<double> interpolatedNonZeroVoxelValue(std::vector<double>& Pt) {return(interpolatedNonZeroVoxelValue(Pt[0],Pt[1],Pt[2]) ); };
     double pickVoxelValue(const size_t & ix,const size_t & iy,const size_t & iz,const size_t iv=0) const;
-    
     inline const INRInfo & info() const {return (_info);};
     inline const double & vx() const {return (_info.RESOLUTION[0]); };
     inline const double & vy() const {return (_info.RESOLUTION[1]); };
