@@ -80,6 +80,7 @@ int main(int argc,char **argv)
     std::cout << "nb of threads is: " << numThreads << std::endl;
   }
   tbb::task_scheduler_init init(numThreads);
+  nthr=NULL;
 #endif
 
   Mesh CarpMesh;
