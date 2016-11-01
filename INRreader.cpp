@@ -1265,6 +1265,7 @@ LinearRegression2DData INRreader::evalRegressionPlane(std::set<size_t> & pointli
     {
       datareg.pnorm[ic]=eigens.eigenVectors[RM3X3Ind(ic,0)]; //extract the 1st col
     }
+<<<<<<< HEAD
     
     std::vector<double> normdir=datareg.pnorm;
     double normnorm=sqrt(normdir[0]*normdir[0]+normdir[1]*normdir[1]+normdir[2]*normdir[2]);
@@ -1322,6 +1323,8 @@ LinearRegression2DData INRreader::evalRegressionPlane(std::set<size_t> & pointli
     datareg.rhominmax[0]=rhomin;
     datareg.rhominmax[1]=rhomax;
 
+=======
+>>>>>>> d10e2da91b6cb6d5fb32e750efce39012b963a5c
   }
   return datareg;
 }
