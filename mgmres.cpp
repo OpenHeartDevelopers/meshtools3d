@@ -5,7 +5,15 @@
 # include <cmath>
 # include <ctime>
 
-using namespace std;
+#ifdef USE_TBB_PARALLEL
+#include <tbb/task_scheduler_init.h>
+#include <tbb/blocked_range.h>
+#include <tbb/parallel_reduce.h>
+#include <tbb/tbb.h>
+#include <tbb/tick_count.h>
+#endif
+
+//using namespace std;
 
 # include "mgmres.hpp"
 
@@ -278,6 +286,16 @@ void ax_cr ( const long int & n, const long int & nz_num, const long int * ia, c
 //    Output, double W[N], the value of A*X.
 //
 {
+#ifdef USE_TBB_PARALLEL
+  ax_cr_parallel axc_par;
+  axc_par.aij=a;
+  axc_par.I=ia;
+  axc_par.J=ja;
+  axc_par.xA=x;
+  axc_par.resArray=w;
+  size_t length=static_cast<size_t>(n);
+  tbb::parallel_for(tbb::blocked_range<size_t>(0,static_cast<size_t>(length)), axc_par);
+#else
   long int i;
   long int k;
   long int k1;
@@ -294,6 +312,7 @@ void ax_cr ( const long int & n, const long int & nz_num, const long int * ia, c
     }
   }
   return;
+#endif  
 }
 //****************************************************************************80
 
@@ -436,12 +455,18 @@ void diagonal_pointer_cr ( const long int & n, const long int & nz_num, const lo
 //    Output, long int UA[N], the index of the diagonal element of each row.
 //
 {
+#ifdef USE_TBB_PARALLEL
+  size_t length=static_cast<size_t>(n);
+  diagonal_pointer_cr_parallel dppar;
+  dppar.inputArrayRow=ia;
+  dppar.inputArrayCol=ja;
+  dppar.outputArray=ua;
+  tbb::parallel_for(tbb::blocked_range<size_t>(0,length), dppar);
+#else
   long int i;
   long int j;
   long int j1;
   long int j2;
-
-
   for ( i = 0; i < n; i++ )
   {
     ua[i] = -1;
@@ -453,11 +478,11 @@ void diagonal_pointer_cr ( const long int & n, const long int & nz_num, const lo
       if ( ja[j] == i ) 
       {
         ua[i] = j;
+        break;
       }
     }
-
   }
-  return;
+#endif  
 }
 //****************************************************************************80
 
@@ -520,21 +545,27 @@ void ilu_cr ( const long int & n, const long int & nz_num, const long int * ia, 
 //
 //  Copy A.
 //
+#ifdef USE_TBB_PARALLEL
+  vectorCopy<double>(a, l,  nz_num);
+#else
   for ( k = 0; k < nz_num; k++ ) 
   {
     l[k] = a[k];
   }
-
+#endif
   for ( i = 0; i < n; i++ ) 
   {
 //
 //  IW points to the nonzero entries in row I.
 //
+#ifdef USE_TBB_PARALLEL    
+  initializeVector<long int>(iw, -1, n);
+#else    
     for ( j = 0; j < n; j++ )
     {
       iw[j] = -1;
     }
-
+#endif
     for ( k = ia[i]; k <= ia[i+1] - 1; k++ ) 
     {
       iw[ja[k]] = k;
@@ -565,20 +596,20 @@ void ilu_cr ( const long int & n, const long int & nz_num, const long int * ia, 
 
     if ( jrow != i ) 
     {
-      cout << "\n";
-      cout << "ILU_CR - Fatal error!\n";
-      cout << "  JROW != I\n";
-      cout << "  JROW = " << jrow << "\n";
-      cout << "  I    = " << i << "\n";
+      std::cout << "\n";
+      std::cout << "ILU_CR - Fatal error!\n";
+      std::cout << "  JROW != I\n";
+      std::cout << "  JROW = " << jrow << "\n";
+      std::cout << "  I    = " << i << "\n";
       exit ( 1 );
     }
 
     if ( l[j] == 0.0 ) 
     {
-      cout << "\n";
-      cout << "ILU_CR - Fatal error!\n";
-      cout << "  Zero pivot on step I = " << i << "\n";
-      cout << "  L[" << j << "] = 0.0\n";
+      std::cout << "\n";
+      std::cout << "ILU_CR - Fatal error!\n";
+      std::cout << "  Zero pivot on step I = " << i << "\n";
+      std::cout << "  L[" << j << "] = 0.0\n";
       exit ( 1 );
     }
 
@@ -656,10 +687,15 @@ void lus_cr ( const long int & n, const long int & nz_num, const long int *ia, c
 //
 //  Copy R in.
 //
+
+#ifdef USE_TBB_PARALLEL
+  vectorCopy<double>(r, w, n);
+#else
   for ( i = 0; i < n; i++ )
   {
     w[i] = r[i];
   }
+#endif  
 //
 //  Solve L * w = w where L is unit lower triangular.
 //
@@ -684,11 +720,14 @@ void lus_cr ( const long int & n, const long int & nz_num, const long int *ia, c
 //
 //  Copy Z out.
 //
+#ifdef USE_TBB_PARALLEL
+  vectorCopy<double>(w,z, n);
+#else
   for ( i = 0; i < n; i++ )
   {
     z[i] = w[i];
   }
-
+#endif  
   delete [] w;
 
   return;
@@ -820,11 +859,11 @@ void mgmres_st ( long int n, long int nz_num, long int ia[], long int ja[], doub
 
   if ( n < mr )
   {
-    cout << "\n";
-    cout << "MGMRES_ST - Fatal error!\n";
-    cout << "  N < MR.\n";
-    cout << "  N = " << n << "\n";
-    cout << "  MR = " << mr << "\n";
+    std::cout << "\n";
+    std::cout << "MGMRES_ST - Fatal error!\n";
+    std::cout << "  N < MR.\n";
+    std::cout << "  N = " << n << "\n";
+    std::cout << "  MR = " << mr << "\n";
     exit ( 1 );
   }
 
@@ -841,7 +880,7 @@ void mgmres_st ( long int n, long int nz_num, long int ia[], long int ja[], doub
 
     if ( verbose ) 
     {
-      cout << "  ITR = " << itr << "  Residual = " << rho << "\n";
+      std::cout << "  ITR = " << itr << "  Residual = " << rho << "\n";
     }
 
     if ( itr == 1 ) 
@@ -939,7 +978,7 @@ void mgmres_st ( long int n, long int nz_num, long int ia[], long int ja[], doub
 
       if ( verbose )
       {
-        cout << "  K =   " << k << "  Residual = " << rho << "\n";
+        std::cout << "  K =   " << k << "  Residual = " << rho << "\n";
       }
 
       if ( rho <= rho_tol && rho <= tol_abs )
@@ -977,10 +1016,10 @@ void mgmres_st ( long int n, long int nz_num, long int ia[], long int ja[], doub
 
   if ( verbose )
   {
-    cout << "\n";
-    cout << "MGMRES_ST\n";
-    cout << "  Number of iterations = " << itr_used << "\n";
-    cout << "  Final residual = " << rho << "\n";
+    std::cout << "\n";
+    std::cout << "MGMRES_ST\n";
+    std::cout << "  Number of iterations = " << itr_used << "\n";
+    std::cout << "  Final residual = " << rho << "\n";
   }
 
   delete [] c;
@@ -1221,43 +1260,50 @@ void pmgmres_ilu_cr ( const long int & n, const long int & nz_num,
 
   if ( verbose>0 )
   {
-	if ( verbose>1 )
-	{
-		std::cout<<"...done"<<std::endl;
-	}
-    cout << "\n";
-    cout << "PMGMRES_ILU_CR\n";
-    cout << "  Number of unknowns = " << n << "\n";
+	  if ( verbose>1 )
+	  {
+		  std::cout<<"...done"<<std::endl;
+	  }
+      std::cout << "\n";
+      std::cout << "PMGMRES_ILU_CR\n";
+      std::cout << "  Number of unknowns = " << n << "\n";
   }
 
   for ( itr = 0; itr < itr_max; itr++ ) 
   {
     ax_cr ( n, nz_num, ia, ja, a, x, r );
 
+    
+#ifdef USE_TBB_PARALLEL    
+    vxmvVectorUpdating<double>(r, rhs,n);
+#else
     for ( i = 0; i < n; i++ ) 
     {
       r[i] = rhs[i] - r[i];
     }
-
+#endif
     lus_cr ( n, nz_num, ia, ja, l, ua, r, r );
 
     rho = sqrt ( r8vec_dot ( n, r, r ) );
 
     if ( verbose>1 )
     {
-      cout << "  ITR = " << itr << "  Residual = " << rho << "\n";
+      std::cout << "  ITR = " << itr << "  Residual = " << rho << "\n";
     }
 
     if ( itr == 0 )
     {
       rho_tol = rho * tol_rel;
     }
-
+#ifdef USE_TBB_PARALLEL    
+    double invrho=1.0/rho;
+    yaxsFunc<double>(r, v, invrho,n);
+#else
     for ( i = 0; i < n; i++ ) 
     {
       v[0*n+i] = r[i] / rho;
     }
-
+#endif
     g[0] = rho;
     for ( i = 1; i < mr + 1; i++ ) 
     {
@@ -1342,7 +1388,7 @@ void pmgmres_ilu_cr ( const long int & n, const long int & nz_num,
 
       if ( verbose>2 )
       {
-        cout << "  K   = " << k << "  Residual = " << rho << "\n";
+        std::cout << "  K   = " << k << "  Residual = " << rho << "\n";
       }
 
       if ( rho <= rho_tol && rho <= tol_abs )
@@ -1363,6 +1409,10 @@ void pmgmres_ilu_cr ( const long int & n, const long int & nz_num,
       }
       y[i] = y[i] / h[i*mr+i];
     }
+    
+#ifdef USE_TBB_PARALLEL
+    xxvyFunc(x, y, v, k, n);
+#else
     for ( i = 0; i < n; i++ )
     {
       for ( j = 0; j < k + 1; j++ )
@@ -1370,19 +1420,19 @@ void pmgmres_ilu_cr ( const long int & n, const long int & nz_num,
         x[i] = x[i] + v[j*n+i] * y[j];
       }
     }
-
+#endif
     if ( rho <= rho_tol && rho <= tol_abs )
     {
       break;
     }
-  }
+  }//end on solver iterations
 
   if ( verbose>0 )
   {
-    cout << "\n";;
-    cout << "PMGMRES_ILU_CR:\n";
-    cout << "  Iterations = " << itr_used << "\n";
-    cout << "  Final residual = " << rho << "\n";
+    std::cout << "\n";;
+    std::cout << "PMGMRES_ILU_CR:\n";
+    std::cout << "  Iterations = " << itr_used << "\n";
+    std::cout << "  Final residual = " << rho << "\n";
   }
 
   delete [] c;
@@ -1428,16 +1478,24 @@ double r8vec_dot ( const long int & n, const double * a1, const double * a2 )
 //    Output, double R8VEC_DOT, the dot product of the vectors.
 //
 {
-  long int i;
-  double value;
+  double value=0.0;
 
-  value = 0.0;
+#ifdef USE_TBB_PARALLEL
+  size_t length=static_cast<size_t>(n);
+  r8vec_dot_parallel r8dot(a1,a2);
+  tbb::parallel_reduce(tbb::blocked_range<size_t>(0,length), r8dot );
+  value=r8dot.getSum();
+#else
+  long int i=0.0;
   for ( i = 0; i < n; i++ )
   {
     value = value + a1[i] * a2[i];
   }
+
+#endif
   return value;
 }
+
 //****************************************************************************80
 
 double *r8vec_uniform_01 ( const long int & n, long int *seed )
@@ -1514,9 +1572,9 @@ double *r8vec_uniform_01 ( const long int & n, long int *seed )
 
   if ( *seed == 0 )
   {
-    cerr << "\n";
-    cerr << "R8VEC_UNIFORM_01 - Fatal error!\n";
-    cerr << "  Input value of SEED = 0.\n";
+    std::cerr << "\n";
+    std::cerr << "R8VEC_UNIFORM_01 - Fatal error!\n";
+    std::cerr << "  Input value of SEED = 0.\n";
     exit ( 1 );
   }
 
@@ -1592,20 +1650,51 @@ void rearrange_cr ( const long int & n, const long int & nz_num, const long int 
 //    order of the entries may have changed because of the sorting.
 //
 {
-  double dtemp;
   long int i;
-  long int is;
-  long int itemp;
-  long int j;
   long int j1;
   long int j2;
+
+  long int is;
+
+  /*long int j;
   long int k;
+  long int itemp;
+  double dtemp;*/
 
   for ( i = 0; i < n; i++ )
   {
     j1 = ia[i];
     j2 = ia[i+1];
     is = j2 - j1;
+    rearrange_cr_row(j1,j2,ja,a);
+
+    /*for ( k = 1; k < is; k++ ) 
+    {
+      for ( j = j1; j < j2 - k; j++ ) 
+      {
+        if ( ja[j+1] < ja[j] ) 
+        {
+          itemp = ja[j+1];
+          ja[j+1] =  ja[j];
+          ja[j] =  itemp;
+
+          dtemp = a[j+1];
+          a[j+1] =  a[j];
+          a[j] = dtemp;
+        }
+      }
+    }*/
+  }
+  return;
+}
+
+void rearrange_cr_row ( const long int & j1,const long int & j2, long int * ja, double * a )
+{
+    long int is = j2 - j1;
+    long int k=0;
+    long int j=0;
+    long int itemp=0;
+    double dtemp=0.0;
 
     for ( k = 1; k < is; k++ ) 
     {
@@ -1623,9 +1712,10 @@ void rearrange_cr ( const long int & n, const long int & nz_num, const long int 
         }
       }
     }
-  }
-  return;
+
+
 }
+
 //****************************************************************************80
 
 void timestamp ( )
@@ -1668,8 +1758,25 @@ void timestamp ( )
 
   size_t len = strftime ( time_buffer, TIME_SIZE, "%d %B %Y %I:%M:%S %p", tm );
 
-  cout << time_buffer << "\n";
+  std::cout << time_buffer << "\n";
 
   return;
 # undef TIME_SIZE
 }
+
+
+
+#ifdef USE_TBB_PARALLEL
+void xxvyFunc(double * xVArray, const double * yVArray, const double * vCMmat, long int k_index, long int size)
+{
+    xxvy xxvy_op;
+    xxvy_op.xV=xVArray;
+    xxvy_op.yV=yVArray;
+    xxvy_op.vCM=vCMmat;
+    xxvy_op.k= k_index;
+    xxvy_op.n=size;
+    tbb::parallel_for(tbb::blocked_range<size_t>(0,static_cast<size_t>(size)), xxvy_op);
+}
+
+
+#endif
