@@ -1082,6 +1082,47 @@ void INRreader::evalLabeledRegionsBounds()
 
        _bboxlabels.insert(std::pair<double,BoundingBox >(voxValue,localbbox) );
     }
+    
+
+    for(regionSubdivisionTypeIterator mapit=voxelRegions.begin();mapit!=voxelRegions.end();++mapit)
+    {
+        LinearRegression2DData regdata=evalRegressionPlane(mapit->second);
+        if(regdata.isAhole)
+        {
+          std::vector<double> pnorm=regdata.pnorm;
+          double norm=sqrt(pnorm[0]*pnorm[0]+pnorm[1]*pnorm[1]+pnorm[2]*pnorm[2]);
+          for(unsigned char cc=0; cc<3; cc++)
+          {
+              pnorm[cc]=pnorm[cc]/norm;
+          }
+          std::vector<double> xc=regdata.xc;
+          for(std::set<size_t>::iterator it=nzeroEntryIndexes.begin();it!=nzeroEntryIndexes.end(); ++it)
+          {
+              std::vector<double> barp=evalBarycenter(*it);
+              for(unsigned char cc=0; cc<3; cc++)
+              {
+                  barp[cc]=barp[cc]-xc[cc];
+              }
+              double dproj=dotprod(barp,pnorm);
+              
+              if((dproj>=regdata.zminmax[0]) &&  (dproj<=regdata.zminmax[1]) )
+              {
+                //projected on plane
+                for(unsigned char cc=0; cc<3; cc++)
+                {
+                    barp[cc]=barp[cc]-dproj*pnorm[cc];
+                }
+                double P_xc=EuclideanDist(barp.data(), xc.data());
+                //if point voxel is between the two planes zmin and zmax, mark the region
+                if(P_xc<=regdata.rhominmax[1])
+                {
+                  double voxValue = static_cast<double>(mapit->first);
+                  setValue(*it, voxValue);
+                }
+              } 
+          }
+        }
+    }
   }
 }
 
@@ -1217,6 +1258,16 @@ double INRreader::EuclideanDist(const double * P1, const double * P2)
     return(dist);               
 }
 
+double INRreader::dotprod(const std::vector<double> & v1, const std::vector<double> & v2)
+{
+  double prod=0.0;
+  for(size_t ii=0; ii<v1.size(); ii++)
+  {
+      prod=prod+v1[ii]*v2[ii];
+  }
+  return(prod);
+}
+
 LinearRegression2DData INRreader::evalRegressionPlane(std::set<size_t> & pointlist)
 {
   LinearRegression2DData datareg;
@@ -1232,7 +1283,7 @@ LinearRegression2DData INRreader::evalRegressionPlane(std::set<size_t> & pointli
       pointcoord[counter]=bar;
       for(unsigned char cc=0; cc<3; cc++)
       {
-        r_G[cc]=bar[cc];
+        r_G[cc]=r_G[cc]+bar[cc];
       }
       counter++;
     }

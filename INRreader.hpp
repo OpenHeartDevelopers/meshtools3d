@@ -259,6 +259,7 @@ class INRreader
     IndexCoord reverseIndex(const size_t & index ) const;
     std::vector<double>evalBarycenter(const size_t & index);
     double EuclideanDist(const double * P1, const double * P2);
+    double dotprod(const std::vector<double> & v1, const std::vector<double> & v2);
     LinearRegression2DData evalRegressionPlane(std::set<size_t> & pointlist);
     bool isLittleEndian();
     void SwapBytes(void *pv, size_t n);
