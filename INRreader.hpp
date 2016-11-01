@@ -58,11 +58,13 @@ struct LinearRegression2DData
   std::vector<double> xc;
   std::vector<double> zminmax;
   std::vector<double> rhominmax;
+  bool isAhole;
   LinearRegression2DData()
   :pnorm(3,0.0),
   xc(3,0.0),
   zminmax(2,0.0),
-  rhominmax(2,0.0)
+  rhominmax(2,0.0),
+  isAhole(false)
   {}
 
 };

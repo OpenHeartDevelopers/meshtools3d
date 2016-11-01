@@ -1322,6 +1322,11 @@ LinearRegression2DData INRreader::evalRegressionPlane(std::set<size_t> & pointli
     datareg.zminmax[1]=zmax;
     datareg.rhominmax[0]=rhomin;
     datareg.rhominmax[1]=rhomax;
+    datareg.isAhole=false;
+    if(!isPointInsideSegmentation(datareg.xc[0],datareg.xc[1],datareg.xc[2]))
+    {
+      datareg.isAhole=true;
+    }
 
   }
   return datareg;
