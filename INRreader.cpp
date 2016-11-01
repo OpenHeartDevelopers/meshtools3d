@@ -1047,43 +1047,7 @@ void INRreader::evalLabeledRegionsBounds()
         }
       }// end if on size
     }//algo division ends
-    //now re-labeling of voxels
-    for(regionSubdivisionTypeIterator itRegToNodeMap=voxelRegions.begin(); itRegToNodeMap!=voxelRegions.end(); ++itRegToNodeMap)
-    {
-       double voxValue = static_cast<double>(itRegToNodeMap->first);
-       BoundingBox localbbox;
-       for(unsigned char jcoord=0; jcoord<3; jcoord++)
-       {
-        ( localbbox.bbox()[jcoord] )[0]=2.0*_info.RESOLUTION[jcoord]*_info.SHAPE[jcoord];
-        ( localbbox.bbox()[jcoord] )[1]=0.0;
-       }
-       for(setPointTypeIterator vox_iter=(itRegToNodeMap->second).begin();vox_iter!=(itRegToNodeMap->second).end(); ++vox_iter)
-       {
-         setValue(*vox_iter, voxValue);
-         std::vector<double>  barycenter=evalBarycenter(*vox_iter);
-         for(unsigned char jcoord=0; jcoord<3; jcoord++)
-         {
-            if(barycenter[jcoord]< ( (localbbox.bbox()[jcoord])[0] )  )
-            {
-                (localbbox.bbox()[jcoord])[0]=barycenter[jcoord];
-            }
-            
-            if(barycenter[jcoord]> ( (localbbox.bbox()[jcoord])[1] ) )
-            {
-                (localbbox.bbox()[jcoord])[1]=barycenter[jcoord];
-            }
-         }
-       }
-       for(unsigned char jcoord=0; jcoord<3; jcoord++)
-       {
-         (localbbox.bbox()[jcoord])[0]=(localbbox.bbox()[jcoord])[0]-0.5*_info.RESOLUTION[jcoord];
-         (localbbox.bbox()[jcoord])[1]=(localbbox.bbox()[jcoord])[1]+0.5*_info.RESOLUTION[jcoord];
-       }
-
-       _bboxlabels.insert(std::pair<double,BoundingBox >(voxValue,localbbox) );
-    }
     
-
     for(regionSubdivisionTypeIterator mapit=voxelRegions.begin();mapit!=voxelRegions.end();++mapit)
     {
         LinearRegression2DData regdata=evalRegressionPlane(mapit->second);
@@ -1118,10 +1082,50 @@ void INRreader::evalLabeledRegionsBounds()
                 {
                   double voxValue = static_cast<double>(mapit->first);
                   setValue(*it, voxValue);
+                  (mapit->second).insert(*it);
                 }
               } 
           }
         }
+    }
+    
+    
+    //now re-labeling of voxels
+    
+    
+    for(regionSubdivisionTypeIterator itRegToNodeMap=voxelRegions.begin(); itRegToNodeMap!=voxelRegions.end(); ++itRegToNodeMap)
+    {
+       double voxValue = static_cast<double>(itRegToNodeMap->first);
+       BoundingBox localbbox;
+       for(unsigned char jcoord=0; jcoord<3; jcoord++)
+       {
+        ( localbbox.bbox()[jcoord] )[0]=2.0*_info.RESOLUTION[jcoord]*_info.SHAPE[jcoord];
+        ( localbbox.bbox()[jcoord] )[1]=0.0;
+       }
+       for(setPointTypeIterator vox_iter=(itRegToNodeMap->second).begin();vox_iter!=(itRegToNodeMap->second).end(); ++vox_iter)
+       {
+         setValue(*vox_iter, voxValue);
+         std::vector<double>  barycenter=evalBarycenter(*vox_iter);
+         for(unsigned char jcoord=0; jcoord<3; jcoord++)
+         {
+            if(barycenter[jcoord]< ( (localbbox.bbox()[jcoord])[0] )  )
+            {
+                (localbbox.bbox()[jcoord])[0]=barycenter[jcoord];
+            }
+            
+            if(barycenter[jcoord]> ( (localbbox.bbox()[jcoord])[1] ) )
+            {
+                (localbbox.bbox()[jcoord])[1]=barycenter[jcoord];
+            }
+         }
+       }
+       for(unsigned char jcoord=0; jcoord<3; jcoord++)
+       {
+         (localbbox.bbox()[jcoord])[0]=(localbbox.bbox()[jcoord])[0]-0.5*_info.RESOLUTION[jcoord];
+         (localbbox.bbox()[jcoord])[1]=(localbbox.bbox()[jcoord])[1]+0.5*_info.RESOLUTION[jcoord];
+       }
+
+       _bboxlabels.insert(std::pair<double,BoundingBox >(voxValue,localbbox) );
     }
   }
 }
