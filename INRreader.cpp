@@ -1217,6 +1217,60 @@ double INRreader::EuclideanDist(const double * P1, const double * P2)
     return(dist);               
 }
 
+LinearRegression2DData INRreader::evalRegressionPlane(std::set<size_t> & pointlist)
+{
+  LinearRegression2DData datareg;
+  size_t n=pointlist.size();
+  if(n>=3)
+  {
+    size_t counter=0;
+    std::vector<std::vector<double> > pointcoord(n);
+    std::vector<double> r_G(3,0);
+    for(std::set<size_t>::iterator it=pointlist.begin(); it!=pointlist.end();++it)
+    {
+      std::vector<double> bar=evalBarycenter(*it);
+      pointcoord[counter]=bar;
+      for(unsigned char cc=0; cc<3; cc++)
+      {
+        r_G[cc]=bar[cc];
+      }
+      counter++;
+    }
+    for(unsigned char cc=0; cc<3; cc++)
+    {
+      r_G[cc]=r_G[cc]/static_cast<double>(n);
+      for(size_t pt=0; pt<n; pt++)
+      {
+        (pointcoord[pt])[cc]=(pointcoord[pt])[cc]-r_G[cc];
+      }
+    }
+    datareg.xc=r_G;
+    std::vector<double> LsqMat(9,0);
+    for(unsigned char ic=0; ic<3; ic++)
+    {
+      double matrixEntry=0.0;
+      for(unsigned char jc=ic; jc<3; jc++)
+      {
+        for(size_t pt=0; pt<n; pt++)
+        {
+          matrixEntry=matrixEntry+(pointcoord[pt])[ic]*(pointcoord[pt])[jc];
+        }
+        LsqMat[RM3X3Ind(ic,jc)]=matrixEntry;
+        LsqMat[RM3X3Ind(jc,ic)]=matrixEntry;
+      }
+    }
+    
+    eigenData eigens=eigen_decomposition3X3(LsqMat);
+    for(unsigned char ic=0; ic<3; ic++)
+    {
+      datareg.pnorm[ic]=eigens.eigenVectors[RM3X3Ind(ic,0)]; //extract the 1st col
+    }
+  }
+  return datareg;
+}
+
+
+
 //used to evaluate endianess
 bool INRreader::isLittleEndian()
 {
@@ -1246,5 +1300,293 @@ void INRreader::SwapBytes(void *pv, size_t n)
     }
 }
 
+eigenData INRreader::eigen_decomposition3X3(std::vector<double> &Amatr)
+{
+  eigenData eigens;
+  std::vector<double> V=Amatr;
+  std::vector<double> e(3,0.0), d(3,0.0);
+  for (unsigned char  cc = 0; cc < 3; cc++)
+  {
+    d[cc] = V[RM3X3Ind(2,cc)];
+  }
+  // Householder reduction to tridiagonal form.
+  for (unsigned char cc = 1; cc<2; cc++)
+  {
+    unsigned char iindex=3-cc;
+    // Scale to avoid under/overflow.
+    double scale = 0.0;
+    double h = 0.0;
+    for (unsigned char k = 0; k < iindex; k++)
+    {
+      scale = scale + std::sqrt(d[k]*d[k]);
+    }
+    if (scale == 0.0)
+    {
+      e[iindex] = d[iindex-1];
+      for (unsigned char j = 0; j < iindex; j++)
+      {
+        d[j] = V[RM3X3Ind(iindex-1,j)];
+        V[RM3X3Ind(iindex,j)]  = 0.0;
+        V[RM3X3Ind(j,iindex)]  = 0.0;
+      }
+    }
+    else
+    {
+      // Generate Householder vector.
+      for (unsigned char k = 0; k < iindex; k++)
+      {
+        d[k] /= scale;
+        h += d[k] * d[k];
+      }
+      double f = d[iindex-1];
+      double g = sqrt(h);
+      if (f > 0)
+      {
+        g = -g;
+      }
+      e[iindex] = scale * g;
+      h = h - f * g;
+      d[iindex-1] = f - g;
+      for (unsigned char j = 0; j < iindex; j++)
+      {
+        e[j] = 0.0;
+      }
+      // Apply similarity transformation to remaining columns.
+      for (unsigned char j = 0; j < iindex; j++)
+      {
+        f = d[j];
+        V[RM3X3Ind(j,iindex)] = f;
+        g = e[j] + V[RM3X3Ind(j,j)] * f;
+        for (unsigned char k = j+1; k <= iindex-1; k++)
+        {
+          g += V[RM3X3Ind(k,j)] * d[k];
+          e[k] += V[RM3X3Ind(k,j)] * f;
+        }
+        e[j] = g;
+      }
+      f = 0.0;
+      for (unsigned char j = 0; j < iindex; j++)
+      {
+        e[j] /= h;
+        f += e[j] * d[j];
+      }
+      double hh = f / (h + h);
+      for (unsigned char j = 0; j < iindex; j++)
+      {
+        e[j] -= hh * d[j];
+      }
+      for (unsigned char j = 0; j < iindex; j++)
+      {
+        f = d[j];
+        g = e[j];
+        for (unsigned char k = j; k <= iindex-1; k++)
+        {
+          V[RM3X3Ind(k,j)] -= (f * e[k] + g * d[k]);
+        }
+        d[j] = V[RM3X3Ind(iindex-1,j)];
+        V[RM3X3Ind(iindex,j)] = 0.0;
+      }
+    }
+    d[iindex] = h;
+  }
+  // Accumulate transformations.
+  for (unsigned char i = 0; i < 2; i++)
+  {
+    V[RM3X3Ind(2,i)]=V[RM3X3Ind(i,i)];
+    V[RM3X3Ind(i,i)] = 1.0;
+    double h = d[i+1];
+    if (h != 0.0)
+    {
+      for (unsigned char k = 0; k <= i; k++)
+      {
+        d[k] = V[RM3X3Ind(k,i+1)]/ h;
+      }
+      for (unsigned char j = 0; j <= i; j++)
+      {
+        double g = 0.0;
+        for (unsigned char k = 0; k <= i; k++)
+        {
+          g += V[RM3X3Ind(k,i+1)]*V[RM3X3Ind(k,j)];
+        }
+        for (unsigned char k = 0; k <= i; k++)
+        {
+          V[RM3X3Ind(k,j)] -= g * d[k];
+        }
+      }
+    }
+    for (unsigned char k = 0; k <= i; k++)
+    {
+      V[RM3X3Ind(k,i+1)] = 0.0;
+    }
+  }
+  for (unsigned char j = 0; j < 3; j++)
+  {
+    d[j] = V[RM3X3Ind(2,j)];
+    V[RM3X3Ind(2,j)] = 0.0;
+  }
+  V[RM3X3Ind(2,2)] = 1.0;
+  e[0] = 0.0;
+  for (unsigned char i = 1; i < 3; i++)
+  {
+    e[i-1] = e[i];
+  }
+  e[2] = 0.0;
+  double f = 0.0;
+  double tst1 = 0.0;
+  double eps = 1.0e-52;
+  for (unsigned char l = 0; l < 3; l++)
+  {
+    // Find small subdiagonal element
+    double tmp=std::sqrt(d[l]*d[l])+std::sqrt(e[l]*e[l]);
+    tst1 = std::max(tst1,tmp);
+    unsigned char m = l;
+    while (m < 2)
+    {
+      if (std::sqrt(e[m]*e[m]) <= eps*tst1)
+      {
+        break;
+      }
+      m++;
+    }
+    // If m == l, d[l] is an eigenvalue,
+    // otherwise, iterate.
+    if (m > l)
+    {
+      int iter = 0;
+      do
+      {
+        iter = iter + 1;  // (Could check iteration count here.)
+        if(iter>500)
+        {
+          break;
+        }
+        // Compute implicit shift
+        double g = d[l];
+        double p = (d[l+1] - g) / (2.0 * e[l]);
+        double r = hypot2(p,1.0);
+        if (p < 0)
+        {
+          r = -r;
+        }
+        d[l] = e[l] / (p + r);
+        d[l+1] = e[l] * (p + r);
+        double dl1 = d[l+1];
+        double h = g - d[l];
+        for (unsigned char i = l+2; i < 3; i++)
+        {
+          d[i] -= h;
+        }
+        f = f + h;
+        // Implicit QL transformation.
+        p = d[m];
+        double c = 1.0;
+        double c2 = c;
+        double c3 = c;
+        double el1 = e[l+1];
+        double s = 0.0;
+        double s2 = 0.0;
+        for (signed char i = m-1; i >= l; i--)
+        {
+          c3 = c2;
+          c2 = c;
+          s2 = s;
+          g = c * e[i];
+          h = c * p;
+          r = hypot2(p,e[i]);
+          e[i+1] = s * r;
+          s = e[i] / r;
+          c = p / r;
+          p = c * d[i] - s * g;
+          d[i+1] = h + s * (c * g + s * d[i]);
+          
+          // Accumulate transformation.
+          
+          for (unsigned char k = 0; k < 3; k++)
+          {
+            h = V[RM3X3Ind(k,i+1)];
+            V[RM3X3Ind(k,i+1)] = s * V[RM3X3Ind(k,i)] + c * h;
+            V[RM3X3Ind(k,i)] = c * V[RM3X3Ind(k,i)] - s * h;
+          }
+        }
+        p = -s * s2 * c3 * el1 * e[l] / dl1;
+        e[l] = s * p;
+        d[l] = c * p;
+        // Check for convergence.
+      } while (std::sqrt(e[l]*e[l]) > eps*tst1);
+    }
+    d[l] = d[l] + f;
+    e[l] = 0.0;
+  }
+  // Sort eigenvalues and corresponding vectors.
+  for (unsigned char i = 0; i < 2; i++)
+  {
+    unsigned char k = i;
+    double p = d[i];
+    for (unsigned char j = i+1; j < 3; j++)
+    {
+      if (d[j] < p)
+      {
+        k = j;
+        p = d[j];
+      }
+    }
+    if (k != i)
+    {
+      d[k] = d[i];
+      d[i] = p;
+      for (unsigned char j = 0; j < 3; j++)
+      {
+        p = V[RM3X3Ind(j,i)];
+        V[RM3X3Ind(j,i)] = V[RM3X3Ind(j,k)];
+        V[RM3X3Ind(j,k)] = p;
+      }
+    }
+  }
+  eigens.eigenValues=d;
+  eigens.eigenVectors=V;
+  return(eigens);
+  
+}
 
+std::vector<double> INRreader::InvertA3X3(const std::vector<double> & Mat0) const
+{
+  //matrix is considered as row major
+  std::vector<double> inverted(9,0);
+  double det =    Mat0[RM3X3Ind(0,0)]*( Mat0[RM3X3Ind(1,1)]*Mat0[RM3X3Ind(2,2)] - Mat0[RM3X3Ind(1,2)]*Mat0[RM3X3Ind(2,1)] ) +
+  -1.0*Mat0[RM3X3Ind(0,1)]*( Mat0[RM3X3Ind(1,0)]*Mat0[RM3X3Ind(2,2)] - Mat0[RM3X3Ind(1,2)]*Mat0[RM3X3Ind(2,0)] ) +
+  Mat0[RM3X3Ind(0,2)]*( Mat0[RM3X3Ind(1,0)]*Mat0[RM3X3Ind(2,1)] - Mat0[RM3X3Ind(2,0)]*Mat0[RM3X3Ind(1,1)] ) ;
+  
+  if(sqrt(det*det)>0.0)
+  {
+    inverted[RM3X3Ind(0,0)] =        Mat0[RM3X3Ind(1,1)]*Mat0[RM3X3Ind(2,2)] - Mat0[RM3X3Ind(1,2)]*Mat0[RM3X3Ind(2,1)];
+    inverted[RM3X3Ind(0,1)] = -1.0*( Mat0[RM3X3Ind(0,1)]*Mat0[RM3X3Ind(2,2)] - Mat0[RM3X3Ind(2,1)]*Mat0[RM3X3Ind(0,2)]);
+    inverted[RM3X3Ind(0,2)] =        Mat0[RM3X3Ind(0,1)]*Mat0[RM3X3Ind(1,2)] - Mat0[RM3X3Ind(0,2)]*Mat0[RM3X3Ind(1,1)];
+    
+    inverted[RM3X3Ind(1,0)] = -1.0*( Mat0[RM3X3Ind(1,0)]*Mat0[RM3X3Ind(2,2)] - Mat0[RM3X3Ind(1,2)]*Mat0[RM3X3Ind(2,0)] );
+    inverted[RM3X3Ind(1,1)] =        Mat0[RM3X3Ind(0,0)]*Mat0[RM3X3Ind(2,2)] - Mat0[RM3X3Ind(0,2)]*Mat0[RM3X3Ind(2,0)];
+    inverted[RM3X3Ind(1,2)] = -1.0*( Mat0[RM3X3Ind(0,0)]*Mat0[RM3X3Ind(1,2)] - Mat0[RM3X3Ind(0,2)]*Mat0[RM3X3Ind(1,0)]);
+    
+    inverted[RM3X3Ind(2,0)] =        Mat0[RM3X3Ind(1,0)]*Mat0[RM3X3Ind(2,1)] - Mat0[RM3X3Ind(2,0)]*Mat0[RM3X3Ind(1,1)];
+    inverted[RM3X3Ind(2,1)] = -1.0*( Mat0[RM3X3Ind(0,0)]*Mat0[RM3X3Ind(2,1)] - Mat0[RM3X3Ind(2,0)]*Mat0[RM3X3Ind(0,1)]);
+    inverted[RM3X3Ind(2,2)] =        Mat0[RM3X3Ind(1,1)]*Mat0[RM3X3Ind(0,0)] - Mat0[RM3X3Ind(1,0)]*Mat0[RM3X3Ind(0,1)];
+    
+    std::vector<double>::iterator it;
+    for(it=inverted.begin(); it!=inverted.end(); ++it)
+    {
+      *it=*it/det;
+    }
+  }
+  else
+  {
+    inverted.clear();
+    inverted.resize(9,0);
+  }
+  return(inverted);
+}
+
+unsigned char INRreader::RM3X3Ind(const unsigned char & irow, const unsigned char & jcol) const
+{
+  unsigned char index=3*irow + jcol;
+  return(index);
+}
 
