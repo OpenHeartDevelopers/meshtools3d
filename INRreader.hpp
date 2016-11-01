@@ -28,6 +28,7 @@
 #include<map>
 #include<limits>
 #include<cfloat>
+#include<cmath>
 
 typedef enum{
     VX_FLOAT, // floating point
@@ -42,6 +43,34 @@ struct IndexCoord
   size_t iy;
   size_t iz;
   size_t iv;
+  IndexCoord()
+  :ix(0),
+  iy(0),
+  iz(0),
+  iv(0)
+  {}
+};
+
+struct LinearRegression2DData
+{
+  //ax+by+cz+d=0
+  std::vector<double> pnorm;
+  std::vector<double> xc;
+  LinearRegression2DData()
+  :pnorm(3,0.0),
+  xc(3,0.0)
+  {}
+
+};
+
+struct eigenData
+{
+  std::vector<double> eigenValues;
+  std::vector<double> eigenVectors;
+  eigenData()
+  :eigenValues(3,0.0),
+  eigenVectors(9,0.0)
+  {}
 };
 
 class INRInfo
@@ -224,8 +253,13 @@ class INRreader
     IndexCoord reverseIndex(const size_t & index ) const;
     std::vector<double>evalBarycenter(const size_t & index);
     double EuclideanDist(const double * P1, const double * P2);
+    LinearRegression2DData evalRegressionPlane(std::set<size_t> & pointlist);
     bool isLittleEndian();
     void SwapBytes(void *pv, size_t n);
+    eigenData eigen_decomposition3X3(std::vector<double> & Amatr);
+    std::vector<double> InvertA3X3(const std::vector<double> & Mat0) const;
+    unsigned char RM3X3Ind(const unsigned char & irow, const unsigned char & jcol) const;
+    inline double hypot2(const double & x, const double & y) const {return sqrt(x*x+y*y);};
     bool _isAllocated;
     INRInfo _info;
     size_t nb_Of_Pixels;
