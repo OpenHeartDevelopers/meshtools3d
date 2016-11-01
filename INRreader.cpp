@@ -1265,6 +1265,63 @@ LinearRegression2DData INRreader::evalRegressionPlane(std::set<size_t> & pointli
     {
       datareg.pnorm[ic]=eigens.eigenVectors[RM3X3Ind(ic,0)]; //extract the 1st col
     }
+    
+    std::vector<double> normdir=datareg.pnorm;
+    double normnorm=sqrt(normdir[0]*normdir[0]+normdir[1]*normdir[1]+normdir[2]*normdir[2]);
+    for(unsigned char ic=0; ic<3; ic++)
+    {
+      normdir[ic]=normdir[ic]/normnorm;
+    }
+    
+    std::vector<double> signed_dist_from_plane(n,0.0);
+    std::vector<double> proj_dist_from_center(n,0.0);
+    for(size_t ipt=0; ipt<n; ipt++)
+    {
+      // dot product brtween normal versor and coordinates
+      double tmp=0.0;
+      std::vector<double> localcoord=(pointcoord[ipt]);
+      for(unsigned char ic=0; ic<3; ic++)
+      {
+        tmp=tmp+normdir[ic]*localcoord[ic];
+      }
+      signed_dist_from_plane[ipt]=tmp;
+      // Plane projection
+      tmp=0.0;
+      for(unsigned char ic=0; ic<3; ic++)
+      {
+        localcoord[ic]=localcoord[ic]-signed_dist_from_plane[ipt]*normdir[ic];
+        tmp=tmp+localcoord[ic]*localcoord[ic];
+      }
+      proj_dist_from_center[ipt]=sqrt(tmp);
+    }
+    // proj_dist_from_center: in-plane circular distribution of the points
+    // signed_dist_from_plane point locations above/below the plane
+    double zmin=1e32,zmax=-1e3,rhomin=zmin,rhomax=zmax;
+    for(size_t ipt=0; ipt<n; ipt++)
+    {
+      if(signed_dist_from_plane[ipt]>zmax)
+      {
+        zmax=signed_dist_from_plane[ipt];
+      }
+      if(signed_dist_from_plane[ipt]<zmin)
+      {
+        zmin=signed_dist_from_plane[ipt];
+      }
+
+      if(proj_dist_from_center[ipt]>rhomax)
+      {
+        rhomax=proj_dist_from_center[ipt];
+      }
+      if(proj_dist_from_center[ipt]<rhomin)
+      {
+        rhomin=proj_dist_from_center[ipt];
+      }
+    }
+    datareg.zminmax[0]=zmin;
+    datareg.zminmax[1]=zmax;
+    datareg.rhominmax[0]=rhomin;
+    datareg.rhominmax[1]=rhomax;
+
   }
   return datareg;
 }

@@ -56,9 +56,13 @@ struct LinearRegression2DData
   //ax+by+cz+d=0
   std::vector<double> pnorm;
   std::vector<double> xc;
+  std::vector<double> zminmax;
+  std::vector<double> rhominmax;
   LinearRegression2DData()
   :pnorm(3,0.0),
-  xc(3,0.0)
+  xc(3,0.0),
+  zminmax(2,0.0),
+  rhominmax(2,0.0)
   {}
 
 };
