@@ -1294,6 +1294,7 @@ LinearRegression2DData INRreader::evalRegressionPlane(std::set<size_t> & pointli
     for(unsigned char cc=0; cc<3; cc++)
     {
       r_G[cc]=r_G[cc]/static_cast<double>(n);
+      
       for(size_t pt=0; pt<n; pt++)
       {
         (pointcoord[pt])[cc]=(pointcoord[pt])[cc]-r_G[cc];
@@ -1303,13 +1304,14 @@ LinearRegression2DData INRreader::evalRegressionPlane(std::set<size_t> & pointli
     std::vector<double> LsqMat(9,0);
     for(unsigned char ic=0; ic<3; ic++)
     {
-      double matrixEntry=0.0;
       for(unsigned char jc=ic; jc<3; jc++)
       {
+        double matrixEntry=0.0;
         for(size_t pt=0; pt<n; pt++)
         {
           matrixEntry=matrixEntry+(pointcoord[pt])[ic]*(pointcoord[pt])[jc];
         }
+        
         LsqMat[RM3X3Ind(ic,jc)]=matrixEntry;
         LsqMat[RM3X3Ind(jc,ic)]=matrixEntry;
       }
