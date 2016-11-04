@@ -127,7 +127,7 @@ bool INRreader::isPointInsideSegmentation(const double & x, const double & y, co
     Ixyz.ix=static_cast<size_t>(std::floor(x/_info.RESOLUTION[0]));
     Ixyz.iy=static_cast<size_t>(std::floor(y/_info.RESOLUTION[1]));
     Ixyz.iz=static_cast<size_t>(std::floor(z/_info.RESOLUTION[2]));
-    if((Ixyz.ix>_info.SHAPE[0])||(Ixyz.iy>_info.SHAPE[1]) ||(Ixyz.iz>_info.SHAPE[2]))
+    if((Ixyz.ix>=_info.SHAPE[0])||(Ixyz.iy>=_info.SHAPE[1]) ||(Ixyz.iz>=_info.SHAPE[2]))
     {
         return(false);
     }
@@ -143,7 +143,7 @@ bool INRreader::isPointInsideSegmentation(const double & x, const double & y, co
         }
     }
 
-    //now checks for point on faces
+    //now checks for points evantually on the voxel faces
     if(!is_inside)
     {
       double rx=sqrt((Ixyz.ix*_info.RESOLUTION[0]-x)*(Ixyz.ix*_info.RESOLUTION[0]-x))/_info.RESOLUTION[0];
