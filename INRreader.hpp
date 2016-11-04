@@ -253,6 +253,7 @@ class INRreader
     bool readHeader(std::ifstream & ImageFile);
     bool readValues(std::ifstream & ImageFile);
     void evalLabeledRegionsBounds();
+    bool isVoxelInSeg(const IndexCoord & Ixyz) const;
     double pickValue(const size_t & _index) const;
     void setValue(const size_t & _index, const double & _value);
     size_t index(const size_t & ix,const size_t & iy,const size_t & iz,const size_t & iv) const;

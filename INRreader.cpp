@@ -28,7 +28,7 @@
 
 #include "INRreader.hpp"
 #ifndef DELTAMAX
-#define DELTAMAX 1
+#define DELTAMAX 2
 #endif
 
 #ifndef INTOLL
@@ -276,16 +276,8 @@ IndexCoord INRreader::voxelCoordInterpNonZero(const double & x, const double & y
     IndexCoord Ixyz=voxelCoordInterp(x,y,z);
     if(_isAllocated)
     {
-      bool iszero=!(isPointInsideSegmentation(x,y,z));
-      for(size_t iv=0; iv<_info.VDIM; iv++)
-      {
-        long long int voxval=static_cast<long long int>(pickVoxelValue(Ixyz.ix,Ixyz.iy,Ixyz.iz,iv));
-        if(voxval>0)
-        {
-          iszero=false;
-          break;
-        }
-      }
+      bool iszero=!(isVoxelInSeg(Ixyz));
+      
       if(iszero)
       {
         std::vector<size_t> ixrange(2,0),iyrange(2,0),izrange(2,0);
@@ -316,15 +308,15 @@ IndexCoord INRreader::voxelCoordInterpNonZero(const double & x, const double & y
         {
           izrange[0]=Ixyz.iz-DELTAMAX;
         }
-        ixrange[1]=std::min(ixrange[0]+2*DELTAMAX,_info.SHAPE[0]);
-        iyrange[1]=std::min(iyrange[0]+2*DELTAMAX,_info.SHAPE[1]);
-        izrange[1]=std::min(izrange[0]+2*DELTAMAX,_info.SHAPE[2]);
+        ixrange[1]=std::min(ixrange[0]+2*DELTAMAX,(_info.SHAPE[0]-1));
+        iyrange[1]=std::min(iyrange[0]+2*DELTAMAX,(_info.SHAPE[1]-1));
+        izrange[1]=std::min(izrange[0]+2*DELTAMAX,(_info.SHAPE[2]-1));
         std::set<size_t> researchInterval;
-        for(size_t indx=ixrange[0]; indx<ixrange[1]; indx++ )
+        for(size_t indx=ixrange[0]; indx<=ixrange[1]; indx++ )
         {
-            for(size_t indy=iyrange[0]; indy<iyrange[1]; indy++ )
+            for(size_t indy=iyrange[0]; indy<=iyrange[1]; indy++ )
             {
-                for(size_t indz=izrange[0]; indz<izrange[1]; indz++ )
+                for(size_t indz=izrange[0]; indz<=izrange[1]; indz++ )
                 {
                   for(size_t iv=0; iv<_info.VDIM; iv++)
                   {
@@ -394,6 +386,26 @@ std::vector<double> INRreader::interpolatedNonZeroVoxelValue (const double & x, 
     }
   }
   return(voxvalue);
+}
+
+bool INRreader::isVoxelInSeg(const IndexCoord & Ixyz) const
+{
+  bool is_inside=false;
+  if(_isAllocated)
+  {
+    for(size_t iv=0; iv<_info.VDIM; iv++)
+    {
+        double vox=pickVoxelValue(Ixyz.ix,Ixyz.iy,Ixyz.iz,iv);
+        long long int voxval=static_cast<long long int>(vox);
+        if(voxval>0)
+        {
+          is_inside=true;
+          break;
+        }
+    }
+  }
+  return(is_inside);
+
 }
 
 double INRreader::pickVoxelValue(const size_t & ix,const size_t & iy,const size_t & iz,const size_t iv) const

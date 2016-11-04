@@ -67,8 +67,8 @@ private:
   /// Returns a box enclosing image \c im
   Bbox_3 compute_bounding_box(const INRreader& im) const
   {
-    return Bbox_3(-1,-1,-1,
-                  im.xdim()*im.vx()+1, im.ydim()*im.vy()+1, im.zdim()*im.vz()+1);
+    return Bbox_3(-1*im.vx(),-1*im.vy(),-1*im.vz(),
+                  (im.xdim()+1)*im.vx(), (im.ydim()+1)*im.vy(), (im.zdim()+1)*im.vz());
   }
 
 private:
