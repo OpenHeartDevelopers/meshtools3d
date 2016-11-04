@@ -713,15 +713,13 @@ void INRreader::evalLabeledRegionsBounds()
   if(_info.VDIM == 1)
   {
     typedef long long int regionLabeltype;
-    
-    typedef std::set<size_t> setPointType;
-    typedef setPointType::iterator setPointTypeIterator;
+    typedef setVoxelType::iterator setVoxelTypeIterator;
     typedef std::set<regionLabeltype> regionSetType;
     
     typedef std::map<size_t, regionLabeltype > voxelToRegionMapType;
-    typedef std::map<regionLabeltype, setPointType> regionSubdivisionType;
+    typedef std::map<regionLabeltype, setVoxelType> regionSubdivisionType;
     typedef regionSubdivisionType::iterator regionSubdivisionTypeIterator;
-    typedef std::map<size_t,setPointType> voxConnectType;
+    
 
     regionSubdivisionType voxelRegions;
     regionSetType regionLabels;
@@ -729,8 +727,8 @@ void INRreader::evalLabeledRegionsBounds()
     //voxelToregionMap is a map between a  voxel and its regions
     voxelToRegionMapType voxelToregionMap;
     
-    // Initialize the map setpointtype that describes the set of indices with the same label
-    for (setPointTypeIterator it=nzeroEntryIndexes.begin(); it!=nzeroEntryIndexes.end(); ++it)
+    // Initialize the map setVoxelType that describes the set of indices with the same label
+    for (setVoxelTypeIterator it=nzeroEntryIndexes.begin(); it!=nzeroEntryIndexes.end(); ++it)
     {
       regionLabeltype voxLabel=static_cast<regionLabeltype >(pickValue(*it));
       voxelRegions[voxLabel].insert(*it);
@@ -738,355 +736,20 @@ void INRreader::evalLabeledRegionsBounds()
     // Delete elements with index label =1
     voxelRegions.erase(voxelRegions.find(1));
     // create a set of only non-zero and non-one elements
-    setPointType boundVoxels;
+    setVoxelType boundVoxels;
     boundVoxels.clear();
     regionLabels.clear();
     for(regionSubdivisionTypeIterator mapit=voxelRegions.begin(); mapit!=voxelRegions.end();++mapit)
     {
       regionLabels.insert(mapit->first);
-      for(setPointTypeIterator itset=((mapit->second).begin());itset!=((mapit->second).end());++itset)
+      for(setVoxelTypeIterator itset=((mapit->second).begin());itset!=((mapit->second).end());++itset)
       {
         boundVoxels.insert(*itset);
         voxelToregionMap.insert(std::pair<size_t,regionLabeltype>(*itset, mapit->first) );
       }
     }
     // Now I create a voxel connectivity
-    voxConnectType connectivity;
-    for(setPointTypeIterator it=boundVoxels.begin(); it!=boundVoxels.end(); ++it)
-    {
-      IndexCoord Ixyz=reverseIndex(*it);
-      Ixyz.iv=0;
-      if(Ixyz.ix>0)
-      {
-        size_t jind=index((Ixyz.ix-1),Ixyz.iy,Ixyz.iz,Ixyz.iv);
-        if(boundVoxels.find(jind)!=boundVoxels.end())
-        {
-          connectivity[*it].insert(jind);
-          connectivity[jind].insert(*it);
-        }
-        
-        if(Ixyz.iy>0)
-        {
-          jind=index((Ixyz.ix-1),(Ixyz.iy-1),Ixyz.iz,Ixyz.iv);
-          if(boundVoxels.find(jind)!=boundVoxels.end())
-          {
-            connectivity[*it].insert(jind);
-            connectivity[jind].insert(*it);
-          }
-          if(Ixyz.iz>0)
-          {
-            jind=index((Ixyz.ix-1),(Ixyz.iy-1),(Ixyz.iz-1),Ixyz.iv);
-            if(boundVoxels.find(jind)!=boundVoxels.end())
-            {
-              connectivity[*it].insert(jind);
-              connectivity[jind].insert(*it);
-            }
-          }
-          if(Ixyz.iz<(_info.SHAPE[2]-1))
-          {
-            jind=index((Ixyz.ix-1),(Ixyz.iy-1),(Ixyz.iz+1),Ixyz.iv);
-            if(boundVoxels.find(jind)!=boundVoxels.end())
-            {
-              connectivity[*it].insert(jind);
-              connectivity[jind].insert(*it);
-            }
-          }
-        }// and on xy, y>0
-        
-        
-        if(Ixyz.iy<(_info.SHAPE[1]-1))
-        {
-          jind=index((Ixyz.ix-1),(Ixyz.iy+1),Ixyz.iz,Ixyz.iv);
-          if(boundVoxels.find(jind)!=boundVoxels.end())
-          {
-            connectivity[*it].insert(jind);
-            connectivity[jind].insert(*it);
-          }
-          if(Ixyz.iz>0)
-          {
-            jind=index((Ixyz.ix-1),(Ixyz.iy+1),(Ixyz.iz-1),Ixyz.iv);
-            if(boundVoxels.find(jind)!=boundVoxels.end())
-            {
-              connectivity[*it].insert(jind);
-              connectivity[jind].insert(*it);
-            }
-          }
-          if(Ixyz.iz<(_info.SHAPE[2]-1))
-          {
-            jind=index((Ixyz.ix-1),(Ixyz.iy+1),(Ixyz.iz+1),Ixyz.iv);
-            if(boundVoxels.find(jind)!=boundVoxels.end())
-            {
-              connectivity[*it].insert(jind);
-              connectivity[jind].insert(*it);
-            }
-          }
-        }// and on xy, y<NYDIM
-        
-        if(Ixyz.iz>0)
-        {
-          jind=index((Ixyz.ix-1),Ixyz.iy,(Ixyz.iz-1),Ixyz.iv);
-          if(boundVoxels.find(jind)!=boundVoxels.end())
-          {
-            connectivity[*it].insert(jind);
-            connectivity[jind].insert(*it);
-          }
-          
-          /*if(Ixyz.iy>0)
-          {
-            jind=index((Ixyz.ix-1),(Ixyz.iy-1),(Ixyz.iz-1),Ixyz.iv);
-            if(boundVoxels.find(jind)!=boundVoxels.end())
-            {
-              connectivity[*it].insert(jind);
-              connectivity[jind].insert(*it);
-            }
-          }
-          if(Ixyz.iy<(_info.SHAPE[1]-1))
-          {
-            jind=index((Ixyz.ix-1),(Ixyz.iy+1),(Ixyz.iz-1),Ixyz.iv);
-            if(boundVoxels.find(jind)!=boundVoxels.end())
-            {
-              connectivity[*it].insert(jind);
-              connectivity[jind].insert(*it);
-            }
-          }*/
-        }//and of xz, z>0
-        
-        
-        if(Ixyz.iz<(_info.SHAPE[2]-1))
-        {
-          jind=index((Ixyz.ix-1),Ixyz.iy,(Ixyz.iz+1),Ixyz.iv);
-          if(boundVoxels.find(jind)!=boundVoxels.end())
-          {
-            connectivity[*it].insert(jind);
-            connectivity[jind].insert(*it);
-          }
-          /*if(Ixyz.iy>0)
-          {
-            jind=index((Ixyz.ix-1),(Ixyz.iy-1),(Ixyz.iz+1),Ixyz.iv);
-            if(boundVoxels.find(jind)!=boundVoxels.end())
-            {
-              connectivity[*it].insert(jind);
-              connectivity[jind].insert(*it);
-            }
-          }
-          if(Ixyz.iy<(_info.SHAPE[1]-1))
-          {
-            jind=index((Ixyz.ix-1),(Ixyz.iy+1),(Ixyz.iz+1),Ixyz.iv);
-            if(boundVoxels.find(jind)!=boundVoxels.end())
-            {
-              connectivity[*it].insert(jind);
-              connectivity[jind].insert(*it);
-            }
-          }*/
-        }//and of xz, z<NZDIM
-      } //(end of ix >0)
-
-
-      if(Ixyz.ix<(_info.SHAPE[0]-1))
-      {
-        size_t jind=index((Ixyz.ix+1),Ixyz.iy,Ixyz.iz,Ixyz.iv);
-        if(boundVoxels.find(jind)!=boundVoxels.end())
-        {
-          connectivity[*it].insert(jind);
-          connectivity[jind].insert(*it);
-        }
-        
-        if(Ixyz.iy>0)
-        {
-          jind=index((Ixyz.ix+1),(Ixyz.iy-1),Ixyz.iz,Ixyz.iv);
-          if(boundVoxels.find(jind)!=boundVoxels.end())
-          {
-            connectivity[*it].insert(jind);
-            connectivity[jind].insert(*it);
-          }
-          if(Ixyz.iz>0)
-          {
-            jind=index((Ixyz.ix+1),(Ixyz.iy-1),(Ixyz.iz-1),Ixyz.iv);
-            if(boundVoxels.find(jind)!=boundVoxels.end())
-            {
-              connectivity[*it].insert(jind);
-              connectivity[jind].insert(*it);
-            }
-          }
-          if(Ixyz.iz<(_info.SHAPE[2]-1))
-          {
-            jind=index((Ixyz.ix+1),(Ixyz.iy-1),(Ixyz.iz+1),Ixyz.iv);
-            if(boundVoxels.find(jind)!=boundVoxels.end())
-            {
-              connectivity[*it].insert(jind);
-              connectivity[jind].insert(*it);
-            }
-          }
-        }// and on xy, y>0
-        
-        
-        if(Ixyz.iy<(_info.SHAPE[1]-1))
-        {
-          jind=index((Ixyz.ix+1),(Ixyz.iy+1),Ixyz.iz,Ixyz.iv);
-          if(boundVoxels.find(jind)!=boundVoxels.end())
-          {
-            connectivity[*it].insert(jind);
-            connectivity[jind].insert(*it);
-          }
-          if(Ixyz.iz>0)
-          {
-            jind=index((Ixyz.ix+1),(Ixyz.iy+1),(Ixyz.iz-1),Ixyz.iv);
-            if(boundVoxels.find(jind)!=boundVoxels.end())
-            {
-              connectivity[*it].insert(jind);
-              connectivity[jind].insert(*it);
-            }
-          }
-          if(Ixyz.iz<(_info.SHAPE[2]-1))
-          {
-            jind=index((Ixyz.ix+1),(Ixyz.iy+1),(Ixyz.iz+1),Ixyz.iv);
-            if(boundVoxels.find(jind)!=boundVoxels.end())
-            {
-              connectivity[*it].insert(jind);
-              connectivity[jind].insert(*it);
-            }
-          }
-        }// and on xy, y<NYDIM
-        
-        if(Ixyz.iz>0)
-        {
-          jind=index((Ixyz.ix+1),Ixyz.iy,(Ixyz.iz-1),Ixyz.iv);
-          if(boundVoxels.find(jind)!=boundVoxels.end())
-          {
-            connectivity[*it].insert(jind);
-            connectivity[jind].insert(*it);
-          }
-          
-          /*if(Ixyz.iy>0)
-          {
-            jind=index((Ixyz.ix+1),(Ixyz.iy-1),(Ixyz.iz-1),Ixyz.iv);
-            if(boundVoxels.find(jind)!=boundVoxels.end())
-            {
-              connectivity[*it].insert(jind);
-              connectivity[jind].insert(*it);
-            }
-          }
-          if(Ixyz.iy<(_info.SHAPE[1]-1))
-          {
-            jind=index((Ixyz.ix+1),(Ixyz.iy+1),(Ixyz.iz-1),Ixyz.iv);
-            if(boundVoxels.find(jind)!=boundVoxels.end())
-            {
-              connectivity[*it].insert(jind);
-              connectivity[jind].insert(*it);
-            }
-          }*/
-        }//and of xz, z>0
-        
-        if(Ixyz.iz<(_info.SHAPE[2]-1))
-        {
-          jind=index((Ixyz.ix+1),Ixyz.iy,(Ixyz.iz+1),Ixyz.iv);
-          if(boundVoxels.find(jind)!=boundVoxels.end())
-          {
-            connectivity[*it].insert(jind);
-            connectivity[jind].insert(*it);
-          }
-          /*if(Ixyz.iy>0)
-          {
-            jind=index((Ixyz.ix+1),(Ixyz.iy-1),(Ixyz.iz+1),Ixyz.iv);
-            if(boundVoxels.find(jind)!=boundVoxels.end())
-            {
-              connectivity[*it].insert(jind);
-              connectivity[jind].insert(*it);
-            }
-          }
-          if(Ixyz.iy<(_info.SHAPE[1]-1))
-          {
-            jind=index((Ixyz.ix+1),(Ixyz.iy+1),(Ixyz.iz+1),Ixyz.iv);
-            if(boundVoxels.find(jind)!=boundVoxels.end())
-            {
-              connectivity[*it].insert(jind);
-              connectivity[jind].insert(*it);
-            }
-          }*/
-        }//and of xz, z<NZDIM
-      }// (end of ix<NXDIM)
-      
-      
-      if(Ixyz.iy>0)
-      {
-        size_t jind=index(Ixyz.ix,(Ixyz.iy-1),Ixyz.iz,Ixyz.iv);
-        if(boundVoxels.find(jind)!=boundVoxels.end())
-        {
-          connectivity[*it].insert(jind);
-          connectivity[jind].insert(*it);
-        }
-        
-        if(Ixyz.iz>0)
-        {
-          jind=index(Ixyz.ix,(Ixyz.iy-1),(Ixyz.iz-1),Ixyz.iv);
-          if(boundVoxels.find(jind)!=boundVoxels.end())
-          {
-            connectivity[*it].insert(jind);
-            connectivity[jind].insert(*it);
-          }
-        }//end on iy, iz>0
-        
-        if(Ixyz.iz<(_info.SHAPE[2]-1))
-        {
-          jind=index(Ixyz.ix,(Ixyz.iy-1),(Ixyz.iz+1),Ixyz.iv);
-          if(boundVoxels.find(jind)!=boundVoxels.end())
-          {
-            connectivity[*it].insert(jind);
-            connectivity[jind].insert(*it);
-          }
-        }//end on iy, iz<NZDIM
-      }//end on iy>0
-      
-
-      if(Ixyz.iy<(_info.SHAPE[1]-1))
-      {
-        size_t jind=index(Ixyz.ix,(Ixyz.iy+1),Ixyz.iz,Ixyz.iv);
-        if(boundVoxels.find(jind)!=boundVoxels.end())
-        {
-          connectivity[*it].insert(jind);
-          connectivity[jind].insert(*it);
-        }
-
-        if(Ixyz.iz>0)
-        {
-          jind=index(Ixyz.ix,(Ixyz.iy+1),(Ixyz.iz-1),Ixyz.iv);
-          if(boundVoxels.find(jind)!=boundVoxels.end())
-          {
-            connectivity[*it].insert(jind);
-            connectivity[jind].insert(*it);
-          }
-        }//end on iy, iz>0
-        
-        if(Ixyz.iz<(_info.SHAPE[2]-1))
-        {
-          jind=index(Ixyz.ix,(Ixyz.iy+1),(Ixyz.iz+1),Ixyz.iv);
-          if(boundVoxels.find(jind)!=boundVoxels.end())
-          {
-            connectivity[*it].insert(jind);
-            connectivity[jind].insert(*it);
-          }
-        }//end on iy, iz<NZDIM
-      }// end on iy<NYDIM
-      
-      if(Ixyz.iz>0)
-      {
-        size_t jind=index(Ixyz.ix,Ixyz.iy,(Ixyz.iz-1),Ixyz.iv);
-        if(boundVoxels.find(jind)!=boundVoxels.end())
-        {
-          connectivity[*it].insert(jind);
-          connectivity[jind].insert(*it);
-        }
-      }//end on iz>0
-      if(Ixyz.iz<(_info.SHAPE[2]-1))
-      {
-        size_t jind=index(Ixyz.ix,Ixyz.iy,(Ixyz.iz+1),Ixyz.iv);
-        if(boundVoxels.find(jind)!=boundVoxels.end())
-        {
-          connectivity[*it].insert(jind);
-          connectivity[jind].insert(*it);
-        }
-      }// end on iz<NZDIM
-    }
+    voxConnectType connectivity=evalLocalConnectivity(boundVoxels);
     
     // At this point, I have a voxel connectivity structure of the
     // Domain items that falls on the PVs and the MV
@@ -1098,13 +761,13 @@ void INRreader::evalLabeledRegionsBounds()
       // extract the local connectivity of the region regionconnect
       voxConnectType regionconnect;
       regionconnect.clear();
-      for(setPointTypeIterator cRegIt=(itRegToNodeMap->second).begin(); cRegIt!=(itRegToNodeMap->second).end(); ++cRegIt)
+      for(setVoxelTypeIterator cRegIt=(itRegToNodeMap->second).begin(); cRegIt!=(itRegToNodeMap->second).end(); ++cRegIt)
       {
         // node belonging to region
         size_t voxel=*cRegIt;
         // explore connectivity of node; extract only connections belonging to the same region
-        setPointType connections;
-        for(setPointTypeIterator connectiter=connectivity[voxel].begin(); connectiter!=connectivity[voxel].end(); ++connectiter)
+        setVoxelType connections;
+        for(setVoxelTypeIterator connectiter=connectivity[voxel].begin(); connectiter!=connectivity[voxel].end(); ++connectiter)
         {
           //voxelToregionMap[*connectiter]: set<long long int> of region labels
           // connectiter belongs to the region under study
@@ -1113,12 +776,12 @@ void INRreader::evalLabeledRegionsBounds()
             connections.insert(*connectiter);
           }
         } //end loop with connectiter
-        regionconnect.insert(std::pair<size_t, setPointType> (voxel,connections) );
+        regionconnect.insert(std::pair<size_t, setVoxelType> (voxel,connections) );
       }// end loop with cRegIt iterator
       //first: determine a seed point
       size_t seed= *((itRegToNodeMap->second).begin());
 
-      setPointType RegionVoxels, Queue;
+      setVoxelType RegionVoxels, Queue;
       Queue.insert(seed);
       RegionVoxels.insert(seed);
       /* Here the algorithm grows: expands the region RegionVoxels using the regional connectivity
@@ -1129,7 +792,7 @@ void INRreader::evalLabeledRegionsBounds()
         size_t candidate= *(Queue.begin());
         Queue.erase(candidate);
         //regionconnect : map<size_t, connectSetType> isw the local connectivity on the region
-        for(setPointTypeIterator countVoxel=regionconnect.at(candidate).begin(); countVoxel!=regionconnect.at(candidate).end(); ++countVoxel)
+        for(setVoxelTypeIterator countVoxel=regionconnect.at(candidate).begin(); countVoxel!=regionconnect.at(candidate).end(); ++countVoxel)
         {
           //check if countNode is inside the region
           if(RegionVoxels.find(*countVoxel)==RegionVoxels.end())
@@ -1150,18 +813,18 @@ void INRreader::evalLabeledRegionsBounds()
         regionLabels.insert(newRegionLabel);
 
         //copy inside newSet the whole set of point belonging to the current region
-        setPointType newSet=(itRegToNodeMap->second);
+        setVoxelType newSet=(itRegToNodeMap->second);
         
         //Delete points identified to the current region
-        for(setPointTypeIterator reg_iter=RegionVoxels.begin();reg_iter!=RegionVoxels.end(); ++reg_iter)
+        for(setVoxelTypeIterator reg_iter=RegionVoxels.begin();reg_iter!=RegionVoxels.end(); ++reg_iter)
         {
           newSet.erase(*reg_iter);
         }
         //insert the new region inside pointRegions
-        voxelRegions.insert(std::pair<regionLabeltype, setPointType>(newRegionLabel,newSet) );
+        voxelRegions.insert(std::pair<regionLabeltype, setVoxelType>(newRegionLabel,newSet) );
         //nodeToRegionMapType = <size_t, set<long long int> >
         //remove point not belonging to region
-        for(setPointTypeIterator reg_iter=newSet.begin();reg_iter!=newSet.end(); ++reg_iter)
+        for(setVoxelTypeIterator reg_iter=newSet.begin();reg_iter!=newSet.end(); ++reg_iter)
         {
           (itRegToNodeMap->second).erase(*reg_iter);
           voxelToregionMap[*reg_iter]=newRegionLabel;
@@ -1223,7 +886,7 @@ void INRreader::evalLabeledRegionsBounds()
         ( localbbox.bbox()[jcoord] )[0]=2.0*_info.RESOLUTION[jcoord]*_info.SHAPE[jcoord];
         ( localbbox.bbox()[jcoord] )[1]=0.0;
        }
-       for(setPointTypeIterator vox_iter=(itRegToNodeMap->second).begin();vox_iter!=(itRegToNodeMap->second).end(); ++vox_iter)
+       for(setVoxelTypeIterator vox_iter=(itRegToNodeMap->second).begin();vox_iter!=(itRegToNodeMap->second).end(); ++vox_iter)
        {
          setValue(*vox_iter, voxValue);
          std::vector<double>  barycenter=evalBarycenter(*vox_iter);
@@ -1830,4 +1493,295 @@ unsigned char INRreader::RM3X3Ind(const unsigned char & irow, const unsigned cha
   unsigned char index=3*irow + jcol;
   return(index);
 }
+
+
+
+
+
+
+
+
+
+
+
+INRreader::voxConnectType INRreader::evalLocalConnectivity(const setVoxelType voxelSet)
+{
+    voxConnectType voxConnected;
+    typedef setVoxelType::iterator setVoxelTypeIterator;
+    for(setVoxelTypeIterator it=voxelSet.begin(); it!=voxelSet.end(); ++it)
+    {
+      IndexCoord Ixyz=reverseIndex(*it);
+      Ixyz.iv=0;
+      if(Ixyz.ix>0)
+      {
+        size_t jind=index((Ixyz.ix-1),Ixyz.iy,Ixyz.iz,Ixyz.iv);
+        if(voxelSet.find(jind)!=voxelSet.end())
+        {
+          voxConnected[*it].insert(jind);
+          voxConnected[jind].insert(*it);
+        }
+        
+        if(Ixyz.iy>0)
+        {
+          jind=index((Ixyz.ix-1),(Ixyz.iy-1),Ixyz.iz,Ixyz.iv);
+          if(voxelSet.find(jind)!=voxelSet.end())
+          {
+            voxConnected[*it].insert(jind);
+            voxConnected[jind].insert(*it);
+          }
+          if(Ixyz.iz>0)
+          {
+            jind=index((Ixyz.ix-1),(Ixyz.iy-1),(Ixyz.iz-1),Ixyz.iv);
+            if(voxelSet.find(jind)!=voxelSet.end())
+            {
+              voxConnected[*it].insert(jind);
+              voxConnected[jind].insert(*it);
+            }
+          }
+          if(Ixyz.iz<(_info.SHAPE[2]-1))
+          {
+            jind=index((Ixyz.ix-1),(Ixyz.iy-1),(Ixyz.iz+1),Ixyz.iv);
+            if(voxelSet.find(jind)!=voxelSet.end())
+            {
+              voxConnected[*it].insert(jind);
+              voxConnected[jind].insert(*it);
+            }
+          }
+        }// and on xy, y>0
+        
+        if(Ixyz.iy<(_info.SHAPE[1]-1))
+        {
+          jind=index((Ixyz.ix-1),(Ixyz.iy+1),Ixyz.iz,Ixyz.iv);
+          if(voxelSet.find(jind)!=voxelSet.end())
+          {
+            voxConnected[*it].insert(jind);
+            voxConnected[jind].insert(*it);
+          }
+          if(Ixyz.iz>0)
+          {
+            jind=index((Ixyz.ix-1),(Ixyz.iy+1),(Ixyz.iz-1),Ixyz.iv);
+            if(voxelSet.find(jind)!=voxelSet.end())
+            {
+              voxConnected[*it].insert(jind);
+              voxConnected[jind].insert(*it);
+            }
+          }
+          if(Ixyz.iz<(_info.SHAPE[2]-1))
+          {
+            jind=index((Ixyz.ix-1),(Ixyz.iy+1),(Ixyz.iz+1),Ixyz.iv);
+            if(voxelSet.find(jind)!=voxelSet.end())
+            {
+              voxConnected[*it].insert(jind);
+              voxConnected[jind].insert(*it);
+            }
+          }
+        }// and on xy, y<NYDIM
+        
+        if(Ixyz.iz>0)
+        {
+          jind=index((Ixyz.ix-1),Ixyz.iy,(Ixyz.iz-1),Ixyz.iv);
+          if(voxelSet.find(jind)!=voxelSet.end())
+          {
+            voxConnected[*it].insert(jind);
+            voxConnected[jind].insert(*it);
+          }
+        }//and of xz, z>0
+        
+        if(Ixyz.iz<(_info.SHAPE[2]-1))
+        {
+          jind=index((Ixyz.ix-1),Ixyz.iy,(Ixyz.iz+1),Ixyz.iv);
+          if(voxelSet.find(jind)!=voxelSet.end())
+          {
+            voxConnected[*it].insert(jind);
+            voxConnected[jind].insert(*it);
+          }
+        }//and of xz, z<NZDIM
+      } //(end of ix >0)
+
+      if(Ixyz.ix<(_info.SHAPE[0]-1))
+      {
+        size_t jind=index((Ixyz.ix+1),Ixyz.iy,Ixyz.iz,Ixyz.iv);
+        if(voxelSet.find(jind)!=voxelSet.end())
+        {
+          voxConnected[*it].insert(jind);
+          voxConnected[jind].insert(*it);
+        }
+        
+        if(Ixyz.iy>0)
+        {
+          jind=index((Ixyz.ix+1),(Ixyz.iy-1),Ixyz.iz,Ixyz.iv);
+          if(voxelSet.find(jind)!=voxelSet.end())
+          {
+            voxConnected[*it].insert(jind);
+            voxConnected[jind].insert(*it);
+          }
+          if(Ixyz.iz>0)
+          {
+            jind=index((Ixyz.ix+1),(Ixyz.iy-1),(Ixyz.iz-1),Ixyz.iv);
+            if(voxelSet.find(jind)!=voxelSet.end())
+            {
+              voxConnected[*it].insert(jind);
+              voxConnected[jind].insert(*it);
+            }
+          }
+          if(Ixyz.iz<(_info.SHAPE[2]-1))
+          {
+            jind=index((Ixyz.ix+1),(Ixyz.iy-1),(Ixyz.iz+1),Ixyz.iv);
+            if(voxelSet.find(jind)!=voxelSet.end())
+            {
+              voxConnected[*it].insert(jind);
+              voxConnected[jind].insert(*it);
+            }
+          }
+        }// and on xy, y>0
+        
+        if(Ixyz.iy<(_info.SHAPE[1]-1))
+        {
+          jind=index((Ixyz.ix+1),(Ixyz.iy+1),Ixyz.iz,Ixyz.iv);
+          if(voxelSet.find(jind)!=voxelSet.end())
+          {
+            voxConnected[*it].insert(jind);
+            voxConnected[jind].insert(*it);
+          }
+          if(Ixyz.iz>0)
+          {
+            jind=index((Ixyz.ix+1),(Ixyz.iy+1),(Ixyz.iz-1),Ixyz.iv);
+            if(voxelSet.find(jind)!=voxelSet.end())
+            {
+              voxConnected[*it].insert(jind);
+              voxConnected[jind].insert(*it);
+            }
+          }
+          if(Ixyz.iz<(_info.SHAPE[2]-1))
+          {
+            jind=index((Ixyz.ix+1),(Ixyz.iy+1),(Ixyz.iz+1),Ixyz.iv);
+            if(voxelSet.find(jind)!=voxelSet.end())
+            {
+              voxConnected[*it].insert(jind);
+              voxConnected[jind].insert(*it);
+            }
+          }
+        }// and on xy, y<NYDIM
+        
+        if(Ixyz.iz>0)
+        {
+          jind=index((Ixyz.ix+1),Ixyz.iy,(Ixyz.iz-1),Ixyz.iv);
+          if(voxelSet.find(jind)!=voxelSet.end())
+          {
+            voxConnected[*it].insert(jind);
+            voxConnected[jind].insert(*it);
+          }
+        }//and of xz, z>0
+        
+        if(Ixyz.iz<(_info.SHAPE[2]-1))
+        {
+          jind=index((Ixyz.ix+1),Ixyz.iy,(Ixyz.iz+1),Ixyz.iv);
+          if(voxelSet.find(jind)!=voxelSet.end())
+          {
+            voxConnected[*it].insert(jind);
+            voxConnected[jind].insert(*it);
+          }
+        }//and of xz, z<NZDIM
+      }// (end of ix<NXDIM)
+      
+      
+      if(Ixyz.iy>0)
+      {
+        size_t jind=index(Ixyz.ix,(Ixyz.iy-1),Ixyz.iz,Ixyz.iv);
+        if(voxelSet.find(jind)!=voxelSet.end())
+        {
+          voxConnected[*it].insert(jind);
+          voxConnected[jind].insert(*it);
+        }
+        if(Ixyz.iz>0)
+        {
+          jind=index(Ixyz.ix,(Ixyz.iy-1),(Ixyz.iz-1),Ixyz.iv);
+          if(voxelSet.find(jind)!=voxelSet.end())
+          {
+            voxConnected[*it].insert(jind);
+            voxConnected[jind].insert(*it);
+          }
+        }//end on iy, iz>0
+        if(Ixyz.iz<(_info.SHAPE[2]-1))
+        {
+          jind=index(Ixyz.ix,(Ixyz.iy-1),(Ixyz.iz+1),Ixyz.iv);
+          if(voxelSet.find(jind)!=voxelSet.end())
+          {
+            voxConnected[*it].insert(jind);
+            voxConnected[jind].insert(*it);
+          }
+        }//end on iy, iz<NZDIM
+      }//end on iy>0
+
+      if(Ixyz.iy<(_info.SHAPE[1]-1))
+      {
+        size_t jind=index(Ixyz.ix,(Ixyz.iy+1),Ixyz.iz,Ixyz.iv);
+        if(voxelSet.find(jind)!=voxelSet.end())
+        {
+          voxConnected[*it].insert(jind);
+          voxConnected[jind].insert(*it);
+        }
+        
+        if(Ixyz.iz>0)
+        {
+          jind=index(Ixyz.ix,(Ixyz.iy+1),(Ixyz.iz-1),Ixyz.iv);
+          if(voxelSet.find(jind)!=voxelSet.end())
+          {
+            voxConnected[*it].insert(jind);
+            voxConnected[jind].insert(*it);
+          }
+        }//end on iy, iz>0
+        
+        if(Ixyz.iz<(_info.SHAPE[2]-1))
+        {
+          jind=index(Ixyz.ix,(Ixyz.iy+1),(Ixyz.iz+1),Ixyz.iv);
+          if(voxelSet.find(jind)!=voxelSet.end())
+          {
+            voxConnected[*it].insert(jind);
+            voxConnected[jind].insert(*it);
+          }
+        }//end on iy, iz<NZDIM
+      }// end on iy<NYDIM
+      
+      if(Ixyz.iz>0)
+      {
+        size_t jind=index(Ixyz.ix,Ixyz.iy,(Ixyz.iz-1),Ixyz.iv);
+        if(voxelSet.find(jind)!=voxelSet.end())
+        {
+          voxConnected[*it].insert(jind);
+          voxConnected[jind].insert(*it);
+        }
+      }//end on iz>0
+      if(Ixyz.iz<(_info.SHAPE[2]-1))
+      {
+        size_t jind=index(Ixyz.ix,Ixyz.iy,(Ixyz.iz+1),Ixyz.iv);
+        if(voxelSet.find(jind)!=voxelSet.end())
+        {
+          voxConnected[*it].insert(jind);
+          voxConnected[jind].insert(*it);
+        }
+      }// end on iz<NZDIM
+    }
+    return(voxConnected);
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 

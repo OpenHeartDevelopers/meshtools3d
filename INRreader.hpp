@@ -218,6 +218,8 @@ class BoundingBox
 
 class INRreader
 {
+    typedef std::set<size_t> setVoxelType;
+    typedef std::map<size_t,setVoxelType> voxConnectType;
   public:
     typedef std::map<double,BoundingBox> BboxMapType;
     typedef BboxMapType::iterator BboxMapIterType;
@@ -268,6 +270,7 @@ class INRreader
     std::vector<double> InvertA3X3(const std::vector<double> & Mat0) const;
     unsigned char RM3X3Ind(const unsigned char & irow, const unsigned char & jcol) const;
     inline double hypot2(const double & x, const double & y) const {return sqrt(x*x+y*y);};
+    voxConnectType evalLocalConnectivity(const setVoxelType voxelSet);
     bool _isAllocated;
     INRInfo _info;
     size_t nb_Of_Pixels;
