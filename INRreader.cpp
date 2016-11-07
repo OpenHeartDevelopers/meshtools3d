@@ -712,20 +712,11 @@ void INRreader::evalLabeledRegionsBounds()
   _bboxlabels.clear();
   if(_info.VDIM == 1)
   {
-    typedef long long int regionLabeltype;
-    typedef setVoxelType::iterator setVoxelTypeIterator;
-    typedef std::set<regionLabeltype> regionSetType;
-    
-    typedef std::map<size_t, regionLabeltype > voxelToRegionMapType;
-    typedef std::map<regionLabeltype, setVoxelType> regionSubdivisionType;
     typedef regionSubdivisionType::iterator regionSubdivisionTypeIterator;
-    
-
+    typedef setVoxelType::iterator setVoxelTypeIterator;
     regionSubdivisionType voxelRegions;
-    regionSetType regionLabels;
     
-    //voxelToregionMap is a map between a  voxel and its regions
-    voxelToRegionMapType voxelToregionMap;
+    
     
     // Initialize the map setVoxelType that describes the set of indices with the same label
     for (setVoxelTypeIterator it=nzeroEntryIndexes.begin(); it!=nzeroEntryIndexes.end(); ++it)
@@ -733,116 +724,46 @@ void INRreader::evalLabeledRegionsBounds()
       regionLabeltype voxLabel=static_cast<regionLabeltype >(pickValue(*it));
       voxelRegions[voxLabel].insert(*it);
     }
+
+    //setVoxelType myocardiumVoxelSet=(voxelRegions.find(1))->second;
     // Delete elements with index label =1
     voxelRegions.erase(voxelRegions.find(1));
+    
     // create a set of only non-zero and non-one elements
     setVoxelType boundVoxels;
     boundVoxels.clear();
-    regionLabels.clear();
     for(regionSubdivisionTypeIterator mapit=voxelRegions.begin(); mapit!=voxelRegions.end();++mapit)
     {
-      regionLabels.insert(mapit->first);
       for(setVoxelTypeIterator itset=((mapit->second).begin());itset!=((mapit->second).end());++itset)
       {
         boundVoxels.insert(*itset);
-        voxelToregionMap.insert(std::pair<size_t,regionLabeltype>(*itset, mapit->first) );
       }
     }
+
     // Now I create a voxel connectivity
     voxConnectType connectivity=evalLocalConnectivity(boundVoxels);
-    
     // At this point, I have a voxel connectivity structure of the
     // Domain items that falls on the PVs and the MV
-    // Now the growing algorithm on labeled regions only
-    for(regionSubdivisionTypeIterator itRegToNodeMap=voxelRegions.begin(); itRegToNodeMap!=voxelRegions.end(); ++itRegToNodeMap)
-    {
-      regionLabeltype labelOfRegions=itRegToNodeMap->first;
-      // iterate on voxels belonging to the region labelOfRegions
-      // extract the local connectivity of the region regionconnect
-      voxConnectType regionconnect;
-      regionconnect.clear();
-      for(setVoxelTypeIterator cRegIt=(itRegToNodeMap->second).begin(); cRegIt!=(itRegToNodeMap->second).end(); ++cRegIt)
-      {
-        // node belonging to region
-        size_t voxel=*cRegIt;
-        // explore connectivity of node; extract only connections belonging to the same region
-        setVoxelType connections;
-        for(setVoxelTypeIterator connectiter=connectivity[voxel].begin(); connectiter!=connectivity[voxel].end(); ++connectiter)
-        {
-          //voxelToregionMap[*connectiter]: set<long long int> of region labels
-          // connectiter belongs to the region under study
-          if((voxelToregionMap[*connectiter])==labelOfRegions)
-          {
-            connections.insert(*connectiter);
-          }
-        } //end loop with connectiter
-        regionconnect.insert(std::pair<size_t, setVoxelType> (voxel,connections) );
-      }// end loop with cRegIt iterator
-      //first: determine a seed point
-      size_t seed= *((itRegToNodeMap->second).begin());
 
-      setVoxelType RegionVoxels, Queue;
-      Queue.insert(seed);
-      RegionVoxels.insert(seed);
-      /* Here the algorithm grows: expands the region RegionVoxels using the regional connectivity
-       it iterates until all the connected voxels are covered
-       */
-      while(!Queue.empty())
-      {
-        size_t candidate= *(Queue.begin());
-        Queue.erase(candidate);
-        //regionconnect : map<size_t, connectSetType> isw the local connectivity on the region
-        for(setVoxelTypeIterator countVoxel=regionconnect.at(candidate).begin(); countVoxel!=regionconnect.at(candidate).end(); ++countVoxel)
-        {
-          //check if countNode is inside the region
-          if(RegionVoxels.find(*countVoxel)==RegionVoxels.end())
-          {
-            //if not member of nodesRegion, add it
-            RegionVoxels.insert(*countVoxel);
-            Queue.insert(*countVoxel);
-          }
-        }
-      }//end of while
-      //RegionVoxels: voxels of the connected region with label itRegToNodeMap->first
-      //check if ... itRegToNodeMap->second : list of points belonging to (set)
-      //if is the case, there are some point to move
-      if((itRegToNodeMap->second).size() !=RegionVoxels.size()  )
-      {
-        //first: create a new label region
-        regionLabeltype newRegionLabel=1+(*(regionLabels.rbegin()));
-        regionLabels.insert(newRegionLabel);
 
-        //copy inside newSet the whole set of point belonging to the current region
-        setVoxelType newSet=(itRegToNodeMap->second);
-        
-        //Delete points identified to the current region
-        for(setVoxelTypeIterator reg_iter=RegionVoxels.begin();reg_iter!=RegionVoxels.end(); ++reg_iter)
-        {
-          newSet.erase(*reg_iter);
-        }
-        //insert the new region inside pointRegions
-        voxelRegions.insert(std::pair<regionLabeltype, setVoxelType>(newRegionLabel,newSet) );
-        //nodeToRegionMapType = <size_t, set<long long int> >
-        //remove point not belonging to region
-        for(setVoxelTypeIterator reg_iter=newSet.begin();reg_iter!=newSet.end(); ++reg_iter)
-        {
-          (itRegToNodeMap->second).erase(*reg_iter);
-          voxelToregionMap[*reg_iter]=newRegionLabel;
-        }
-      }// end if on size
-    }//algo division ends
+
+    subdivideRegions(voxelRegions,  connectivity );
     
-    for(regionSubdivisionTypeIterator mapit=voxelRegions.begin();mapit!=voxelRegions.end();++mapit)
+    //Fix with regression planes
+    /*for(regionSubdivisionTypeIterator mapit=voxelRegions.begin();mapit!=voxelRegions.end();++mapit)
     {
         LinearRegression2DData regdata=evalRegressionPlane(mapit->second);
         if(regdata.isAhole)
         {
+          //extract normal to plane and normalise it
           std::vector<double> pnorm=regdata.pnorm;
           double norm=sqrt(pnorm[0]*pnorm[0]+pnorm[1]*pnorm[1]+pnorm[2]*pnorm[2]);
           for(unsigned char cc=0; cc<3; cc++)
           {
               pnorm[cc]=pnorm[cc]/norm;
           }
+
+          // extract center point of the plane
           std::vector<double> xc=regdata.xc;
           for(std::set<size_t>::iterator it=nzeroEntryIndexes.begin();it!=nzeroEntryIndexes.end(); ++it)
           {
@@ -852,7 +773,6 @@ void INRreader::evalLabeledRegionsBounds()
                   barp[cc]=barp[cc]-xc[cc];
               }
               double dproj=dotprod(barp,pnorm);
-              
               if((dproj>=regdata.zminmax[0]) &&  (dproj<=regdata.zminmax[1]) )
               {
                 //projected on plane
@@ -871,11 +791,9 @@ void INRreader::evalLabeledRegionsBounds()
               } 
           }
         }
-    }
-    
+    }*/
     
     //now re-labeling of voxels
-    
     
     for(regionSubdivisionTypeIterator itRegToNodeMap=voxelRegions.begin(); itRegToNodeMap!=voxelRegions.end(); ++itRegToNodeMap)
     {
@@ -1042,7 +960,9 @@ std::vector<double> INRreader::evalBarycenter(const size_t & index)
 
 double INRreader::EuclideanDist(const double * P1, const double * P2)
 {
-    double dist=std::sqrt((P1[0]-P2[0])*(P1[0]-P2[0])+(P1[1]-P2[1])*(P1[1]-P2[1])+(P1[2]-P2[2])*(P1[2]-P2[2]));
+    double dist=std::sqrt((P1[0]-P2[0])*(P1[0]-P2[0])
+                         +(P1[1]-P2[1])*(P1[1]-P2[1])
+                         +(P1[2]-P2[2])*(P1[2]-P2[2]));
     return(dist);               
 }
 
@@ -1051,7 +971,7 @@ double INRreader::dotprod(const std::vector<double> & v1, const std::vector<doub
   double prod=0.0;
   for(size_t ii=0; ii<v1.size(); ii++)
   {
-      prod=prod+v1[ii]*v2[ii];
+      prod=prod+(v1[ii]*v2[ii]);
   }
   return(prod);
 }
@@ -1495,15 +1415,6 @@ unsigned char INRreader::RM3X3Ind(const unsigned char & irow, const unsigned cha
 }
 
 
-
-
-
-
-
-
-
-
-
 INRreader::voxConnectType INRreader::evalLocalConnectivity(const setVoxelType voxelSet)
 {
     voxConnectType voxConnected;
@@ -1769,11 +1680,87 @@ INRreader::voxConnectType INRreader::evalLocalConnectivity(const setVoxelType vo
 
 
 
+void INRreader::subdivideRegions(regionSubdivisionType & voxelReg, const voxConnectType & connect )
+{
+    typedef std::map<size_t, regionLabeltype > voxelToRegionMapType;
+    typedef std::set<regionLabeltype> regionSetType;
+    typedef regionSubdivisionType::iterator regionSubdivisionTypeIterator;
+    typedef setVoxelType::iterator setVoxelTypeIterator;
+    typedef setVoxelType::const_iterator setVoxelTypeIteratorConst;
+    
+    
+    voxelToRegionMapType voxelToregionMap;
+    regionSetType regionLabels;
+    for(regionSubdivisionTypeIterator mapit=voxelReg.begin(); mapit!=voxelReg.end();++mapit)
+    {
+      regionLabels.insert(mapit->first);
+      for(setVoxelTypeIterator itset=((mapit->second).begin());itset!=((mapit->second).end());++itset)
+      {
+        voxelToregionMap.insert(std::pair<size_t,regionLabeltype>(*itset, mapit->first) );
+      }
+    }
 
+    for(regionSubdivisionTypeIterator itRegToNodeMap=voxelReg.begin(); itRegToNodeMap!=voxelReg.end(); ++itRegToNodeMap)
+    {
+      // extract only connections belonging to the same region
+      voxConnectType regionconnect;
+      regionconnect.clear();
+      for(setVoxelTypeIterator cRegIt=(itRegToNodeMap->second).begin(); cRegIt!=(itRegToNodeMap->second).end(); ++cRegIt)
+      {
+        setVoxelType connections;
+        voxConnectType::const_iterator pconnect=connect.find(*cRegIt);
+        //for(setVoxelTypeIterator connectiter=(connect[*cRegIt]).begin(); connectiter!=(connect[*cRegIt]).end(); ++connectiter)
+        for(setVoxelTypeIteratorConst connectiter=(pconnect->second).begin(); connectiter!=(pconnect->second).end(); ++connectiter)
+        {
+          if((voxelToregionMap[*connectiter])==(itRegToNodeMap->first))
+          {
+            connections.insert(*connectiter);
+          }
+        } 
+        regionconnect.insert(std::pair<size_t, setVoxelType> (*cRegIt,connections) );
+      }
 
+      //first: determine a seed point
+      size_t seed= *((itRegToNodeMap->second).begin());
+      setVoxelType RegionVoxels, Queue;
+      Queue.insert(seed);
+      RegionVoxels.insert(seed);
+      while(!Queue.empty())
+      {
+        size_t candidate= *(Queue.begin());
+        Queue.erase(candidate);
+        for(setVoxelTypeIterator countVoxel=regionconnect.at(candidate).begin(); countVoxel!=regionconnect.at(candidate).end(); ++countVoxel)
+        {
+          if(RegionVoxels.find(*countVoxel)==RegionVoxels.end())
+          {
+            RegionVoxels.insert(*countVoxel);
+            Queue.insert(*countVoxel);
+          }
+        }
+      }//end of while
 
-
-
+      //RegionVoxels: voxels of the connected region with label itRegToNodeMap->first
+      //check if there are unconnected regions and in case move them
+      if((itRegToNodeMap->second).size() !=RegionVoxels.size()  )
+      {
+        //first: create a new label region
+        regionLabeltype newRegionLabel=1+(*(regionLabels.rbegin()));
+        regionLabels.insert(newRegionLabel);
+        setVoxelType newSet=(itRegToNodeMap->second);
+        for(setVoxelTypeIterator reg_iter=RegionVoxels.begin();reg_iter!=RegionVoxels.end(); ++reg_iter)
+        {
+          newSet.erase(*reg_iter);
+        }
+        voxelReg.insert(std::pair<regionLabeltype, setVoxelType>(newRegionLabel,newSet) );
+        //remove point not belonging to region
+        for(setVoxelTypeIterator reg_iter=newSet.begin();reg_iter!=newSet.end(); ++reg_iter)
+        {
+          (itRegToNodeMap->second).erase(*reg_iter);
+          voxelToregionMap[*reg_iter]=newRegionLabel;
+        }
+      }// end if on size
+    }//algo division ends
+}
 
 
 

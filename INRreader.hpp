@@ -220,6 +220,9 @@ class INRreader
 {
     typedef std::set<size_t> setVoxelType;
     typedef std::map<size_t,setVoxelType> voxConnectType;
+    typedef long long int regionLabeltype;
+    typedef std::map<regionLabeltype, setVoxelType> regionSubdivisionType;
+
   public:
     typedef std::map<double,BoundingBox> BboxMapType;
     typedef BboxMapType::iterator BboxMapIterType;
@@ -271,6 +274,8 @@ class INRreader
     unsigned char RM3X3Ind(const unsigned char & irow, const unsigned char & jcol) const;
     inline double hypot2(const double & x, const double & y) const {return sqrt(x*x+y*y);};
     voxConnectType evalLocalConnectivity(const setVoxelType voxelSet);
+    void subdivideRegions(regionSubdivisionType & voxelRegions, const voxConnectType & connectivity );
+        
     bool _isAllocated;
     INRInfo _info;
     size_t nb_Of_Pixels;
