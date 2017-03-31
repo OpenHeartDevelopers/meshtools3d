@@ -33,6 +33,19 @@ int main(int argc,char **argv)
 		exit(0);
 	}
   
+  if( command_line.search(2, "-h","--help") or (argc==1) ) 
+  {
+      std::cout<<"MeshTools3D\nUsage: ";
+      std::cout<<"./meshtools3d -f <data_filename> -seg_dir <segmentation_dir> -seg_name <segmentation_name> -out_dir <output_dir> -out_name <output_name>"<<std::endl;
+      std::cout<<"\t data_filename is the file name where parameters are"<<std::endl;
+      std::cout<<"\t segmentation_dir, segmentation_name are the directory and the name of the input segmentation"<<std::endl;
+      std::cout<<"\t output_dir, output_name are the output directory and the output suffix"<<std::endl;
+      std::cout<<"NOTE:"<<std::endl;
+      std::cout<<"\t If -seg_dir, -seg_name, -out_dir, -out_name are optional aruments,\n\t they overwrite those specified in the data file (used, for example, to use meshtools3d within a script)"<<std::endl;
+      exit(0);
+  }
+  
+  
   std::string seg_dir            = param_file("segmentation/seg_dir",".");
   std::string seg_name           = param_file("segmentation/seg_name","image.inr");
   bool mesh_from_segmentation    = param_file("segmentation/mesh_from_segmentation",true);
