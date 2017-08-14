@@ -131,17 +131,7 @@ bool INRreader::isPointInsideSegmentation(const double & x, const double & y, co
     {
         return(false);
     }
-    
-    for(size_t iv=0; iv<_info.VDIM; iv++)
-    {
-        double vox=pickVoxelValue(Ixyz.ix,Ixyz.iy,Ixyz.iz,iv);
-        long long int voxval=static_cast<long long int>(vox);
-        if(voxval>0)
-        {
-          is_inside=true;
-          break;
-        }
-    }
+    is_inside=isVoxelInSeg( Ixyz);
 
     //now checks for points evantually on the voxel faces
     if(!is_inside)
@@ -245,6 +235,9 @@ bool INRreader::isPointInsideSegmentation(const double & x, const double & y, co
 
 IndexCoord INRreader::voxelCoordInterp(const double & x, const double & y, const double & z) const
 {
+  /*  Given  a point of coordinates (x,y,z) it gives the indexes of the corresponding voxel (Ix,Iy,Iz).
+      If point coordiantes falls outside the bounding box, gives the projection of the point onto the bbox
+  */
   IndexCoord Ixyz;
   Ixyz.iv=0;
   
@@ -387,6 +380,64 @@ std::vector<double> INRreader::interpolatedNonZeroVoxelValue (const double & x, 
   }
   return(voxvalue);
 }
+
+
+std::vector<double> INRreader::trilinearInterpolatedVoxelValue (const double & x, const double & y, const double & z)
+{
+  std::vector<double> voxvalue(_info.VDIM,0.0);
+  if(_isAllocated)
+  {
+
+    std::vector<double> coord(3,0);
+    coord[0]=x/_info.RESOLUTION[0];
+    coord[1]=x/_info.RESOLUTION[1];
+    coord[2]=x/_info.RESOLUTION[2];
+    
+    IndexCoord Ixyz;
+    Ixyz.ix=static_cast<size_t>(std::floor(coord[0]));
+    Ixyz.iy=static_cast<size_t>(std::floor(coord[1]));
+    Ixyz.iz=static_cast<size_t>(std::floor(coord[2]));
+    
+    
+    if((Ixyz.ix>=_info.SHAPE[0])||(Ixyz.iy>=_info.SHAPE[1]) ||(Ixyz.iz>=_info.SHAPE[2]))
+    {
+        return(voxvalue);
+    }
+    
+
+    double di2 = static_cast<double>(Ixyz.iz+1) - coord[2];
+    double di1 = coord[2] - static_cast<double>(Ixyz.iz);
+    double dj2 = static_cast<double>(Ixyz.iy+1) - coord[1];
+    double dj1 = coord[1] - static_cast<double>(Ixyz.iy);
+    double dk2 = static_cast<double>(Ixyz.ix+1) - coord[0];
+    double dk1 = coord[0] - static_cast<double>(Ixyz.ix);
+    
+    for(size_t iv=0; iv<_info.VDIM; iv++)
+    {
+      double a=pickVoxelValue(Ixyz.ix,Ixyz.iy,Ixyz.iz,iv);
+      double e=pickVoxelValue((1+Ixyz.ix),Ixyz.iy,Ixyz.iz,iv);
+      double d=pickVoxelValue(Ixyz.ix,(1+Ixyz.iy),Ixyz.iz,iv);      
+      double h=pickVoxelValue((1+Ixyz.ix),(1+Ixyz.iy),Ixyz.iz,iv);
+      
+      double b=pickVoxelValue(Ixyz.ix,Ixyz.iy,(1+Ixyz.iz),iv);
+      double f=pickVoxelValue((1+Ixyz.ix),Ixyz.iy,(1+Ixyz.iz),iv);
+      double c=pickVoxelValue(Ixyz.ix,(1+Ixyz.iy),(1+Ixyz.iz),iv);      
+      double g=pickVoxelValue((1+Ixyz.ix),(1+Ixyz.iy),(1+Ixyz.iz),iv);
+
+      
+      voxvalue[iv]=( (  ( a * di2 + b * di1 )*dj2 + ( d * di2 + c * di1 )*dj1) * dk2 +
+	                   (  ( e * di2 + f * di1 )*dj2 + ( h * di2 + g * di1 )*dj1) * dk1 );
+    }
+
+
+
+
+  }
+  return(voxvalue);
+
+
+}
+
 
 bool INRreader::isVoxelInSeg(const IndexCoord & Ixyz) const
 {
@@ -918,10 +969,10 @@ void INRreader::setValue(const size_t & _index, const double & _value)
 
 size_t INRreader::index(const size_t & ix,const size_t & iy,const size_t & iz,const size_t & iv) const
 {
-  //Returns the index within the data array. The figure is usually written as follows:
+  // Returns the index within the data array. The figure is usually written as follows:
   // Each component is composed by nb_of_pixels data; so (nb_of_pixels)_comp1,..,(nb_of_pixels)compNV
   // Pixels are divided by plane (z direction); so (px_per_Plane)_plane1,...,(px_per_Plane)_planeNZ
-  // For each plane, the first ny component i read will constitute the first colum and so on: it is written column_wise
+  // For each plane, the first ny component I read will constitute the first colum and so on: it is written column_wise
   size_t _index=0;
   size_t vdimcompStart=(iv*nb_Of_Pixels);
   size_t zPlaneStart= px_per_Plane*iz;
