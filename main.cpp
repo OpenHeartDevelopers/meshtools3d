@@ -349,7 +349,7 @@ int main(int argc,char **argv)
     chrono2.stop();
     std::cout<<" done in "<<chrono2<<std::endl;
   }
-
+  CarpMesh.meshRescaling(rescaling); //rescale the whole mesh; not on output. So output of rescaling is 1 now
   std::cout<<"boundary re-labeling..."<<std::flush;
   chrono2.start();
   CarpMesh.evalBoundaryLabels(debug_output,out_dir,debug_frequency);
@@ -358,7 +358,7 @@ int main(int argc,char **argv)
   chrono2.reset();
 
   CarpMesh.writeBoundaryLabels(out_dir, out_name);
-  CarpMesh.meshRescaling(rescaling); //rescale the whole mesh; not on output. So output of rescaling is 1 now
+  
   if(out_carp)
   {
       std::string cfileoutName=out_dir+"/"+out_name;
