@@ -240,9 +240,12 @@ class INRreader
     std::vector<double> interpolatedVoxelValue (const double & x, const double & y, const double & z);
     std::vector<double> interpolatedNonZeroVoxelValue (const double & x, const double & y, const double & z);
     std::vector<double> trilinearInterpolatedVoxelValue (const double & x, const double & y, const double & z);
+    double labellized_trilinearInterpolatedVoxelValue (const double & x, const double & y, const double & z);
     inline std::vector<double> interpolatedVoxelValue(std::vector<double>& Pt) {return(interpolatedVoxelValue(Pt[0],Pt[1],Pt[2]) ); };
     inline std::vector<double> interpolatedNonZeroVoxelValue(std::vector<double>& Pt) {return(interpolatedNonZeroVoxelValue(Pt[0],Pt[1],Pt[2]) ); };
     inline std::vector<double> trilinearInterpolatedVoxelValue (std::vector<double>& Pt){return (trilinearInterpolatedVoxelValue(Pt[0],Pt[1],Pt[2])); };
+    inline double labellized_trilinearInterpolatedVoxelValue (std::vector<double>& Pt){return (labellized_trilinearInterpolatedVoxelValue(Pt[0],Pt[1],Pt[2]) );  };
+    
     
     double pickVoxelValue(const size_t & ix,const size_t & iy,const size_t & iz,const size_t iv=0) const;
     inline const INRInfo & info() const {return (_info);};
@@ -265,6 +268,7 @@ class INRreader
     double pickValue(const size_t & _index) const;
     void setValue(const size_t & _index, const double & _value);
     size_t index(const size_t & ix,const size_t & iy,const size_t & iz,const size_t & iv) const;
+    inline size_t index(const IndexCoord & Ixyz) const {return(index(Ixyz.ix,Ixyz.iy,Ixyz.iz,Ixyz.iv) );};
     IndexCoord reverseIndex(const size_t & index ) const;
     std::vector<double>evalBarycenter(const size_t & index);
     double EuclideanDist(const double * P1, const double * P2);

@@ -390,13 +390,14 @@ std::vector<double> INRreader::trilinearInterpolatedVoxelValue (const double & x
 
     std::vector<double> coord(3,0);
     coord[0]=x/_info.RESOLUTION[0];
-    coord[1]=x/_info.RESOLUTION[1];
-    coord[2]=x/_info.RESOLUTION[2];
+    coord[1]=y/_info.RESOLUTION[1];
+    coord[2]=z/_info.RESOLUTION[2];
     
     IndexCoord Ixyz;
     Ixyz.ix=static_cast<size_t>(std::floor(coord[0]));
     Ixyz.iy=static_cast<size_t>(std::floor(coord[1]));
     Ixyz.iz=static_cast<size_t>(std::floor(coord[2]));
+    Ixyz.iv=0;
     
     
     if((Ixyz.ix>=_info.SHAPE[0])||(Ixyz.iy>=_info.SHAPE[1]) ||(Ixyz.iz>=_info.SHAPE[2]))
@@ -428,12 +429,117 @@ std::vector<double> INRreader::trilinearInterpolatedVoxelValue (const double & x
       voxvalue[iv]=( (  ( a * di2 + b * di1 )*dj2 + ( d * di2 + c * di1 )*dj1) * dk2 +
 	                   (  ( e * di2 + f * di1 )*dj2 + ( h * di2 + g * di1 )*dj1) * dk1 );
     }
-
-
-
-
   }
   return(voxvalue);
+}
+
+
+double INRreader::labellized_trilinearInterpolatedVoxelValue (const double & x, const double & y, const double & z)
+{
+  double voxvalue = 0.0;
+  if(_isAllocated )
+  {
+
+      std::vector<double> coord(3,0);
+      coord[0]=x/_info.RESOLUTION[0];
+      coord[1]=y/_info.RESOLUTION[1];
+      coord[2]=z/_info.RESOLUTION[2];
+
+      IndexCoord Ixyz;
+      Ixyz.ix=static_cast<size_t>(std::floor(coord[0]));
+      Ixyz.iy=static_cast<size_t>(std::floor(coord[1]));
+      Ixyz.iz=static_cast<size_t>(std::floor(coord[2]));
+      Ixyz.iv=0;
+
+      if((Ixyz.ix>=_info.SHAPE[0])||(Ixyz.iy>=_info.SHAPE[1]) ||(Ixyz.iz>=_info.SHAPE[2]))
+      {
+          return(voxvalue);
+      }
+
+      std::vector<IndexCoord> indices(8,Ixyz);
+      indices[1].ix=indices[0].ix+1;
+      indices[2].iy=indices[0].iy+1;
+      indices[3].ix=indices[0].ix+1;
+      indices[3].iy=indices[0].iy+1;
+      
+      indices[4]=indices[0];
+      indices[5]=indices[1];
+      indices[6]=indices[2];
+      indices[7]=indices[3];
+      
+      for(unsigned char ii=4; ii<8;ii++)
+      {
+        indices[ii].iz=indices[0].iz+1;
+      }
+      
+      std::vector<int> labels(8,0);
+      labels[0]=static_cast<int>(pickValue(index(indices[0])));
+
+      unsigned char lc = 1;
+      for(unsigned char lci=1; lci<8; ++lci)
+      {
+          bool found = false;
+          int iwt = static_cast<int>(pickValue(index(indices[lci]))); 
+          for(unsigned char lcj=0; lcj < lc; ++lcj)
+          {
+              if(iwt == labels[lcj])
+              {
+                  found = true;
+                  break;
+              }
+          }
+          if(found)
+          { 
+              continue;
+          }
+          labels[lc] = iwt;
+          ++lc;
+      }
+
+      if(lc == 1) //only one label
+      {
+          return labels[0];
+      }
+
+      double best_value = 0.;
+      int best = 0;
+
+      double di2 = static_cast<double>(Ixyz.iz+1) - coord[2];
+      double di1 = coord[2] - static_cast<double>(Ixyz.iz);
+      double dj2 = static_cast<double>(Ixyz.iy+1) - coord[1];
+      double dj1 = coord[1] - static_cast<double>(Ixyz.iy);
+      double dk2 = static_cast<double>(Ixyz.ix+1) - coord[0];
+      double dk1 = coord[0] - static_cast<double>(Ixyz.ix);
+      
+      for(unsigned char il = 0; il < lc; ++il)
+      {
+          int iwt = labels[il];
+        
+          double a=static_cast<double>(static_cast<int>(pickValue(index(indices[0])))==iwt);
+          double e=static_cast<double>(static_cast<int>(pickValue(index(indices[1])))==iwt);
+          double d=static_cast<double>(static_cast<int>(pickValue(index(indices[2])))==iwt);
+          double h=static_cast<double>(static_cast<int>(pickValue(index(indices[3])))==iwt);
+      
+          double b=static_cast<double>(static_cast<int>(pickValue(index(indices[4])))==iwt);
+          double f=static_cast<double>(static_cast<int>(pickValue(index(indices[5])))==iwt);
+          double c=static_cast<double>(static_cast<int>(pickValue(index(indices[6])))==iwt);
+          double g=static_cast<double>(static_cast<int>(pickValue(index(indices[7])))==iwt);
+
+          double r=( (  ( a * di2 + b * di1 )*dj2 + ( d * di2 + c * di1 )*dj1) * dk2 +
+	                   (  ( e * di2 + f * di1 )*dj2 + ( h * di2 + g * di1 )*dj1) * dk1 );
+
+          if(r > best_value) 
+          {
+              best = iwt;
+              best_value = r;
+          }
+      }
+      voxvalue = static_cast<double>(best);
+  }
+  
+  return (voxvalue);
+
+
 
 
 }
