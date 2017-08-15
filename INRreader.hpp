@@ -235,16 +235,17 @@ class INRreader
     void freeMemory();
     void createBoundingBoxes();
     bool isPointInsideSegmentation(const double & x, const double & y, const double & z) const;
+    bool isPointInsideSegmentationTrilinear(const double & x, const double & y, const double & z) const;
     IndexCoord voxelCoordInterp(const double & x, const double & y, const double & z) const; 
     IndexCoord voxelCoordInterpNonZero(const double & x, const double & y, const double & z);
     std::vector<double> interpolatedVoxelValue (const double & x, const double & y, const double & z);
     std::vector<double> interpolatedNonZeroVoxelValue (const double & x, const double & y, const double & z);
-    std::vector<double> trilinearInterpolatedVoxelValue (const double & x, const double & y, const double & z);
-    double labellized_trilinearInterpolatedVoxelValue (const double & x, const double & y, const double & z);
+    std::vector<double> trilinearInterpolatedVoxelValue (const double & x, const double & y, const double & z) const;
+    double labellized_trilinearInterpolatedVoxelValue(const double & x, const double & y, const double & z) const;
     inline std::vector<double> interpolatedVoxelValue(std::vector<double>& Pt) {return(interpolatedVoxelValue(Pt[0],Pt[1],Pt[2]) ); };
     inline std::vector<double> interpolatedNonZeroVoxelValue(std::vector<double>& Pt) {return(interpolatedNonZeroVoxelValue(Pt[0],Pt[1],Pt[2]) ); };
-    inline std::vector<double> trilinearInterpolatedVoxelValue (std::vector<double>& Pt){return (trilinearInterpolatedVoxelValue(Pt[0],Pt[1],Pt[2])); };
-    inline double labellized_trilinearInterpolatedVoxelValue (std::vector<double>& Pt){return (labellized_trilinearInterpolatedVoxelValue(Pt[0],Pt[1],Pt[2]) );  };
+    inline std::vector<double> trilinearInterpolatedVoxelValue (const std::vector<double>& Pt)const {return (trilinearInterpolatedVoxelValue(Pt[0],Pt[1],Pt[2])); };
+    inline double labellized_trilinearInterpolatedVoxelValue (const std::vector<double>& Pt) const {return (labellized_trilinearInterpolatedVoxelValue(Pt[0],Pt[1],Pt[2]) );  };
     
     
     double pickVoxelValue(const size_t & ix,const size_t & iy,const size_t & iz,const size_t iv=0) const;

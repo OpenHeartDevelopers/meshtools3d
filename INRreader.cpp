@@ -233,6 +233,132 @@ bool INRreader::isPointInsideSegmentation(const double & x, const double & y, co
   return(is_inside);
 }
 
+
+
+bool INRreader::isPointInsideSegmentationTrilinear(const double & x, const double & y, const double & z) const
+{
+  bool is_inside=false;
+  if(_isAllocated)
+  {
+   
+    IndexCoord Ixyz;
+    Ixyz.ix=static_cast<size_t>(std::floor(x/_info.RESOLUTION[0]));
+    Ixyz.iy=static_cast<size_t>(std::floor(y/_info.RESOLUTION[1]));
+    Ixyz.iz=static_cast<size_t>(std::floor(z/_info.RESOLUTION[2]));
+    if((Ixyz.ix>=_info.SHAPE[0])||(Ixyz.iy>=_info.SHAPE[1]) ||(Ixyz.iz>=_info.SHAPE[2]))
+    {
+        return(false);
+    }
+    double labvalue=labellized_trilinearInterpolatedVoxelValue(x,y,z);
+    is_inside=static_cast<bool>(labvalue);
+    
+
+    //now checks for points evantually on the voxel faces
+    if(!is_inside)
+    {
+      double rx=sqrt((Ixyz.ix*_info.RESOLUTION[0]-x)*(Ixyz.ix*_info.RESOLUTION[0]-x))/_info.RESOLUTION[0];
+      double ry=sqrt((Ixyz.iy*_info.RESOLUTION[1]-y)*(Ixyz.iy*_info.RESOLUTION[1]-y))/_info.RESOLUTION[1];
+      double rz=sqrt((Ixyz.iz*_info.RESOLUTION[2]-z)*(Ixyz.iz*_info.RESOLUTION[2]-z))/_info.RESOLUTION[2];
+      if((rx<INTOLL) && (Ixyz.ix>0))
+      {
+        for(size_t iv=0; iv<_info.VDIM; iv++)
+        {
+          double vox=pickVoxelValue((Ixyz.ix-1),Ixyz.iy,Ixyz.iz,iv);
+          long long int voxval=static_cast<long long int>(vox);
+          if(voxval>0)
+          {
+            is_inside=true;
+            break;
+          }
+        }
+      }
+      if((!is_inside) && (ry<INTOLL) && (Ixyz.iy>0))
+      {
+      
+        for(size_t iv=0; iv<_info.VDIM; iv++)
+        {
+          double vox=pickVoxelValue(Ixyz.ix,(Ixyz.iy-1),Ixyz.iz,iv);
+          long long int voxval=static_cast<long long int>(vox);
+          if(voxval>0)
+          {
+            is_inside=true;
+            break;
+          }
+        }
+      }
+      if((!is_inside) && (rz<INTOLL) && (Ixyz.iz>0))
+      {
+    
+        for(size_t iv=0; iv<_info.VDIM; iv++)
+        {
+          double vox=pickVoxelValue(Ixyz.ix,Ixyz.iy,(Ixyz.iz-1),iv);
+          long long int voxval=static_cast<long long int>(vox);
+          if(voxval>0)
+          {
+            is_inside=true;
+            break;
+          }
+        }
+      }
+      
+      rx=1.0-sqrt((Ixyz.ix*_info.RESOLUTION[0]-x)*(Ixyz.ix*_info.RESOLUTION[0]-x))/_info.RESOLUTION[0];
+      ry=1.0-sqrt((Ixyz.iy*_info.RESOLUTION[1]-y)*(Ixyz.iy*_info.RESOLUTION[1]-y))/_info.RESOLUTION[1];
+      rz=1.0-sqrt((Ixyz.iz*_info.RESOLUTION[2]-z)*(Ixyz.iz*_info.RESOLUTION[2]-z))/_info.RESOLUTION[2];
+      
+      
+      if((!is_inside) && (rx<INTOLL) && (Ixyz.ix<(_info.SHAPE[0]-1)) )
+      {
+        for(size_t iv=0; iv<_info.VDIM; iv++)
+        {
+          double vox=pickVoxelValue((Ixyz.ix+1),Ixyz.iy,Ixyz.iz,iv);
+          long long int voxval=static_cast<long long int>(vox);
+          if(voxval>0)
+          {
+            is_inside=true;
+            break;
+          }
+        }
+      }
+      if((!is_inside) && (ry<INTOLL) && (Ixyz.iy<(_info.SHAPE[1]-1)) )
+      {
+      
+        for(size_t iv=0; iv<_info.VDIM; iv++)
+        {
+          double vox=pickVoxelValue(Ixyz.ix,(Ixyz.iy+1),Ixyz.iz,iv);
+          long long int voxval=static_cast<long long int>(vox);
+          if(voxval>0)
+          {
+            is_inside=true;
+            break;
+          }
+        }
+      }
+      if((!is_inside) && (rz<INTOLL) && (Ixyz.iz<(_info.SHAPE[2]-1)) )
+      {
+    
+        for(size_t iv=0; iv<_info.VDIM; iv++)
+        {
+          double vox=pickVoxelValue(Ixyz.ix,Ixyz.iy,(Ixyz.iz+1),iv);
+          long long int voxval=static_cast<long long int>(vox);
+          if(voxval>0)
+          {
+            is_inside=true;
+            break;
+          }
+        }
+      }
+      
+    } //end of the check on the voxel boundaries
+  }  
+  return(is_inside);
+}
+
+
+
+
+
+
+
 IndexCoord INRreader::voxelCoordInterp(const double & x, const double & y, const double & z) const
 {
   /*  Given  a point of coordinates (x,y,z) it gives the indexes of the corresponding voxel (Ix,Iy,Iz).
@@ -382,7 +508,7 @@ std::vector<double> INRreader::interpolatedNonZeroVoxelValue (const double & x, 
 }
 
 
-std::vector<double> INRreader::trilinearInterpolatedVoxelValue (const double & x, const double & y, const double & z)
+std::vector<double> INRreader::trilinearInterpolatedVoxelValue (const double & x, const double & y, const double & z) const
 {
   std::vector<double> voxvalue(_info.VDIM,0.0);
   if(_isAllocated)
@@ -434,7 +560,7 @@ std::vector<double> INRreader::trilinearInterpolatedVoxelValue (const double & x
 }
 
 
-double INRreader::labellized_trilinearInterpolatedVoxelValue (const double & x, const double & y, const double & z)
+double INRreader::labellized_trilinearInterpolatedVoxelValue (const double & x, const double & y, const double & z) const
 {
   double voxvalue = 0.0;
   if(_isAllocated )
