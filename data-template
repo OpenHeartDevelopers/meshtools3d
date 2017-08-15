@@ -12,6 +12,9 @@ seg_name               = liver.inr.gz
 mesh_from_segmentation = 1  # tells is read directly segmentation or use a special treatment (mneshing with no-labels, then labeling)
 
 [meshing]
+readTheMesh        = 0
+mesh_dir           = /home/meshes
+mesh_name          = liver
 facet_angle         = 30
 facet_size          = 6.0
 facet_distance      = 4

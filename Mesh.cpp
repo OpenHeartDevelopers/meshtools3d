@@ -136,7 +136,7 @@ void Mesh::readFromFile(const  std::string & inputFileame)
     points.resize(nbPt);
     for(size_t iPt=0; iPt<nbPt; iPt++)
     {
-      for(short int ic=0; ic<3; ic++)
+      for(unsigned char ic=0; ic<3; ic++)
       {
         fnode>>points[iPt].coord[ic];
         info.baricenter[ic]=info.baricenter[ic]+(points[iPt].coord[ic]);
@@ -151,7 +151,7 @@ void Mesh::readFromFile(const  std::string & inputFileame)
         }
       }
     }
-    for(short int ic=0; ic<3; ic++)
+    for(unsigned char ic=0; ic<3; ic++)
     {
       info.baricenter[ic]=info.baricenter[ic]/nbPt;
     }
@@ -170,15 +170,15 @@ void Mesh::readFromFile(const  std::string & inputFileame)
     triangles.resize(nbElem);
     tetrahedra.resize(nbElem);
     
-    std::vector<short int * > permutation;
+    std::vector<unsigned char * > permutation;
     permutation.resize(4);
-    for(short int jface=0; jface<4; jface++)
+    for(unsigned char jface=0; jface<4; jface++)
     {
-      permutation[jface] = new short int [3];
-      for(short int jf=0; jf<3; jf++)
+      permutation[jface] = new unsigned char [3];
+      for(unsigned char jf=0; jf<3; jf++)
       {
-        short int asum=jface+jf;
-        short int rem= asum%4;
+        unsigned char asum=jface+jf;
+        unsigned char rem= asum%4;
         permutation[jface][jf]=rem;
       }
     }
@@ -194,7 +194,7 @@ void Mesh::readFromFile(const  std::string & inputFileame)
         
         std::vector<facetype> ordered_faces;
         ordered_faces.resize(4);
-        for(short int iv=0; iv<4; iv++)
+        for(unsigned char iv=0; iv<4; iv++)
         {
 #ifndef NDEBUG
           felem>>tetrahedra.at(nbTet-1).vertex[iv];
@@ -209,9 +209,9 @@ void Mesh::readFromFile(const  std::string & inputFileame)
 #endif        
 
         //ordered_faces: the 4 faces with nodes ordered
-        for(short int jface=0; jface<4; jface++)
+        for(unsigned char jface=0; jface<4; jface++)
         {
-          for(short int jf=0; jf<3; jf++)
+          for(unsigned char jf=0; jf<3; jf++)
           {
             ordered_faces[jface].insert(tetrahedra[nbTet-1].vertex[permutation[jface][jf]]);
           }
@@ -220,7 +220,7 @@ void Mesh::readFromFile(const  std::string & inputFileame)
         // if the face is inside bound_faces, I delete it
         // if the face is not inside bound_faces I add it
         //bound_faces
-        for(short int jface=0; jface<4; jface++)
+        for(unsigned char jface=0; jface<4; jface++)
         {
           size_t key=*(ordered_faces[jface].begin());
           bool value_to_insert=true;
@@ -245,14 +245,14 @@ void Mesh::readFromFile(const  std::string & inputFileame)
             faceLabtype labeledFace=std::make_pair(nbTet-1,face);
             bound_faces.insert(std::pair<size_t, faceLabtype > (key,labeledFace) );
           }
-        }//end loop on jface
-      }
+        } //end loop on jface
+      } // end if Elem is Tt
       else
       {
         if(TypeOfElem=="Tr")
         {
           nbTri=nbTri+1;
-          for(short int iv=0; iv<3; iv++)
+          for(unsigned char iv=0; iv<3; iv++)
           {
 #ifndef NDEBUG
             felem>>triangles.at(nbTri-1).vertex[iv];
@@ -265,14 +265,14 @@ void Mesh::readFromFile(const  std::string & inputFileame)
 #else            
           felem>>triangles[nbTri-1].regionLabel;
 #endif          
-        }
+        } // end if elem=Tr
         else
         {
           std::cout<<"element type "<<TypeOfElem<<"ignored"<<std::endl;
           felem.ignore(std::numeric_limits<std::streamsize>::max(), '\n' );
         }
       }
-    }
+    } //end for on elems
     felem.close();
     if(nbTet<nbElem)
     {
@@ -293,7 +293,7 @@ void Mesh::readFromFile(const  std::string & inputFileame)
       }
     }
   
-    for(short int jface=0; jface<4; jface++)
+    for(unsigned char jface=0; jface<4; jface++)
     {
       delete[] permutation[jface];
       permutation[jface] = NULL;
@@ -366,15 +366,15 @@ void Mesh::evalTriangles(mapfacetype bound_faces, size_t & nbTri,bool build_sear
       }
       //tetVertex: [0,1,2] on triangle; 3 external to triangle
       std::vector<Point> teVertex(4);
-      for(short int ivTr=0; ivTr<3; ivTr++)
+      for(unsigned char ivTr=0; ivTr<3; ivTr++)
       {
-        for(short int jcoord=0;jcoord<3;jcoord++)
+        for(unsigned char jcoord=0;jcoord<3;jcoord++)
         {
           (teVertex[ivTr]).coord[jcoord]=(points[Tria.vertex[ivTr]]).coord[jcoord];
         }
       }
       std::vector<double> v1(3,0),v2(3,0),v3(3,0);
-      for(short int jcoord=0;jcoord<3;jcoord++)
+      for(unsigned char jcoord=0;jcoord<3;jcoord++)
       {
         (teVertex[3]).coord[jcoord]=(points[Tet.vertex[notInTriaIndex]]).coord[jcoord];
         v1[jcoord] = teVertex[1].coord[jcoord]-teVertex[0].coord[jcoord];
@@ -386,7 +386,7 @@ void Mesh::evalTriangles(mapfacetype bound_faces, size_t & nbTri,bool build_sear
       normal[1]=-1.0*(v1[0]*v2[2]-v1[2]*v2[0]);
       normal[2]=v1[0]*v2[1]-v1[1]*v2[0];
       double vectormod=sqrt(normal[0]*normal[0]+normal[1]*normal[1]+normal[2]*normal[2]);
-      for(short int jcoord=0;jcoord<3;jcoord++)
+      for(unsigned char jcoord=0;jcoord<3;jcoord++)
       {
         normal[jcoord]=normal[jcoord]/vectormod;
       }
@@ -428,9 +428,9 @@ double Mesh::hTri(size_t iTri )
     double area=AreaTri(iTri);
     Triangle & Tria=triangles[iTri];
     std::vector<Point> TriaPts(3);
-    for(short int iPt=0; iPt<3; iPt++)
+    for(unsigned char iPt=0; iPt<3; iPt++)
     {
-      for(short int ic=0; ic<3; ic++)
+      for(unsigned char ic=0; ic<3; ic++)
       {
         TriaPts[iPt].coord[ic]=points[Tria.vertex[iPt]].coord[ic];
       }
@@ -438,12 +438,12 @@ double Mesh::hTri(size_t iTri )
       //TriaPts[iPt].y=points[Tria.vertex[iPt]].y;
       //TriaPts[iPt].z=points[Tria.vertex[iPt]].z;
     }
-    short int * permutation = new short int[3];
+    unsigned char * permutation = new unsigned char[3];
     permutation[0]=1;
     permutation[1]=2;
     permutation[2]=0;
     double egdgeproduct=1.0;
-    for(short int iEdge=0; iEdge<3; iEdge++)
+    for(unsigned char iEdge=0; iEdge<3; iEdge++)
     {
       double dx=(TriaPts[iEdge].x()-TriaPts[permutation[iEdge]].x());
       double dy=(TriaPts[iEdge].y()-TriaPts[permutation[iEdge]].y());
@@ -467,20 +467,20 @@ double Mesh::rhoTri(size_t iTri)
     double area=AreaTri(iTri);
     Triangle & Tria=triangles[iTri];
     std::vector<Point> TriaPts(3);
-    for(short int iPt=0; iPt<3; iPt++)
+    for(unsigned char iPt=0; iPt<3; iPt++)
     {
-      for(short int ic=0; ic<3; ic++)
+      for(unsigned char ic=0; ic<3; ic++)
       {
         TriaPts[iPt].coord[ic]=points[Tria.vertex[iPt]].coord[ic];
       }
     }
   
-    short int * permutation = new short int[3];
+    unsigned char * permutation = new unsigned char[3];
     permutation[0]=1;
     permutation[1]=2;
     permutation[2]=0;
     double perimeter=0.0;
-    for(short int iEdge=0; iEdge<3; iEdge++)
+    for(unsigned char iEdge=0; iEdge<3; iEdge++)
     {
       double dx=(TriaPts[iEdge].x()-TriaPts[permutation[iEdge]].x());
       double dy=(TriaPts[iEdge].y()-TriaPts[permutation[iEdge]].y());
@@ -513,15 +513,15 @@ double Mesh::AreaTri(size_t iTri) const
   {
     const Triangle & Tria=triangles[iTri];
     std::vector<Point> TriaPts(3);
-    for(short int iPt=0; iPt<3; iPt++)
+    for(unsigned char iPt=0; iPt<3; iPt++)
     {
-      for(short int ic=0; ic<3; ic++)
+      for(unsigned char ic=0; ic<3; ic++)
       {
         TriaPts[iPt].coord[ic]=points[Tria.vertex[iPt]].coord[ic];
       }
     }
     std::vector<double> v1(3,0), v2(3,0),vprod(3,0);
-    for(short int ic=0; ic<3; ic++)
+    for(unsigned char ic=0; ic<3; ic++)
     {
       v1[ic]=TriaPts[1].coord[ic]-TriaPts[0].coord[ic];
       v2[ic]=TriaPts[2].coord[ic]-TriaPts[0].coord[ic];        
@@ -568,9 +568,9 @@ double Mesh::AreaTet(size_t iTet)
   {
     Tetrahedron Tet=tetrahedra[iTet];
     std::vector<Point> TetPts(4);
-    for(short int iPt=0; iPt<4; iPt++)
+    for(unsigned char iPt=0; iPt<4; iPt++)
     {
-      for(short int ic=0; ic<3; ic++)
+      for(unsigned char ic=0; ic<3; ic++)
       {
         TetPts[iPt].coord[ic]=points[Tet.vertex[iPt]].coord[ic];
       }
@@ -579,7 +579,7 @@ double Mesh::AreaTet(size_t iTet)
     std::vector<double> v4(3,0), v5(3,0);
     std::vector<double> vprod1(3,0), vprod2(3,0),vprod3(3,0),vprod4(3,0);
     
-    for(short int ic=0; ic<3; ic++)
+    for(unsigned char ic=0; ic<3; ic++)
     {
       v1[ic]=TetPts[1].coord[ic]-TetPts[0].coord[ic];
       v2[ic]=TetPts[2].coord[ic]-TetPts[0].coord[ic];
@@ -623,15 +623,15 @@ double Mesh::VolTet(size_t iTet) const
   {
     const Tetrahedron & Tet=tetrahedra[iTet];
     std::vector<Point> TetPts(4);
-    for(short int iPt=0; iPt<4; iPt++)
+    for(unsigned char iPt=0; iPt<4; iPt++)
     {
-      for(short int ic=0; ic<3; ic++)
+      for(unsigned char ic=0; ic<3; ic++)
       {
         TetPts[iPt].coord[ic]=points[Tet.vertex[iPt]].coord[ic];
       }
     }
     std::vector<double> v1(3,0), v2(3,0),v3(3,0),vprod(3,0);
-    for(short int ic=0; ic<3; ic++)
+    for(unsigned char ic=0; ic<3; ic++)
     {
       v1[ic]=TetPts[1].coord[ic]-TetPts[0].coord[ic];
       v2[ic]=TetPts[2].coord[ic]-TetPts[0].coord[ic];
@@ -678,12 +678,12 @@ void Mesh::evalBoundaryLabels(bool debug,std::string debugDir,size_t print_inter
     {
       int labOfRegion=triangles[iTri].regionLabel;
       regionLabels.insert(labOfRegion);
-      for(short int iv=0; iv<3; iv++)
+      for(unsigned char iv=0; iv<3; iv++)
       {
           size_t p0=triangles[iTri].vertex[iv];
           (pointRegions[labOfRegion]).insert(p0);
           (NodeToregionMap[p0]).insert(labOfRegion);
-          for(short int jv=iv+1; jv<3; jv++)
+          for(unsigned char jv=iv+1; jv<3; jv++)
           {
             size_t p1=triangles[iTri].vertex[jv];
             connectivity[p0].insert(p1);
@@ -855,7 +855,7 @@ void Mesh::evalBoundaryLabels(bool debug,std::string debugDir,size_t print_inter
     //now re-labeling of triangles
     for(size_t iTri=0; iTri<nTri(); iTri++)
     {
-      for(short int iv=0; iv<3; iv++)
+      for(unsigned char iv=0; iv<3; iv++)
       {
         size_t p0=triangles[iTri].vertex[iv];
         if(NodeToregionMap[p0].size()==1)
@@ -893,7 +893,7 @@ void Mesh::evalBoundaryLabels(bool debug,std::string debugDir,size_t print_inter
     Point endoBar, epiBar;
     for(std::set<long int>::iterator endo_iter=_Endo.begin(); endo_iter !=_Endo.end(); ++endo_iter)
     {
-      for(short int  jcoord=0; jcoord<3; jcoord++)
+      for(unsigned char  jcoord=0; jcoord<3; jcoord++)
       {
         endoBar.coord[jcoord] = endoBar.coord[jcoord] + (points[*endo_iter]).coord[jcoord];
       }
@@ -901,13 +901,13 @@ void Mesh::evalBoundaryLabels(bool debug,std::string debugDir,size_t print_inter
     
     for(std::set<long int>::iterator epi_iter=_Epi.begin(); epi_iter !=_Epi.end(); ++epi_iter)
     {
-      for(short int  jcoord=0; jcoord<3; jcoord++)
+      for(unsigned char  jcoord=0; jcoord<3; jcoord++)
       {
         epiBar.coord[jcoord] = epiBar.coord[jcoord] + (points[*epi_iter]).coord[jcoord];
       }
     }
     
-    for(short int  jcoord=0; jcoord<3; jcoord++)
+    for(unsigned char  jcoord=0; jcoord<3; jcoord++)
     {
       endoBar.coord[jcoord] = endoBar.coord[jcoord]/_Endo.size();
       epiBar.coord[jcoord] =  epiBar.coord[jcoord]/_Epi.size();
@@ -920,14 +920,14 @@ void Mesh::evalBoundaryLabels(bool debug,std::string debugDir,size_t print_inter
     for(std::set<long int>::iterator endo_iter=_Endo.begin(); endo_iter !=_Endo.end(); ++endo_iter)
     {
       std::vector<double> dist(2,0.0);
-      for(short int  jcoord=0; jcoord<3; jcoord++)
+      for(unsigned char  jcoord=0; jcoord<3; jcoord++)
       {
         dist[0] = dist[0] + (points[*endo_iter].coord[jcoord]-endoBar.coord[jcoord])*(points[*endo_iter].coord[jcoord]-endoBar.coord[jcoord]);
         dist[1] = dist[1] + (points[*endo_iter].coord[jcoord]-epiBar.coord[jcoord])*(points[*endo_iter].coord[jcoord]-epiBar.coord[jcoord]);
       }
       dist[0] = sqrt(dist[0]);
       dist[1] = sqrt(dist[1]);
-      for(short int jdist=0; jdist<2; jdist++)
+      for(unsigned char jdist=0; jdist<2; jdist++)
       {
         if(dist[jdist]<endodist[jdist])
         {
@@ -939,14 +939,14 @@ void Mesh::evalBoundaryLabels(bool debug,std::string debugDir,size_t print_inter
     for(std::set<long int>::iterator epi_iter=_Epi.begin(); epi_iter !=_Epi.end(); ++epi_iter)
     {
       std::vector<double> dist(2,0.0);
-      for(short int  jcoord=0; jcoord<3; jcoord++)
+      for(unsigned char  jcoord=0; jcoord<3; jcoord++)
       {
         dist[0] = dist[0] + (points[*epi_iter].coord[jcoord]-endoBar.coord[jcoord])*(points[*epi_iter].coord[jcoord]-endoBar.coord[jcoord]);
         dist[1] = dist[1] + (points[*epi_iter].coord[jcoord]-epiBar.coord[jcoord])*(points[*epi_iter].coord[jcoord]-epiBar.coord[jcoord]);
       }
       dist[0] = sqrt(dist[0]);
       dist[1] = sqrt(dist[1]);
-      for(short int jdist=0; jdist<2; jdist++)
+      for(unsigned char jdist=0; jdist<2; jdist++)
       {
         if(dist[jdist]<endodist[jdist])
         {
@@ -1058,7 +1058,7 @@ void Mesh::initializeConnectivities()
     for(size_t iTetra=0; iTetra<nTet(); iTetra++)
     {
       const Tetrahedron & Tetra = tetrahedra[iTetra];
-      for(short int iVertex=0; iVertex<4; iVertex++)
+      for(unsigned char iVertex=0; iVertex<4; iVertex++)
       {
         _conn_nodes[Tetra.vertex[iVertex]].insert(iTetra);
       }
@@ -1070,7 +1070,7 @@ void Mesh::initializeConnectivities()
     for(size_t iTria=0; iTria<nTri(); iTria++)
     {
       const Triangle & Tria = triangles[iTria];
-      for(short int iVertex=0; iVertex<3; iVertex++)
+      for(unsigned char iVertex=0; iVertex<3; iVertex++)
       {
         _conn_nodesTris[Tria.vertex[iVertex]].insert(iTria);
       }
@@ -1417,7 +1417,7 @@ void Mesh::writeFakeFiebers(std::string outputFileName, bool binary)
     
     std::vector<double> fakefib(3,0);
     fakefib[0]=1.0;
-    for(short int icomp=0; icomp<2; icomp++)
+    for(unsigned char icomp=0; icomp<2; icomp++)
     {
       double component=fakefib[icomp];
       if(binary) 
@@ -1745,15 +1745,15 @@ void Mesh::extractBoundary(bool build_search_tree)
   { 
     size_t nbTri=0;
     size_t nTet=tetrahedra.size();
-    std::vector<short int * > permutation;
+    std::vector<unsigned char * > permutation;
     permutation.resize(4);
-    for(short int jface=0; jface<4; jface++)
+    for(unsigned char jface=0; jface<4; jface++)
     {
-      permutation[jface] = new short int [3];
-      for(short int jf=0; jf<3; jf++)
+      permutation[jface] = new unsigned char [3];
+      for(unsigned char jf=0; jf<3; jf++)
       {
-        short int asum=jface+jf;
-        short int rem= asum%4;
+        unsigned char asum=jface+jf;
+        unsigned char rem= asum%4;
         permutation[jface][jf]=rem;
       }
     }
@@ -1767,9 +1767,9 @@ void Mesh::extractBoundary(bool build_search_tree)
       std::vector<facetype> ordered_faces;    
       ordered_faces.resize(4);
       //ordered_faces: the 4 faces with nodes ordered
-      for(short int jface=0; jface<4; jface++)
+      for(unsigned char jface=0; jface<4; jface++)
       {
-        for(short int jf=0; jf<3; jf++)
+        for(unsigned char jf=0; jf<3; jf++)
         {
           ordered_faces[jface].insert(tetrahedra[iTet].vertex[(permutation[jface][jf])] );
         }
@@ -1777,7 +1777,7 @@ void Mesh::extractBoundary(bool build_search_tree)
       // now I use as key the value of the first node
       // if the face is inside bound_faces, I delete it
       // if the face is not inside bound_faces I add it
-      for(short int jface=0; jface<4; jface++)
+      for(unsigned char jface=0; jface<4; jface++)
       {
         size_t key=*(ordered_faces[jface].begin());
         bool value_to_insert=true;
@@ -1807,7 +1807,7 @@ void Mesh::extractBoundary(bool build_search_tree)
 
     }//end loop on Tetra
 
-    for(short int jface=0; jface<4; jface++)
+    for(unsigned char jface=0; jface<4; jface++)
     {
       delete[] permutation[jface];
       permutation[jface] = NULL;
