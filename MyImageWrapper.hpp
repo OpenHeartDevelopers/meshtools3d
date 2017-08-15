@@ -73,7 +73,8 @@ public:
   return_type operator()(const Point_3& p, const bool = true) const
   {
 
-    bool isin = r_im_.isPointInsideSegmentation(p.x(),p.y(),p.z());
+    //bool isin = r_im_.isPointInsideSegmentation(p.x(),p.y(),p.z());
+    bool isin = r_im_.isPointInsideSegmentationTrilinear(p.x(),p.y(),p.z());
     if(isin)
     {
         return 1;
