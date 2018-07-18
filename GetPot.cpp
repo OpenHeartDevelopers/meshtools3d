@@ -501,18 +501,26 @@ GetPot::next(const double& Default)
     return Remain != "" ? __convert_to_type(Remain, Default) : Default;
 }
 
-inline const char*
-GetPot::next(const char* Default)
+std::string
+GetPot::next(const std::string & Default)
 {
-    if( search_failed_f ) return Default;
+    if( search_failed_f )
+    {
+      return Default;
+    }
     cursor++;
 
     if( cursor >= argv.size() )
-    { cursor = argv.size(); return Default; }
+    { 
+        cursor = argv.size(); 
+        return Default; 
+    }
 
-    const std::string Remain = __get_remaining_string(argv[cursor], prefix);
+    //const std::string Remain = __get_remaining_string(argv[cursor], prefix);
+    std::string Remain = __get_remaining_string(argv[cursor], prefix);
 
-    return Remain != "" ? Remain.c_str() : Default;
+    //return Remain != "" ? Remain.c_str() : Default;
+    return Remain != "" ? Remain : Default;
 }
 
 //     -- follow() function group
@@ -535,7 +543,8 @@ std::string
 GetPot::follow(std::string Default, const char* Option)
 {
     if( search(Option) == false ) return Default;
-    return next(Default.c_str());
+    //return next(Default.c_str());
+    return next(Default);
 }
 
 //     -- second follow() function group

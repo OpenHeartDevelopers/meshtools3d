@@ -83,7 +83,7 @@ public:
   //     -- get argument at cursor++
   int          next(int           Default);
   double       next(const double& Default);
-  const char*  next(const char*   Default);
+  std::string  next(const std::string &  Default);
   //     -- search for option and get argument at cursor++
   int          follow(int           Default, const char* Option);
   double       follow(const double& Default, const char* Option);
