@@ -501,7 +501,7 @@ GetPot::next(const double& Default)
     return Remain != "" ? __convert_to_type(Remain, Default) : Default;
 }
 
-std::string
+inline std::string
 GetPot::next(const std::string & Default)
 {
     if( search_failed_f )
