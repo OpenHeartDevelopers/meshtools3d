@@ -18,12 +18,14 @@
 
 ThicknessEvaluation::ThicknessEvaluation()
 :LaplaceSolver(),
-_algorithm(1)
+_algorithm(1),
+_swapregions(false)
 {}
 
 ThicknessEvaluation::ThicknessEvaluation(const Mesh *  _mesh)
 :LaplaceSolver(_mesh),
-_algorithm(1)
+_algorithm(1),
+_swapregions(false)
 {
   _thickness.clear();
 }
@@ -38,6 +40,7 @@ ThicknessEvaluation::ThicknessEvaluation(const GetPot & dfile, const Mesh * _mes
 :LaplaceSolver(dfile, _mesh)
 {
   _algorithm = dfile("others/thickalgo",1);
+  _swapregions= dfile("others/swapregions",false); 
   _thickness.clear();
 }
 
@@ -54,9 +57,20 @@ void ThicknessEvaluation::evalThicknessMethodMartin()
   int interactions=0;
 	int problems=0;
 	std::vector<double> path(_ptrmesh->nTri(),0);
-  
-  const facetype & illumTris  = _ptrmesh->endoTria();
-  const facetype & groundTris = _ptrmesh->epiTria();
+  const facetype * illumTris=NULL;
+  const facetype * groundTris=NULL;
+
+  if(_swapregions)
+  {
+      illumTris  = &(_ptrmesh->epiTria());
+      groundTris = &(_ptrmesh->endoTria());
+  }
+  else
+  {
+      illumTris  = &(_ptrmesh->endoTria());
+      groundTris = &(_ptrmesh->epiTria());
+  }
+
   const std::vector<boundaryFaceInTetraType> & elemBoundaryTris =  _ptrmesh->elemBoundaryTris();
   const std::vector<boundaryFaceInTetraType> & faceToFace =  _ptrmesh->faceToFace();
   const std::vector<Tetrahedron> & elems = _ptrmesh->Tet();
@@ -67,7 +81,7 @@ void ThicknessEvaluation::evalThicknessMethodMartin()
   std::cout << "* Computing wall thickness (Martin's  Algorithm) ... *"<<std::endl;
   std::cout << "******************************************************"<<std::endl;
   chrono.start();
-  for(facetype::iterator it=illumTris.begin();it!=illumTris.end();it++)
+  for(facetype::iterator it=illumTris->begin();it!=illumTris->end();it++)
 	{
     // Picks-out particular triangle
 		size_t thisIllumTri = *it;
@@ -280,7 +294,7 @@ void ThicknessEvaluation::evalThicknessMethodMartin()
           if(iterBoundaryOnFace != ElementBTris.end() )
           {
             // Checks to see if this is part of the ground electrode
-            if(groundTris.find(iterBoundaryOnFace->second) != groundTris.end())
+            if(groundTris->find(iterBoundaryOnFace->second) != groundTris->end())
             {
                 inTissue = false;
                 break;
@@ -400,7 +414,7 @@ void ThicknessEvaluation::evalThicknessMethodMartin()
 // I commented the following instructions since elemData is not used thereafter  
   /*
   std::vector<double> elemData(_ptrmesh->nTet(),0);
-  for(facetype::iterator it=illumTris.begin();it!=illumTris.end();it++)
+  for(facetype::iterator it=illumTris->begin();it!=illumTris->end();it++)
 	{
 	  size_t elem_n = _ptrmesh->triaToTetMap(*it);
 	  size_t tri_n = *it;
@@ -415,7 +429,7 @@ void ThicknessEvaluation::evalThicknessMethodMartin()
   std::vector<int> surfPlotterCounter(_ptrmesh->nPt(),0);
   
   
-  for(facetype::iterator it=illumTris.begin();it!=illumTris.end();it++)
+  for(facetype::iterator it=illumTris->begin();it!=illumTris->end();it++)
   {
 	  size_t tri_n=*it;
 	  for(short int jVertex=0;jVertex<3;jVertex++)
@@ -433,7 +447,8 @@ void ThicknessEvaluation::evalThicknessMethodMartin()
   	  _thickness[iPt] = _thickness[iPt]/double(surfPlotterCounter[iPt]);
   	}
   }
-
+  illumTris=NULL;
+  groundTris=NULL;
 }
 
 
@@ -653,9 +668,20 @@ void ThicknessEvaluation::evalThicknessAlternativeMethod()
   const std::vector<Triangle> & tris = _ptrmesh->Tri();
   const std::vector<Point> & coords = _ptrmesh->Pt();
   
-  const std::set<long int> & endoSet = _ptrmesh->Endocardium();
-  const std::set<long int> &  epiSet  = _ptrmesh->Epicardium();
 
+  const std::set<long int> * endoSet=NULL;
+  const std::set<long int> * epiSet=NULL;
+
+  if(_swapregions)
+  {
+      endoSet = &(_ptrmesh->Epicardium());
+      epiSet  = &(_ptrmesh->Endocardium());
+  }
+  else
+  {
+      endoSet = &(_ptrmesh->Endocardium());
+      epiSet  = &(_ptrmesh->Epicardium());
+  }
   _thickness.clear();
   _thickness.resize(_ptrmesh->nPt(),0);
 
@@ -684,7 +710,7 @@ void ThicknessEvaluation::evalThicknessAlternativeMethod()
   std::cout << "****************************************************"<<std::endl;
   
 
-  for(std::set<long int>::iterator iendo=endoSet.begin(); iendo != endoSet.end(); ++iendo)
+  for(std::set<long int>::iterator iendo=endoSet->begin(); iendo != endoSet->end(); ++iendo)
   {
     size_t pstart=static_cast<size_t>(*iendo);
     bool search=true;
@@ -733,7 +759,7 @@ void ThicknessEvaluation::evalThicknessAlternativeMethod()
       color[phiIter->second]=true;  // so this point will not be reached again
       
       
-      if(epiSet.find(static_cast<size_t>(pend)) != epiSet.end())
+      if(epiSet->find(static_cast<size_t>(pend)) != epiSet->end())
       {
         search=false;
         break;
@@ -753,11 +779,12 @@ void ThicknessEvaluation::evalThicknessAlternativeMethod()
     const Point & p1= coords[pend];
     _thickness[*iendo] = pointDistances(p1,p0);
   }//end loop on endo
-
-
-
   chrono.stop();
   std::cout << "Done in "<<chrono<<std::endl;
+  endoSet=NULL;
+  epiSet=NULL;
+  
+  
 }
 
 

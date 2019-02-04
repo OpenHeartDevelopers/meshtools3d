@@ -64,6 +64,7 @@ int main(int argc,char **argv)
   std::string out_dir        = param_file("output/outdir","."); 
   std::string out_name       = param_file("output/name","imgmesh"); 
   bool eval_thickness        = param_file("others/eval_thickness",false); 
+  bool swapregions           = param_file("others/swapregions",false); 
   bool out_medit             = param_file("output/out_medit",false);
   bool out_carp              = param_file("output/out_carp",false);  
   bool out_carp_binary       = param_file("output/out_carp_binary",false);
@@ -404,8 +405,18 @@ int main(int argc,char **argv)
   {
     
     ThicknessEvaluation ThicknessCompute(param_file, &CarpMesh );
-    ThicknessCompute.setBCValue(CarpMesh.Endocardium(), 0.0);  
-    ThicknessCompute.setBCValue(CarpMesh.Epicardium(), 1.0);  
+    
+    if(swapregions)
+    {
+        // to assign the thickness at the epicardium, swap the values of the potential
+        ThicknessCompute.setBCValue(CarpMesh.Endocardium(), 1.0);  
+        ThicknessCompute.setBCValue(CarpMesh.Epicardium(), 0.0);  
+    }
+    else
+    {
+          ThicknessCompute.setBCValue(CarpMesh.Endocardium(), 0.0);  
+          ThicknessCompute.setBCValue(CarpMesh.Epicardium(), 1.0);  
+    }
     
     ThicknessCompute.solve();
     if(ThicknessCompute.algorithm()!=static_cast<unsigned char>(2)  )

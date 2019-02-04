@@ -54,6 +54,7 @@ public  LaplaceSolver
     std::vector<double> waxpy(const std::vector<double> & x, const std::vector<double> & y, double alpha=1.0);
     std::vector<double> _thickness;
     unsigned char _algorithm;
+    bool _swapregions;
 
 
 };

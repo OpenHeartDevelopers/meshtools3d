@@ -31,6 +31,7 @@ verbose         = 0
 
 [others]
 eval_thickness  = 1
+swapregions     = 0  #if 0[default]: thickness on the endocardium; 1:thickness points are assigned to the epicardium
 thickalgo       = 1  #1: Martin Bishop Algorithm; 2: Cesare Corrado Algorithm
 
 
