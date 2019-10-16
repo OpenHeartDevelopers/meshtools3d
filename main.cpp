@@ -39,7 +39,7 @@ int main(int argc,char **argv)
 		exit(0);
 	}
   
-  if( command_line.search(2, "-h","--help") or (argc==1) ) 
+  if( command_line.search(2, "-h","--help") || (argc==1) ) 
   {
       std::cout<<"MeshTools3D\nUsage: ";
       std::cout<<"./meshtools3d -f <data_filename> -seg_dir <segmentation_dir> -seg_name <segmentation_name> -out_dir <output_dir> -out_name <output_name>"<<std::endl;
