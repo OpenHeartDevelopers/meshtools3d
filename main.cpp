@@ -14,7 +14,13 @@
 #include "VtkWriter.hpp"
 #include "INRreader.hpp"
 #include "GetPot.hpp"
-#include<CGALDataType.hpp>
+#include "CGALDataType.hpp"
+
+#if defined(_WIN32) || defined(_WIN64)
+#include<boost/filesystem.hpp>
+#endif
+
+
 #include<set>
 #ifdef CGAL_LINKED_WITH_TBB
 #include <tbb/task_scheduler_init.h>
@@ -106,149 +112,158 @@ int main(int argc,char **argv)
   INRreader Segmentation;
 
   //create the output dir
-  std::string command="mkdir -p "+out_dir;
-  int ierr=system(command.c_str());
-  if(!ierr==0)
+#if defined(_WIN32) || defined(_WIN64)
+  boost::filesystem::path dir(out_dir);
+  bool is_ok=boost::filesystem::create_directory(dir);
+  if ( !is_ok)
   {
     std::cerr<<"Problem in creating the directory "<<out_dir<<std::endl;
     exit(1);
   }
-  else
+#else
+  std::string command="mkdir -p "+out_dir;
+  int ierr=system(command.c_str());
+  if(!ierr==0)
   {
-      Chrono chrono;
-      //If mesh is read, no need to generate it
-      if(!readTheMesh)
-      {      
-          std::string imageName=seg_dir+"/"+seg_name;
-          if(mesh_from_segmentation)   // CGAL reads segmentation with labels and mesh it
+      std::cerr<<"Problem in creating the directory "<<out_dir<<std::endl;
+      exit(1);
+  }
+
+#endif  
+  Chrono chrono;
+  //If mesh is read, no need to generate it
+  if(!readTheMesh)
+  {      
+      std::string imageName=seg_dir+"/"+seg_name;
+      if(mesh_from_segmentation)   // CGAL reads segmentation with labels and mesh it
+      {
+          C3t3 c3t3;
+          CGAL::Image_3 image1;
+          if(image1.read(imageName.c_str()))
           {
-              C3t3 c3t3;
-              CGAL::Image_3 image1;
-              if(image1.read(imageName.c_str()))
-              {
-                  Mesh_domain domain(image1);
-                  Facet_criteria facet_criteria(fangle, fsize, fapprox); 
-                  Cell_criteria cell_criteria(cR_E_ratio, csize);
-                  Mesh_criteria criteria(facet_criteria, cell_criteria);
-                  std::cout<<"MESHING...";
-                  chrono.start();
-                  c3t3 = CGAL::make_mesh_3<C3t3>(domain, criteria, 
-                                                   CGAL::parameters::lloyd(), CGAL::parameters::odt(), 
-                                                   CGAL::parameters::perturb(), CGAL::parameters::exude());
-                  chrono.stop();
-                  std::cout<<" done in "<<chrono<<std::endl;
-                  chrono.reset();
-              }
-              else
-              {
-                    std::cerr<<"ERROR: IMAGE NOT READ"<<std::endl;
-                    exit(1);
-              }
-              if(out_medit) // print mesh in .mesh format
-              {
-                  std::string mfileoutName=out_dir+"/"+out_name+".mesh";
-                  std::ofstream medit_file(mfileoutName.c_str());
-                  c3t3.output_to_medit(medit_file);
-                  medit_file.close();
-              }
-              //get the triangulation; 
-              // Here I need a reference, otherwise when I go to take the tetra vertex
-              // these will be not consistent (most of them 0)
-              const Tr & triang= c3t3.triangulation();  
-              size_t nbPt=static_cast<size_t>(triang.number_of_vertices());
-              size_t nbTet=static_cast<size_t>(c3t3.number_of_cells_in_complex());
-              if(nbPt<3 ||nbTet<1)
-              {
-                  std::cerr<<"Problem with Triangulations, only "<<nbPt<<" Vertices and "<<nbTet<<" Thetraedra"<<std::endl;
-                  if(!out_medit)
-                  {
-                      std::string mfileoutName=out_dir+"/"+out_name+".mesh";
-                      std::ofstream medit_file(mfileoutName.c_str());
-                      c3t3.output_to_medit(medit_file);
-                      medit_file.close();
-                  }
-                  exit(1);
-              }
-              else
-              {
-                  std::cout<<"Vertices: "<<nbPt<<std::endl;
-                  std::cout<<"Tetra:    "<<nbTet<<std::endl;
-              }
-              CarpMesh.initializePtVector(nbPt);
-              size_t icount=0;
-              std::map<Tr::Vertex_handle, size_t> Vertices;
-              for (Tr::Finite_vertices_iterator it=triang.finite_vertices_begin(); it != triang.finite_vertices_end(); ++it)
-              {
-          	      Vertices[it]=icount;
-          	      CarpMesh.Pt(icount).x()=it->point().x();
-                  CarpMesh.Pt(icount).y()=it->point().y();
-          	      CarpMesh.Pt(icount).z()=it->point().z();
-                  for(unsigned char ic=0; ic<3; ic++)
-                  {
-                    CarpMesh.Info().baricenter[ic]=CarpMesh.Info().baricenter[ic]+(CarpMesh.Pt(icount).coord[ic]);
-                    CarpMesh.Info().checksum[ic]=CarpMesh.Info().checksum[ic]+static_cast<float>(CarpMesh.Pt(icount).coord[ic]);
-                    if(CarpMesh.Info().bbox[ic][0]>CarpMesh.Pt(icount).coord[ic])
-                    {
-                      CarpMesh.Info().bbox[ic][0]=CarpMesh.Pt(icount).coord[ic];
-                    }
-                    if(CarpMesh.Info().bbox[ic][1]<CarpMesh.Pt(icount).coord[ic])
-                    {
-                      CarpMesh.Info().bbox[ic][1]=CarpMesh.Pt(icount).coord[ic];
-                    }
-                  }
-                  ++icount;
-              }
-              for(unsigned char ic=0; ic<3; ic++)
-              {
-                  CarpMesh.Info().baricenter[ic]=CarpMesh.Info().baricenter[ic]/nbPt;
-              }
-              //TETRA
-              CarpMesh.initializeTetraVector(nbTet);
-              icount=0;
-              for(Cell_iterator itc = c3t3.cells_in_complex_begin(); itc != c3t3.cells_in_complex_end(); ++itc)
-              {
-                for(unsigned char iv=0; iv<4; iv++)
-                {
-                  size_t vindex= Vertices.at(itc->vertex(iv)) ;
-                  CarpMesh.Tet(icount).vertex[iv]=vindex;
-                }
-                CarpMesh.Tet(icount).regionLabel=static_cast<int>(itc->subdomain_index());
-                icount++;
-              }
-          } // Segmentation is read by INRreader; mesh domain implemented through a function wrapper with no labels
-          else
-          {
-              Segmentation.readSegmentation(imageName);
-              Mesh_domain_manualseg domain(Segmentation);
-              Facet_criteria_manualseg facet_criteria(fangle, fsize, fapprox); 
-              Cell_criteria_manualseg  cell_criteria(cR_E_ratio, csize);
-              Mesh_criteria_manualseg  criteria(facet_criteria, cell_criteria);
+              Mesh_domain domain(image1);
+              Facet_criteria facet_criteria(fangle, fsize, fapprox); 
+              Cell_criteria cell_criteria(cR_E_ratio, csize);
+              Mesh_criteria criteria(facet_criteria, cell_criteria);
               std::cout<<"MESHING...";
               chrono.start();
-              C3t3_manualseg c3t3= CGAL::make_mesh_3<C3t3_manualseg>(domain, criteria, 
-                                                  CGAL::parameters::lloyd(), CGAL::parameters::odt(), 
-                                                  CGAL::parameters::perturb(), CGAL::parameters::exude());
+              c3t3 = CGAL::make_mesh_3<C3t3>(domain, criteria, 
+                                               CGAL::parameters::lloyd(), CGAL::parameters::odt(), 
+                                               CGAL::parameters::perturb(), CGAL::parameters::exude());
               chrono.stop();
               std::cout<<" done in "<<chrono<<std::endl;
               chrono.reset();
-              if(out_medit) // print mesh in .mesh format
+          }
+          else
+          {
+                std::cerr<<"ERROR: IMAGE NOT READ"<<std::endl;
+                exit(1);
+          }
+          if(out_medit) // print mesh in .mesh format
+          {
+              std::string mfileoutName=out_dir+"/"+out_name+".mesh";
+              std::ofstream medit_file(mfileoutName.c_str());
+              c3t3.output_to_medit(medit_file);
+              medit_file.close();
+          }
+          //get the triangulation; 
+          // Here I need a reference, otherwise when I go to take the tetra vertex
+          // these will be not consistent (most of them 0)
+          const Tr & triang= c3t3.triangulation();  
+          size_t nbPt=static_cast<size_t>(triang.number_of_vertices());
+          size_t nbTet=static_cast<size_t>(c3t3.number_of_cells_in_complex());
+          if(nbPt<3 ||nbTet<1)
+          {
+              std::cerr<<"Problem with Triangulations, only "<<nbPt<<" Vertices and "<<nbTet<<" Thetraedra"<<std::endl;
+              if(!out_medit)
               {
                   std::string mfileoutName=out_dir+"/"+out_name+".mesh";
                   std::ofstream medit_file(mfileoutName.c_str());
                   c3t3.output_to_medit(medit_file);
                   medit_file.close();
               }
-              //get the triangulation; 
-              // Here I need a reference, otherwise when I go to take the tetra vertex
-              // these will be not consistent (most of them 0)
-              //get the triangulation; 
-              // Here I need a reference, otherwise when I go to take the tetra vertex
-              // these will be not consistent (most of them 0)
-              const Tr_manualseg & triang= c3t3.triangulation();  
-              size_t nbPt=static_cast<size_t>(triang.number_of_vertices());
-              size_t nbTet=static_cast<size_t>(c3t3.number_of_cells_in_complex());
-              if(nbPt<3 ||nbTet<1)
+              exit(1);
+          }
+          else
+          {
+              std::cout<<"Vertices: "<<nbPt<<std::endl;
+              std::cout<<"Tetra:    "<<nbTet<<std::endl;
+          }
+          CarpMesh.initializePtVector(nbPt);
+          size_t icount=0;
+          std::map<Tr::Vertex_handle, size_t> Vertices;
+          for (Tr::Finite_vertices_iterator it=triang.finite_vertices_begin(); it != triang.finite_vertices_end(); ++it)
+          {
+      	      Vertices[it]=icount;
+      	      CarpMesh.Pt(icount).x()=it->point().x();
+              CarpMesh.Pt(icount).y()=it->point().y();
+      	      CarpMesh.Pt(icount).z()=it->point().z();
+              for(unsigned char ic=0; ic<3; ic++)
               {
+                CarpMesh.Info().baricenter[ic]=CarpMesh.Info().baricenter[ic]+(CarpMesh.Pt(icount).coord[ic]);
+                CarpMesh.Info().checksum[ic]=CarpMesh.Info().checksum[ic]+static_cast<float>(CarpMesh.Pt(icount).coord[ic]);
+                if(CarpMesh.Info().bbox[ic][0]>CarpMesh.Pt(icount).coord[ic])
+                {
+                  CarpMesh.Info().bbox[ic][0]=CarpMesh.Pt(icount).coord[ic];
+                }
+                if(CarpMesh.Info().bbox[ic][1]<CarpMesh.Pt(icount).coord[ic])
+                {
+                  CarpMesh.Info().bbox[ic][1]=CarpMesh.Pt(icount).coord[ic];
+                }
+              }
+              ++icount;
+          }
+          for(unsigned char ic=0; ic<3; ic++)
+          {
+              CarpMesh.Info().baricenter[ic]=CarpMesh.Info().baricenter[ic]/nbPt;
+          }
+          //TETRA
+          CarpMesh.initializeTetraVector(nbTet);
+          icount=0;
+          for(Cell_iterator itc = c3t3.cells_in_complex_begin(); itc != c3t3.cells_in_complex_end(); ++itc)
+          {
+            for(unsigned char iv=0; iv<4; iv++)
+            {
+              size_t vindex= Vertices.at(itc->vertex(iv)) ;
+              CarpMesh.Tet(icount).vertex[iv]=vindex;
+            }
+            CarpMesh.Tet(icount).regionLabel=static_cast<int>(itc->subdomain_index());
+            icount++;
+          }
+      } // Segmentation is read by INRreader; mesh domain implemented through a function wrapper with no labels
+      else
+      {
+          Segmentation.readSegmentation(imageName);
+          Mesh_domain_manualseg domain(Segmentation);
+          Facet_criteria_manualseg facet_criteria(fangle, fsize, fapprox); 
+          Cell_criteria_manualseg  cell_criteria(cR_E_ratio, csize);
+          Mesh_criteria_manualseg  criteria(facet_criteria, cell_criteria);
+          std::cout<<"MESHING...";
+          chrono.start();
+          C3t3_manualseg c3t3= CGAL::make_mesh_3<C3t3_manualseg>(domain, criteria, 
+                                              CGAL::parameters::lloyd(), CGAL::parameters::odt(), 
+                                              CGAL::parameters::perturb(), CGAL::parameters::exude());
+          chrono.stop();
+          std::cout<<" done in "<<chrono<<std::endl;
+          chrono.reset();
+          if(out_medit) // print mesh in .mesh format
+          {
+              std::string mfileoutName=out_dir+"/"+out_name+".mesh";
+              std::ofstream medit_file(mfileoutName.c_str());
+              c3t3.output_to_medit(medit_file);
+              medit_file.close();
+          }
+          //get the triangulation; 
+          // Here I need a reference, otherwise when I go to take the tetra vertex
+          // these will be not consistent (most of them 0)
+          //get the triangulation; 
+          // Here I need a reference, otherwise when I go to take the tetra vertex
+          // these will be not consistent (most of them 0)
+          const Tr_manualseg & triang= c3t3.triangulation();  
+          size_t nbPt=static_cast<size_t>(triang.number_of_vertices());
+          size_t nbTet=static_cast<size_t>(c3t3.number_of_cells_in_complex());
+          if(nbPt<3 ||nbTet<1)
+          {
                   std::cerr<<"Problem with Triangulations, only "<<nbPt<<" Vertices and "<<nbTet<<" Thetraedra"<<std::endl;
                   if(!out_medit)
                   {
@@ -258,17 +273,17 @@ int main(int argc,char **argv)
                       medit_file.close();
                   }
                   exit(1);
-              }
-              else
-              {
+          }
+          else
+          {
                   std::cout<<"Vertices: "<<nbPt<<std::endl;
                   std::cout<<"Tetra:    "<<nbTet<<std::endl;
-              }
-              CarpMesh.initializePtVector(nbPt);
-              size_t icount=0;
-              std::map<Tr_manualseg::Vertex_handle, size_t> Vertices;
-              for (Tr_manualseg::Finite_vertices_iterator it=triang.finite_vertices_begin(); it != triang.finite_vertices_end(); ++it)
-              {
+          }
+          CarpMesh.initializePtVector(nbPt);
+          size_t icount=0;
+          std::map<Tr_manualseg::Vertex_handle, size_t> Vertices;
+          for (Tr_manualseg::Finite_vertices_iterator it=triang.finite_vertices_begin(); it != triang.finite_vertices_end(); ++it)
+          {
           	      Vertices[it]=icount;
           	      CarpMesh.Pt(icount).x()=it->point().x();
                   CarpMesh.Pt(icount).y()=it->point().y();
@@ -287,16 +302,16 @@ int main(int argc,char **argv)
                     }
                   }
                   ++icount;
-              }
-              for(unsigned char ic=0; ic<3; ic++)
-              {
+          }
+          for(unsigned char ic=0; ic<3; ic++)
+          {
                   CarpMesh.Info().baricenter[ic]=CarpMesh.Info().baricenter[ic]/nbPt;
-              }
-              //TETRA
-              CarpMesh.initializeTetraVector(nbTet);
-              icount=0;
-              for(Cell_iterator_manualseg itc = c3t3.cells_in_complex_begin(); itc != c3t3.cells_in_complex_end(); ++itc)
-              {
+          }
+          //TETRA
+          CarpMesh.initializeTetraVector(nbTet);
+          icount=0;
+          for(Cell_iterator_manualseg itc = c3t3.cells_in_complex_begin(); itc != c3t3.cells_in_complex_end(); ++itc)
+          {
                 for(unsigned char iv=0; iv<4; iv++)
                 {
                   size_t vindex= Vertices.at(itc->vertex(iv)) ;
@@ -305,19 +320,19 @@ int main(int argc,char **argv)
                 //CarpMesh.Tet(icount).regionLabel=static_cast<int>(itc->subdomain_index());
                 CarpMesh.Tet(icount).regionLabel=static_cast<int>(1); //label =1 by default: this is used as myocardium value
                 icount++;
-              }
           }
-      } //end if on not read mesh
-      else
-      {
+      }
+  } //end if on not read mesh
+  else
+  {
           std::string meshFile=mesh_dir+"/"+mesh_name;
           chrono.start();
           CarpMesh.readFromFile(meshFile);
           chrono.stop();
           std::cout<<" mesh read in "<<chrono<<std::endl;
           chrono.reset();
-      }  
-  }//end if on mkdir
+  }  
+
   
   // if mesh is read, it still has its boundary and so on (boundary extracted from reading); also, no need of rescaling 
   Chrono chrono2;
