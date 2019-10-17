@@ -6,6 +6,9 @@
 #include<sstream>
 #include<fstream>
 #include<cmath>
+#if defined(_WIN32) || defined(_WIN64)
+#include<boost/filesystem.hpp>
+#endif
 
 #include "VtkWriter.hpp"
 
@@ -63,6 +66,16 @@ void VtkWriter::openFileForOutput()
       std::cerr<<"Warning: a file is already opened; closing it"<<std::endl;
       outputVTKFile.close();
     }
+
+#if defined(_WIN32) || defined(_WIN64)
+    boost::filesystem::path dir(M_dir);
+    bool is_ok=boost::filesystem::create_directory(dir);
+    if ( !is_ok)
+    {
+        std::cerr<<"ERROR: directory "<< M_dir<<" not created"<<std::endl;
+        exit(1);
+    }
+#else
     std::string command="mkdir -p " + M_dir;
     int ierr=system(command.c_str());
     if(ierr)
@@ -70,6 +83,7 @@ void VtkWriter::openFileForOutput()
         std::cerr<<"ERROR: directory "<< M_dir<<" not created"<<std::endl;
         exit(1);
     }
+#endif    
     std::cout<<"Opening File "<<FileName<<std::endl;
     if (M_is_binary)
     {
