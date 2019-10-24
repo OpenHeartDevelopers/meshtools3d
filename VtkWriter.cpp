@@ -69,7 +69,7 @@ void VtkWriter::openFileForOutput()
 
 #if defined(_WIN32) || defined(_WIN64)
     boost::filesystem::path dir(M_dir);
-    bool is_ok=boost::filesystem::create_directory(dir);
+    bool is_ok=boost::filesystem::create_directories(dir);
     if ( !is_ok)
     {
         std::cerr<<"ERROR: directory "<< M_dir<<" not created"<<std::endl;

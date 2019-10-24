@@ -114,7 +114,7 @@ int main(int argc,char **argv)
   //create the output dir
 #if defined(_WIN32) || defined(_WIN64)
   boost::filesystem::path dir(out_dir);
-  bool is_ok=boost::filesystem::create_directory(dir);
+  bool is_ok=boost::filesystem::create_directories(dir);
   if ( !is_ok)
   {
     std::cerr<<"Problem in creating the directory "<<out_dir<<std::endl;
