@@ -1,7 +1,7 @@
 FROM alonsojasl/ubuntu-cemrg:base
 # FROM ubuntu-cemrg:lite
 
-MAINTAINER Jose Alonso Solis-Lemus <jose.solislemus@kcl.ac.uk>
+LABEL maintainer="Jose Alonso Solis-Lemus <jose.solislemus@kcl.ac.uk>"
 LABEL Description="MeshTools3D executables"
 
 # CGAL4.8.2 in: /installs/cgal4.8.2-build/release
@@ -23,6 +23,11 @@ RUN cd /installs/meshtools3D_build && make
 
 RUN rm -rf /dependencies
 
-ENTRYPOINT ["/installs/meshtools3D_build/meshtools3d"]
+COPY ./dockerM3D.sh /installs/meshtools3D_build/dockerM3D.sh
+
+RUN chmod +x /installs/meshtools3D_build/dockerM3D.sh
+
+# ENTRYPOINT ["/installs/meshtools3D_build/meshtools3d"]
+ENTRYPOINT ["/installs/meshtools3D_build/dockerM3D.sh"]
 
 WORKDIR /data
