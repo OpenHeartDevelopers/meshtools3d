@@ -1,5 +1,4 @@
 FROM alonsojasl/ubuntu-cemrg:base
-# FROM ubuntu-cemrg:lite
 
 LABEL maintainer="Jose Alonso Solis-Lemus <jose.solislemus@kcl.ac.uk>"
 LABEL Description="MeshTools3D executables"
