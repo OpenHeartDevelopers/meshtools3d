@@ -14,7 +14,7 @@ Some functionality are implemented but not used; in particular:
 
 ### Surface region points
 This functionality determines endo, epi,  mitral valves nodes, etc  on the boundary, when these region are constrained by another one.
-Endocardium and Epicardium surfaces are given as output and determined as the regions with the largest number of points (epicardium) 
+Endocardium and Epicardium surfaces are given as output and determined as the regions with the largest number of points (epicardium)
 and the second region with the largest number of points (endocardium) within the extracted ones.
 
 ## Installation
@@ -56,16 +56,16 @@ Remark: TBB_NUM_THREADS is NOT a environment variable of TBB; it will affects on
 ## Notes
 * To disable TBB when compile, comment (with a # at the beginning of each line) the following lines in CMakeLists.txt:
 ```sh
-if( TBB_FOUND ) 
-  include(${TBB_USE_FILE}) 
-  list(APPEND CGAL_3RD_PARTY_LIBRARIES ${TBB_LIBRARIES}) 
-endif() 
+if( TBB_FOUND )
+  include(${TBB_USE_FILE})
+  list(APPEND CGAL_3RD_PARTY_LIBRARIES ${TBB_LIBRARIES})
+endif()
 ```
 * To create a debug version of the code, first generate the Makefile with:
 ```sh
 cmake -DCMAKE_BUILD_TYPE=Debug -DCGAL_DONT_OVERRIDE_CMAKE_FLAGS=FALSE -DCGAL_DISABLE_ROUNDING_MATH_CHECK=ON
 ```
-rounding mat checks have to be disabled if one want to use valgrind (look in https://github.com/openscad/openscad/issues/1340 for a similar problem) 
+rounding mat checks have to be disabled if one want to use valgrind (look in https://github.com/openscad/openscad/issues/1340 for a similar problem)
 and overriding of cmake flags has to be allowed
 
 ## TO DO
@@ -100,11 +100,13 @@ and overriding of cmake flags has to be allowed
 
 27 Oct 2016
 
-* deleted some variables when no longer needed to free memory before the evaluation of the potential 
+* deleted some variables when no longer needed to free memory before the evaluation of the potential
 * implemented a class for read and handle .inr files
 * implemented a search tree to localise boundary triangles within a specified bounding box
 * implemented some CGAL extensions to use wrap the segmentation in a function that tells if a point is within the segmented domain or not
 * created a new mode for mesh switching off segmentation labels during meshing and then labeling triangles only
 * created a new example (sphereMultilabel) for meshing and then re-labeling
 
+Dec 2019
 
+* Created Dockerfile to create a docker image for `meshtools3d` to be used via docker (no compilation required)

@@ -6,3 +6,4 @@
 /meshtools3d
 # Editor temporary files
 .*.swp
+*.o 
