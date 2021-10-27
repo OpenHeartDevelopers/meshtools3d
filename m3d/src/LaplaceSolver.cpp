@@ -1,7 +1,7 @@
-#include "LaplaceSolver.hpp"
+#include "../include/LaplaceSolver.hpp"
 #include<iostream>
-#include "Chrono.hpp"
-#include "mgmres.hpp"
+#include "../include/Chrono.hpp"
+#include "../include/mgmres.hpp"
 #include<cmath>
 
 #ifndef OUTPREC
@@ -39,7 +39,7 @@ void LaplaceSolver::setMesh(const Mesh *  _mesh)
     this->evaldphi0();
     _sol.resize(_ptrmesh->nPt(),0);
     _RHS.resize(_ptrmesh->nPt(),0);
-    
+
     if(dimKrilovSp>static_cast<long int>(_ptrmesh->nPt()))
     {
       dimKrilovSp=_ptrmesh->nPt();
@@ -52,7 +52,7 @@ void LaplaceSolver::initialize(const GetPot & dfile)
 {
   abs_toll    = dfile("laplacesolver/abs_toll",1.e-6);
   rel_toll    = dfile("laplacesolver/rel_toll",1.e-6);
-  itr_max     = dfile("laplacesolver/itr_max",100);    
+  itr_max     = dfile("laplacesolver/itr_max",100);
   verbose     = dfile("laplacesolver/verbose",0);
   dimKrilovSp = dfile("laplacesolver/dimKrilovSp",100);
   if(_consistentState &&  (dimKrilovSp>static_cast<long int>(_ptrmesh->nPt()))  )
@@ -105,13 +105,13 @@ void LaplaceSolver::eval_pattern()
   // in each entry the set gives the connectivity
   // i.e. the label of neighb. nodes
 
-  for(size_t iTet=0; iTet<_ptrmesh->nTet(); iTet++)  
+  for(size_t iTet=0; iTet<_ptrmesh->nTet(); iTet++)
   {
     for(short int iPt=0; iPt<4; iPt++)
     {
         long int iNode=_ptrmesh->Tet(iTet).vertex[iPt];
         labelPerNode[iNode].insert(iNode);
-        
+
         for(short int jPt=1+iPt; jPt<4; jPt++)
         {
           long int jNode=_ptrmesh->Tet(iTet).vertex[jPt];
@@ -133,7 +133,7 @@ void LaplaceSolver::eval_pattern()
   for(size_t iPt=0; iPt<_ptrmesh->nPt(); iPt++)
   {
     _Matrix._pattern.I[iPt+1]=_Matrix._pattern.I[iPt]+labelPerNode[iPt].size();
-    
+
     unsigned counter=0;
     for(std::set<long int>::iterator it=labelPerNode[iPt].begin(); it!=labelPerNode[iPt].end(); ++it)
     {
@@ -231,7 +231,7 @@ void LaplaceSolver::matrixAssembly(bool build_pattern)
     {
       std::cout<<"pattern evaluation...";
     }
-    
+
     eval_pattern();
     if(verbose)
     {
@@ -256,7 +256,7 @@ void LaplaceSolver::matrixAssembly(bool build_pattern)
       vord.insert(std::pair<size_t, short int >(TetVertex[iv],iv) );
     }
     //Node reordering
-    
+
     short int countv=0;
     for(itOrd=vord.begin(); itOrd!=vord.end(); ++itOrd)
     {
@@ -286,16 +286,16 @@ void LaplaceSolver::matrixAssembly(bool build_pattern)
             local_stiffness[RMIndex(iPt,jPt,4)]=0.0;  //rows to zero
             double aji=local_stiffness[RMIndex(jPt,iPt,4)];
             // simm. diag step
-            local_RHS[jPt]=local_RHS[jPt]-aji*(itv->second); 
+            local_RHS[jPt]=local_RHS[jPt]-aji*(itv->second);
             local_stiffness[RMIndex(jPt,iPt,4)]=0.0;
           }
-          local_stiffness[RMIndex(iPt,iPt,4)]=aii; 
+          local_stiffness[RMIndex(iPt,iPt,4)]=aii;
           local_RHS[iPt]=aii*(itv->second);
         }
     }//end for on local points
 
     // matrix and RHS connectivity
-  
+
     for(short int iPt=0; iPt<4; iPt++)
     {
       long int I_index=TetVertex[reordering[iPt]];
@@ -328,7 +328,7 @@ void LaplaceSolver::matrixAssembly(bool build_pattern)
         size_t counter=0;
         while(!found && counter<=numel)
         {
-          if(J_index<_Matrix._pattern.J[tmpIndex])  
+          if(J_index<_Matrix._pattern.J[tmpIndex])
           {
             end=tmpIndex;
           }
@@ -354,7 +354,7 @@ void LaplaceSolver::matrixAssembly(bool build_pattern)
         }
       }//end loop on jPt
     }//end loop on iPt
-    
+
 
   }//end loop on tetra
 
@@ -375,8 +375,8 @@ void LaplaceSolver::solve()
   long int nPt=_ptrmesh->nPt();
   std::cout<<"Solving the linear system (GMRES)"<<std::endl;
   chrono.start();
-  pmgmres_ilu_cr( nPt, _Matrix._pattern.n_zero, _Matrix._pattern.I.data(), _Matrix._pattern.J.data(), _Matrix.K.data(), 
-                    _sol.data(), _RHS.data(), itr_max, dimKrilovSp,  abs_toll, 
+  pmgmres_ilu_cr( nPt, _Matrix._pattern.n_zero, _Matrix._pattern.I.data(), _Matrix._pattern.J.data(), _Matrix.K.data(),
+                    _sol.data(), _RHS.data(), itr_max, dimKrilovSp,  abs_toll,
                     rel_toll, verbose );
   chrono.stop();
   std::cout<<" done in "<<chrono<<std::endl;
@@ -432,17 +432,17 @@ void LaplaceSolver::writeVTKSolution(std::string filename, bool binary, double r
   // I suppose that paraview look for float floating point
   // and int integers; with this type definition is easier to
   // change the output type
-   
+
   typedef int vtkIntType;
   typedef float vtkFloatType;
-  
-  // For an unknown idiots reason (or perhaps because network uses always big endian), 
-  // paraview needs output in big endian. So, first 
+
+  // For an unknown idiots reason (or perhaps because network uses always big endian),
+  // paraview needs output in big endian. So, first
   // I determine the endianness of the current machine
-  
+
 
   bool littleEndianMachine=isLittleEndian();
-  
+
   std::string outputFileName=filename+"_potential.vtk";
 
   short int precision=12;
@@ -477,7 +477,7 @@ void LaplaceSolver::writeVTKSolution(std::string filename, bool binary, double r
   }
   vertex= new vtkIntType[nbV];
   std::ofstream VTKFile;
-  
+
   if(binary)
   {
     VTKFile.open(outputFileName.c_str(),std::ios::out | std::ios::binary);
@@ -486,7 +486,7 @@ void LaplaceSolver::writeVTKSolution(std::string filename, bool binary, double r
   {
     VTKFile.open(outputFileName.c_str(),std::ios::out );
   }
-  
+
   VTKFile<<"# vtk DataFile Version 4.2"<<std::endl;
   VTKFile<<"Visualization of specified geometry"<<std::endl;
   if(binary)
@@ -498,7 +498,7 @@ void LaplaceSolver::writeVTKSolution(std::string filename, bool binary, double r
     VTKFile<<"ASCII"<<std::endl;
   }
   VTKFile<<"DATASET UNSTRUCTURED_GRID"<<std::endl;
-  
+
   //Points
   VTKFile<<"POINTS "<<nPt<<" float"<<std::endl;
   for(size_t iPt=0; iPt<nPt; iPt++)
@@ -529,13 +529,13 @@ void LaplaceSolver::writeVTKSolution(std::string filename, bool binary, double r
         }
     }
   }//end loop on points
-    
+
   if(binary)
   {
     VTKFile<<std::endl;
   }
-  
-  // Elements 
+
+  // Elements
   VTKFile<<"CELLS "<<nElem<<" "<<(nbV+1)*nElem<<std::endl;
   for(size_t iElem=0; iElem<nElem; iElem++)
   {
@@ -552,7 +552,7 @@ void LaplaceSolver::writeVTKSolution(std::string filename, bool binary, double r
     }
     if(binary)
     {
-      VTKFile.write((char*) &nbVoutput,sizeof(vtkIntType)); 
+      VTKFile.write((char*) &nbVoutput,sizeof(vtkIntType));
       for(short int iV=0; iV<nbV; iV++ )
       {
         vtkIntType VertexCP=vertex[iV];
@@ -560,7 +560,7 @@ void LaplaceSolver::writeVTKSolution(std::string filename, bool binary, double r
         {
           SwapBytes(&VertexCP, sizeof(VertexCP));
         }
-        VTKFile.write((char*) &VertexCP,sizeof(vtkIntType)); 
+        VTKFile.write((char*) &VertexCP,sizeof(vtkIntType));
       }
     }
     else
@@ -589,7 +589,7 @@ void LaplaceSolver::writeVTKSolution(std::string filename, bool binary, double r
   {
     if(binary)
     {
-      VTKFile.write((char*) &typeCell,sizeof(vtkIntType)); 
+      VTKFile.write((char*) &typeCell,sizeof(vtkIntType));
     }
     else
     {
@@ -609,7 +609,7 @@ void LaplaceSolver::writeVTKSolution(std::string filename, bool binary, double r
   {
     VTKFile<<std::endl;
   }
-  
+
   //now i detrmine point label
   VTKFile<<"POINT_DATA "<<nPt<<std::endl;
   VTKFile<<"SCALARS Potential float"<<std::endl;
@@ -666,14 +666,14 @@ void LaplaceSolver::writeVTKSolution(std::string filename, bool binary, double r
         VTKFile.write((char*) &vx,sizeof(vtkFloatType));
         VTKFile.write((char*) &vy,sizeof(vtkFloatType));
         VTKFile.write((char*) &vz,sizeof(vtkFloatType));
-      
+
       }
       else
       {
         VTKFile<<std::setprecision(precision)<<vx<<" "
                <<std::setprecision(precision)<<vy<<" "
                <<std::setprecision(precision)<<vz;
-        
+
         if(((1+iElem)%2) && (iElem<nElem-1))
         {
           VTKFile<<" ";
@@ -689,7 +689,7 @@ void LaplaceSolver::writeVTKSolution(std::string filename, bool binary, double r
       VTKFile<<std::endl;
     }
   }*/
-  
+
   VTKFile.close();
 }
 
@@ -701,7 +701,7 @@ std::vector<double> LaplaceSolver::ElementTetraGradient(size_t iTet,bool normali
   std::vector<double> invJt=(_ptrmesh->TetInvJacobianTransponse(iTet)); // 9X1
   std::vector<std::vector<double> > dphi;
   dphi.resize(4);
-  
+
   // Evaluate derivatives of shape functions
   for(short int jf=0; jf<4; jf++)
   {
@@ -724,8 +724,8 @@ std::vector<double> LaplaceSolver::ElementTetraGradient(size_t iTet,bool normali
         gradient[jc] = gradient[jc] + (dphi[iv])[jc] * sol_at_vertex;
       }
   }
-  
-  
+
+
   /*
   double  gradient0[3];
   gradient0[0]=0.0;
@@ -821,7 +821,3 @@ void LaplaceSolver::writeElementGradient(std::string filename)
 
 
 }
-
-
-
-

@@ -7,7 +7,7 @@
 //  MERCHANTABILITY  or FITNESS  FOR A  PARTICULAR PURPOSE.   See  the GNU
 //  Lesser General Public License for more details.
 //
-//  This library is used to extract data from .inr segmentations, the 
+//  This library is used to extract data from .inr segmentations, the
 //  INRIA segmentation format
 //
 //  Developer: Cesare Corrado cesare.corrado@kcl.ac.uk
@@ -26,7 +26,7 @@
 #include<cmath>
 #include<map>
 
-#include "INRreader.hpp"
+#include "../include/INRreader.hpp"
 #ifndef DELTAMAX
 #define DELTAMAX 2
 #endif
@@ -88,14 +88,14 @@ void INRreader::readSegmentation(const std::string & filename)
         std::cerr<<"ERROR: FILE "<<filename<<" NOT OPENED! "<<std::endl;
         exit(1);
     }
-    
+
     bool headerRead=readHeader(INRfile);
     if(!headerRead)
     {
             std::cerr<<"ERROR: PROBLEMS WITH THE IMAGE HEADER"<<std::endl;
             exit(1);
     }
-    
+
     nb_Of_Pixels=_info.nbOfPixels();
     px_per_Plane=_info.PxPerPlane();
     byteLen=(_info.PIXSIZE)/8;
@@ -154,7 +154,7 @@ bool INRreader::isPointInsideSegmentation(const double & x, const double & y, co
       }
       if((!is_inside) && (ry<INTOLL) && (Ixyz.iy>0))
       {
-      
+
         for(size_t iv=0; iv<_info.VDIM; iv++)
         {
           double vox=pickVoxelValue(Ixyz.ix,(Ixyz.iy-1),Ixyz.iz,iv);
@@ -168,7 +168,7 @@ bool INRreader::isPointInsideSegmentation(const double & x, const double & y, co
       }
       if((!is_inside) && (rz<INTOLL) && (Ixyz.iz>0))
       {
-    
+
         for(size_t iv=0; iv<_info.VDIM; iv++)
         {
           double vox=pickVoxelValue(Ixyz.ix,Ixyz.iy,(Ixyz.iz-1),iv);
@@ -180,12 +180,12 @@ bool INRreader::isPointInsideSegmentation(const double & x, const double & y, co
           }
         }
       }
-      
+
       rx=1.0-sqrt((Ixyz.ix*_info.RESOLUTION[0]-x)*(Ixyz.ix*_info.RESOLUTION[0]-x))/_info.RESOLUTION[0];
       ry=1.0-sqrt((Ixyz.iy*_info.RESOLUTION[1]-y)*(Ixyz.iy*_info.RESOLUTION[1]-y))/_info.RESOLUTION[1];
       rz=1.0-sqrt((Ixyz.iz*_info.RESOLUTION[2]-z)*(Ixyz.iz*_info.RESOLUTION[2]-z))/_info.RESOLUTION[2];
-      
-      
+
+
       if((!is_inside) && (rx<INTOLL) && (Ixyz.ix<(_info.SHAPE[0]-1)) )
       {
         for(size_t iv=0; iv<_info.VDIM; iv++)
@@ -201,7 +201,7 @@ bool INRreader::isPointInsideSegmentation(const double & x, const double & y, co
       }
       if((!is_inside) && (ry<INTOLL) && (Ixyz.iy<(_info.SHAPE[1]-1)) )
       {
-      
+
         for(size_t iv=0; iv<_info.VDIM; iv++)
         {
           double vox=pickVoxelValue(Ixyz.ix,(Ixyz.iy+1),Ixyz.iz,iv);
@@ -215,7 +215,7 @@ bool INRreader::isPointInsideSegmentation(const double & x, const double & y, co
       }
       if((!is_inside) && (rz<INTOLL) && (Ixyz.iz<(_info.SHAPE[2]-1)) )
       {
-    
+
         for(size_t iv=0; iv<_info.VDIM; iv++)
         {
           double vox=pickVoxelValue(Ixyz.ix,Ixyz.iy,(Ixyz.iz+1),iv);
@@ -227,9 +227,9 @@ bool INRreader::isPointInsideSegmentation(const double & x, const double & y, co
           }
         }
       }
-      
+
     } //end of the check on the voxel boundaries
-  }  
+  }
   return(is_inside);
 }
 
@@ -240,7 +240,7 @@ bool INRreader::isPointInsideSegmentationTrilinear(const double & x, const doubl
   bool is_inside=false;
   if(_isAllocated)
   {
-   
+
     IndexCoord Ixyz;
     Ixyz.ix=static_cast<size_t>(std::floor(x/_info.RESOLUTION[0]));
     Ixyz.iy=static_cast<size_t>(std::floor(y/_info.RESOLUTION[1]));
@@ -251,7 +251,7 @@ bool INRreader::isPointInsideSegmentationTrilinear(const double & x, const doubl
     }
     double labvalue=labellized_trilinearInterpolatedVoxelValue(x,y,z);
     is_inside=static_cast<bool>(labvalue);
-    
+
 
     //now checks for points evantually on the voxel faces
     if(!is_inside)
@@ -274,7 +274,7 @@ bool INRreader::isPointInsideSegmentationTrilinear(const double & x, const doubl
       }
       if((!is_inside) && (ry<INTOLL) && (Ixyz.iy>0))
       {
-      
+
         for(size_t iv=0; iv<_info.VDIM; iv++)
         {
           double vox=pickVoxelValue(Ixyz.ix,(Ixyz.iy-1),Ixyz.iz,iv);
@@ -288,7 +288,7 @@ bool INRreader::isPointInsideSegmentationTrilinear(const double & x, const doubl
       }
       if((!is_inside) && (rz<INTOLL) && (Ixyz.iz>0))
       {
-    
+
         for(size_t iv=0; iv<_info.VDIM; iv++)
         {
           double vox=pickVoxelValue(Ixyz.ix,Ixyz.iy,(Ixyz.iz-1),iv);
@@ -300,12 +300,12 @@ bool INRreader::isPointInsideSegmentationTrilinear(const double & x, const doubl
           }
         }
       }
-      
+
       rx=1.0-sqrt((Ixyz.ix*_info.RESOLUTION[0]-x)*(Ixyz.ix*_info.RESOLUTION[0]-x))/_info.RESOLUTION[0];
       ry=1.0-sqrt((Ixyz.iy*_info.RESOLUTION[1]-y)*(Ixyz.iy*_info.RESOLUTION[1]-y))/_info.RESOLUTION[1];
       rz=1.0-sqrt((Ixyz.iz*_info.RESOLUTION[2]-z)*(Ixyz.iz*_info.RESOLUTION[2]-z))/_info.RESOLUTION[2];
-      
-      
+
+
       if((!is_inside) && (rx<INTOLL) && (Ixyz.ix<(_info.SHAPE[0]-1)) )
       {
         for(size_t iv=0; iv<_info.VDIM; iv++)
@@ -321,7 +321,7 @@ bool INRreader::isPointInsideSegmentationTrilinear(const double & x, const doubl
       }
       if((!is_inside) && (ry<INTOLL) && (Ixyz.iy<(_info.SHAPE[1]-1)) )
       {
-      
+
         for(size_t iv=0; iv<_info.VDIM; iv++)
         {
           double vox=pickVoxelValue(Ixyz.ix,(Ixyz.iy+1),Ixyz.iz,iv);
@@ -335,7 +335,7 @@ bool INRreader::isPointInsideSegmentationTrilinear(const double & x, const doubl
       }
       if((!is_inside) && (rz<INTOLL) && (Ixyz.iz<(_info.SHAPE[2]-1)) )
       {
-    
+
         for(size_t iv=0; iv<_info.VDIM; iv++)
         {
           double vox=pickVoxelValue(Ixyz.ix,Ixyz.iy,(Ixyz.iz+1),iv);
@@ -347,9 +347,9 @@ bool INRreader::isPointInsideSegmentationTrilinear(const double & x, const doubl
           }
         }
       }
-      
+
     } //end of the check on the voxel boundaries
-  }  
+  }
   return(is_inside);
 }
 
@@ -366,7 +366,7 @@ IndexCoord INRreader::voxelCoordInterp(const double & x, const double & y, const
   */
   IndexCoord Ixyz;
   Ixyz.iv=0;
-  
+
   if(_isAllocated)
   {
     Ixyz.ix=static_cast<size_t>(std::floor(x/_info.RESOLUTION[0]));
@@ -396,7 +396,7 @@ IndexCoord INRreader::voxelCoordInterpNonZero(const double & x, const double & y
     if(_isAllocated)
     {
       bool iszero=!(isVoxelInSeg(Ixyz));
-      
+
       if(iszero)
       {
         std::vector<size_t> ixrange(2,0),iyrange(2,0),izrange(2,0);
@@ -408,7 +408,7 @@ IndexCoord INRreader::voxelCoordInterpNonZero(const double & x, const double & y
         {
           ixrange[0]=Ixyz.ix-DELTAMAX;
         }
-        
+
         if(Ixyz.iy<DELTAMAX)
         {
           iyrange[0]=0;
@@ -475,7 +475,7 @@ IndexCoord INRreader::voxelCoordInterpNonZero(const double & x, const double & y
         P1=NULL;
         Ixyz=reverseIndex(ind);
       }
-    }    
+    }
     return(Ixyz);
 }
 
@@ -518,19 +518,19 @@ std::vector<double> INRreader::trilinearInterpolatedVoxelValue (const double & x
     coord[0]=x/_info.RESOLUTION[0];
     coord[1]=y/_info.RESOLUTION[1];
     coord[2]=z/_info.RESOLUTION[2];
-    
+
     IndexCoord Ixyz;
     Ixyz.ix=static_cast<size_t>(std::floor(coord[0]));
     Ixyz.iy=static_cast<size_t>(std::floor(coord[1]));
     Ixyz.iz=static_cast<size_t>(std::floor(coord[2]));
     Ixyz.iv=0;
-    
-    
+
+
     if((Ixyz.ix>=_info.SHAPE[0])||(Ixyz.iy>=_info.SHAPE[1]) ||(Ixyz.iz>=_info.SHAPE[2]))
     {
         return(voxvalue);
     }
-    
+
 
     double di2 = static_cast<double>(Ixyz.iz+1) - coord[2];
     double di1 = coord[2] - static_cast<double>(Ixyz.iz);
@@ -538,20 +538,20 @@ std::vector<double> INRreader::trilinearInterpolatedVoxelValue (const double & x
     double dj1 = coord[1] - static_cast<double>(Ixyz.iy);
     double dk2 = static_cast<double>(Ixyz.ix+1) - coord[0];
     double dk1 = coord[0] - static_cast<double>(Ixyz.ix);
-    
+
     for(size_t iv=0; iv<_info.VDIM; iv++)
     {
       double a=pickVoxelValue(Ixyz.ix,Ixyz.iy,Ixyz.iz,iv);
       double e=pickVoxelValue((1+Ixyz.ix),Ixyz.iy,Ixyz.iz,iv);
-      double d=pickVoxelValue(Ixyz.ix,(1+Ixyz.iy),Ixyz.iz,iv);      
+      double d=pickVoxelValue(Ixyz.ix,(1+Ixyz.iy),Ixyz.iz,iv);
       double h=pickVoxelValue((1+Ixyz.ix),(1+Ixyz.iy),Ixyz.iz,iv);
-      
+
       double b=pickVoxelValue(Ixyz.ix,Ixyz.iy,(1+Ixyz.iz),iv);
       double f=pickVoxelValue((1+Ixyz.ix),Ixyz.iy,(1+Ixyz.iz),iv);
-      double c=pickVoxelValue(Ixyz.ix,(1+Ixyz.iy),(1+Ixyz.iz),iv);      
+      double c=pickVoxelValue(Ixyz.ix,(1+Ixyz.iy),(1+Ixyz.iz),iv);
       double g=pickVoxelValue((1+Ixyz.ix),(1+Ixyz.iy),(1+Ixyz.iz),iv);
 
-      
+
       voxvalue[iv]=( (  ( a * di2 + b * di1 )*dj2 + ( d * di2 + c * di1 )*dj1) * dk2 +
 	                   (  ( e * di2 + f * di1 )*dj2 + ( h * di2 + g * di1 )*dj1) * dk1 );
     }
@@ -587,17 +587,17 @@ double INRreader::labellized_trilinearInterpolatedVoxelValue (const double & x, 
       indices[2].iy=indices[0].iy+1;
       indices[3].ix=indices[0].ix+1;
       indices[3].iy=indices[0].iy+1;
-      
+
       indices[4]=indices[0];
       indices[5]=indices[1];
       indices[6]=indices[2];
       indices[7]=indices[3];
-      
+
       for(unsigned char ii=4; ii<8;ii++)
       {
         indices[ii].iz=indices[0].iz+1;
       }
-      
+
       std::vector<int> labels(8,0);
       labels[0]=static_cast<int>(pickValue(index(indices[0])));
 
@@ -605,7 +605,7 @@ double INRreader::labellized_trilinearInterpolatedVoxelValue (const double & x, 
       for(unsigned char lci=1; lci<8; ++lci)
       {
           bool found = false;
-          int iwt = static_cast<int>(pickValue(index(indices[lci]))); 
+          int iwt = static_cast<int>(pickValue(index(indices[lci])));
           for(unsigned char lcj=0; lcj < lc; ++lcj)
           {
               if(iwt == labels[lcj])
@@ -615,7 +615,7 @@ double INRreader::labellized_trilinearInterpolatedVoxelValue (const double & x, 
               }
           }
           if(found)
-          { 
+          {
               continue;
           }
           labels[lc] = iwt;
@@ -636,16 +636,16 @@ double INRreader::labellized_trilinearInterpolatedVoxelValue (const double & x, 
       double dj1 = coord[1] - static_cast<double>(Ixyz.iy);
       double dk2 = static_cast<double>(Ixyz.ix+1) - coord[0];
       double dk1 = coord[0] - static_cast<double>(Ixyz.ix);
-      
+
       for(unsigned char il = 0; il < lc; ++il)
       {
           int iwt = labels[il];
-        
+
           double a=static_cast<double>(static_cast<int>(pickValue(index(indices[0])))==iwt);
           double e=static_cast<double>(static_cast<int>(pickValue(index(indices[1])))==iwt);
           double d=static_cast<double>(static_cast<int>(pickValue(index(indices[2])))==iwt);
           double h=static_cast<double>(static_cast<int>(pickValue(index(indices[3])))==iwt);
-      
+
           double b=static_cast<double>(static_cast<int>(pickValue(index(indices[4])))==iwt);
           double f=static_cast<double>(static_cast<int>(pickValue(index(indices[5])))==iwt);
           double c=static_cast<double>(static_cast<int>(pickValue(index(indices[6])))==iwt);
@@ -654,7 +654,7 @@ double INRreader::labellized_trilinearInterpolatedVoxelValue (const double & x, 
           double r=( (  ( a * di2 + b * di1 )*dj2 + ( d * di2 + c * di1 )*dj1) * dk2 +
 	                   (  ( e * di2 + f * di1 )*dj2 + ( h * di2 + g * di1 )*dj1) * dk1 );
 
-          if(r > best_value) 
+          if(r > best_value)
           {
               best = iwt;
               best_value = r;
@@ -662,7 +662,7 @@ double INRreader::labellized_trilinearInterpolatedVoxelValue (const double & x, 
       }
       voxvalue = static_cast<double>(best);
   }
-  
+
   return (voxvalue);
 
 
@@ -720,7 +720,7 @@ std::vector<double> INRreader::extractVoxelValues()
 {
 
   std::vector<double> voxValues(nzeroEntryIndexes.size(),0.0);
-  
+
   size_t counter=0;
   for(std::set<size_t>::iterator it=nzeroEntryIndexes.begin(); it!=nzeroEntryIndexes.end(); ++it)
   {
@@ -744,7 +744,7 @@ bool INRreader::readHeader(std::ifstream & ImageFile)
     const std::string endOfHeader="##}";
     do{
         std::getline(ImageFile,lineHeader,'\n');
-        
+
         if(!headerbeginok)
         {
             if(lineHeader.compare("#INRIMAGE-4#{")==0)
@@ -757,17 +757,17 @@ bool INRreader::readHeader(std::ifstream & ImageFile)
             std::cerr<<"ERROR: PROBLEMS WITH THE IMAGE FILE"<<std::endl;
             exit(1);
         }
-        
+
         std::string delimiter="=";
         size_t pos=lineHeader.find(delimiter);
         if(pos != std::string::npos)
         {
             //substr(size_t pos, size_t n ) is a substring starting at pos an with length n
             std::string token = lineHeader.substr(0, pos);
-            std::string value = lineHeader.substr(pos+ delimiter.length(),std::string::npos);  
+            std::string value = lineHeader.substr(pos+ delimiter.length(),std::string::npos);
             //move token to uppercase
             std::transform(token.begin(), token.end(),token.begin(), ::toupper);
-            
+
             // image size (SHAPE)
             if (token.compare("XDIM") == 0)
             {
@@ -775,16 +775,16 @@ bool INRreader::readHeader(std::ifstream & ImageFile)
               tonumber>>(_info.SHAPE[0]);
             }
             else if (token.compare("YDIM") == 0)
-            { 
+            {
               std::stringstream tonumber(value);
               tonumber>>(_info.SHAPE[1]);
             }
             else if (token.compare("ZDIM") == 0)
-            { 
+            {
               std::stringstream tonumber(value);
               tonumber>>(_info.SHAPE[2]);
             }
-            
+
             //voxel size (RESOLUTION)
             else if (token.compare("VX") == 0)
             {
@@ -792,16 +792,16 @@ bool INRreader::readHeader(std::ifstream & ImageFile)
               tonumber>>(_info.RESOLUTION[0]);
             }
             else if (token.compare("VY") == 0)
-            { 
+            {
               std::stringstream tonumber(value);
               tonumber>>(_info.RESOLUTION[1]);
             }
             else if (token.compare("VZ") == 0)
-            { 
+            {
                std::stringstream tonumber(value);
                tonumber>>(_info.RESOLUTION[2]);
             }
-            
+
             //translation offset (TOFFSET)
             else if (token.compare("TX") == 0)
             {
@@ -809,16 +809,16 @@ bool INRreader::readHeader(std::ifstream & ImageFile)
               tonumber>>(_info.TOFFSET[0]);
             }
             else if (token.compare("TY") == 0)
-            { 
+            {
               std::stringstream tonumber(value);
               tonumber>>(_info.TOFFSET[1]);
             }
             else if (token.compare("TZ") == 0)
-            { 
+            {
               std::stringstream tonumber(value);
               tonumber>>(_info.TOFFSET[2]);
             }
-            
+
             //image rotation (ROTATION)
             else if (token.compare("RX") == 0)
             {
@@ -826,22 +826,22 @@ bool INRreader::readHeader(std::ifstream & ImageFile)
               tonumber>>(_info.ROTATION[0]);
             }
             else if (token.compare("RY") == 0)
-            { 
+            {
               std::stringstream tonumber(value);
               tonumber>>(_info.ROTATION[1]);
             }
             else if (token.compare("RZ") == 0)
-            { 
+            {
               std::stringstream tonumber(value);
               tonumber>>(_info.ROTATION[2]);
             }
-            
+
             // vectorial dimension (VDIM)
             else if (token.compare("VDIM") == 0)
             {
               std::stringstream tonumber(value);
               tonumber>>(_info.VDIM);
-            
+
             }
             //scale; don't know what is it
             else if (token.compare("SCALE") == 0)
@@ -854,15 +854,15 @@ bool INRreader::readHeader(std::ifstream & ImageFile)
                 std::transform(value.begin(), value.end(),value.begin(), ::toupper);
                 size_t pos2=value.find(" ");
                 std::string datatype=value.substr(0,pos2);
-                if(datatype.compare("FLOAT") == 0) 
+                if(datatype.compare("FLOAT") == 0)
                 {
                   _info.TYPE=VX_FLOAT;
                 }
                 else if(datatype.compare("SIGNED") == 0)
                 {
                   _info.TYPE=VX_FIXED;
-                } 
-                else if(datatype.compare("UNSIGNED") == 0) 
+                }
+                else if(datatype.compare("UNSIGNED") == 0)
                 {
                   _info.TYPE=VX_UFIXED;
                 }
@@ -879,7 +879,7 @@ bool INRreader::readHeader(std::ifstream & ImageFile)
               std::stringstream tonumber(bitsize);
               tonumber>>(_info.PIXSIZE);
             }
-            
+
             //endianess (CPU)
             else if (token.compare("CPU") == 0)
             {
@@ -895,8 +895,8 @@ bool INRreader::readHeader(std::ifstream & ImageFile)
             }
         }
     }while(endOfHeader.compare(lineHeader)!=0);
-    
-    if(endOfHeader.compare(lineHeader)==0) 
+
+    if(endOfHeader.compare(lineHeader)==0)
     {
         headerendok=true;
     }
@@ -909,7 +909,7 @@ bool INRreader::readValues(std::ifstream & ImageFile)
   bool readerisok=true;
   bool _amIlittleEndian=isLittleEndian();
   bool _swapBites=true;
-  
+
   if((_amIlittleEndian && _info.littleEndian) ||(!(_amIlittleEndian || _info.littleEndian)) )
   {
       _swapBites=false;
@@ -924,7 +924,7 @@ bool INRreader::readValues(std::ifstream & ImageFile)
             readerisok=false;
             break;
       }
-      
+
       ImageFile.read(value,byteLen);
       if(_swapBites)
       {
@@ -935,13 +935,13 @@ bool INRreader::readValues(std::ifstream & ImageFile)
       {
           data[byte_offset+ibyte]=value[ibyte];
       }
-      
+
       switch(_info.TYPE)
       {
         case VX_FLOAT:
         {
           double restmp=0;
-          memcpy (&restmp, value, byteLen);      
+          memcpy (&restmp, value, byteLen);
           long long int res=static_cast<long long int>(restmp);
           if(res>0)
           {
@@ -952,7 +952,7 @@ bool INRreader::readValues(std::ifstream & ImageFile)
         case VX_FIXED:
         {
           long long int res=0;
-          memcpy (&res, value, byteLen);      
+          memcpy (&res, value, byteLen);
           if(res>0)
           {
               nzeroEntryIndexes.insert(iEntry);
@@ -962,7 +962,7 @@ bool INRreader::readValues(std::ifstream & ImageFile)
         case VX_UFIXED:
         {
           long long unsigned res=0;
-          memcpy (&res, value, byteLen);      
+          memcpy (&res, value, byteLen);
           if(res>0)
           {
               nzeroEntryIndexes.insert(iEntry);
@@ -981,7 +981,7 @@ bool INRreader::readValues(std::ifstream & ImageFile)
   {
       std::cout<<"...done; there are "<<nzeroEntryIndexes.size()<<" non-zero pixels"<<std::endl;
   }
-  
+
   delete [] value;
   value=NULL;
   return(readerisok);
@@ -998,9 +998,9 @@ void INRreader::evalLabeledRegionsBounds()
     typedef regionSubdivisionType::iterator regionSubdivisionTypeIterator;
     typedef setVoxelType::iterator setVoxelTypeIterator;
     regionSubdivisionType voxelRegions;
-    
-    
-    
+
+
+
     // Initialize the map setVoxelType that describes the set of indices with the same label
     for (setVoxelTypeIterator it=nzeroEntryIndexes.begin(); it!=nzeroEntryIndexes.end(); ++it)
     {
@@ -1011,7 +1011,7 @@ void INRreader::evalLabeledRegionsBounds()
     //setVoxelType myocardiumVoxelSet=(voxelRegions.find(1))->second;
     // Delete elements with index label =1
     voxelRegions.erase(voxelRegions.find(1));
-    
+
     // create a set of only non-zero and non-one elements
     setVoxelType boundVoxels;
     boundVoxels.clear();
@@ -1031,7 +1031,7 @@ void INRreader::evalLabeledRegionsBounds()
 
 
     subdivideRegions(voxelRegions,  connectivity );
-    
+
     //Fix with regression planes
     /*for(regionSubdivisionTypeIterator mapit=voxelRegions.begin();mapit!=voxelRegions.end();++mapit)
     {
@@ -1071,13 +1071,13 @@ void INRreader::evalLabeledRegionsBounds()
                   setValue(*it, voxValue);
                   (mapit->second).insert(*it);
                 }
-              } 
+              }
           }
         }
     }*/
-    
+
     //now re-labeling of voxels
-    
+
     for(regionSubdivisionTypeIterator itRegToNodeMap=voxelRegions.begin(); itRegToNodeMap!=voxelRegions.end(); ++itRegToNodeMap)
     {
        double voxValue = static_cast<double>(itRegToNodeMap->first);
@@ -1097,7 +1097,7 @@ void INRreader::evalLabeledRegionsBounds()
             {
                 (localbbox.bbox()[jcoord])[0]=barycenter[jcoord];
             }
-            
+
             if(barycenter[jcoord]> ( (localbbox.bbox()[jcoord])[1] ) )
             {
                 (localbbox.bbox()[jcoord])[1]=barycenter[jcoord];
@@ -1117,7 +1117,7 @@ void INRreader::evalLabeledRegionsBounds()
 
 double INRreader::pickValue(const size_t & _index) const
 {
-  
+
   double res=0.0;
   if(_isAllocated)
   {
@@ -1217,17 +1217,17 @@ IndexCoord INRreader::reverseIndex(const size_t & index ) const
   IndexCoord reverseIndexing;
   // first the vector component;
   reverseIndexing.iv=std::floor(index/nb_Of_Pixels);
-  
+
   //now the plane
   size_t remainder=index-(reverseIndexing.iv*nb_Of_Pixels);
   reverseIndexing.iz=std::floor(remainder/px_per_Plane);
-  
+
   //now the rows
   size_t remainder2=remainder-(reverseIndexing.iz*px_per_Plane);
   reverseIndexing.iy=std::floor(remainder2/(_info.SHAPE[0]));
   //now the colums
   reverseIndexing.ix=remainder2-(reverseIndexing.iy*_info.SHAPE[0]);
-  
+
   return(reverseIndexing);
 }
 
@@ -1246,7 +1246,7 @@ double INRreader::EuclideanDist(const double * P1, const double * P2)
     double dist=std::sqrt((P1[0]-P2[0])*(P1[0]-P2[0])
                          +(P1[1]-P2[1])*(P1[1]-P2[1])
                          +(P1[2]-P2[2])*(P1[2]-P2[2]));
-    return(dist);               
+    return(dist);
 }
 
 double INRreader::dotprod(const std::vector<double> & v1, const std::vector<double> & v2)
@@ -1281,7 +1281,7 @@ LinearRegression2DData INRreader::evalRegressionPlane(std::set<size_t> & pointli
     for(unsigned char cc=0; cc<3; cc++)
     {
       r_G[cc]=r_G[cc]/static_cast<double>(n);
-      
+
       for(size_t pt=0; pt<n; pt++)
       {
         (pointcoord[pt])[cc]=(pointcoord[pt])[cc]-r_G[cc];
@@ -1298,26 +1298,26 @@ LinearRegression2DData INRreader::evalRegressionPlane(std::set<size_t> & pointli
         {
           matrixEntry=matrixEntry+(pointcoord[pt])[ic]*(pointcoord[pt])[jc];
         }
-        
+
         LsqMat[RM3X3Ind(ic,jc)]=matrixEntry;
         LsqMat[RM3X3Ind(jc,ic)]=matrixEntry;
       }
     }
-    
+
     eigenData eigens=eigen_decomposition3X3(LsqMat);
     for(unsigned char ic=0; ic<3; ic++)
     {
       datareg.pnorm[ic]=eigens.eigenVectors[RM3X3Ind(ic,0)]; //extract the 1st col
     }
 
-    
+
     std::vector<double> normdir=datareg.pnorm;
     double normnorm=sqrt(normdir[0]*normdir[0]+normdir[1]*normdir[1]+normdir[2]*normdir[2]);
     for(unsigned char ic=0; ic<3; ic++)
     {
       normdir[ic]=normdir[ic]/normnorm;
     }
-    
+
     std::vector<double> signed_dist_from_plane(n,0.0);
     std::vector<double> proj_dist_from_center(n,0.0);
     for(size_t ipt=0; ipt<n; ipt++)
@@ -1605,9 +1605,9 @@ eigenData INRreader::eigen_decomposition3X3(std::vector<double> &Amatr)
           c = p / r;
           p = c * d[i] - s * g;
           d[i+1] = h + s * (c * g + s * d[i]);
-          
+
           // Accumulate transformation.
-          
+
           for (unsigned char k = 0; k < 3; k++)
           {
             h = V[RM3X3Ind(k,i+1)];
@@ -1652,7 +1652,7 @@ eigenData INRreader::eigen_decomposition3X3(std::vector<double> &Amatr)
   eigens.eigenValues=d;
   eigens.eigenVectors=V;
   return(eigens);
-  
+
 }
 
 std::vector<double> INRreader::InvertA3X3(const std::vector<double> & Mat0) const
@@ -1662,21 +1662,21 @@ std::vector<double> INRreader::InvertA3X3(const std::vector<double> & Mat0) cons
   double det =    Mat0[RM3X3Ind(0,0)]*( Mat0[RM3X3Ind(1,1)]*Mat0[RM3X3Ind(2,2)] - Mat0[RM3X3Ind(1,2)]*Mat0[RM3X3Ind(2,1)] ) +
   -1.0*Mat0[RM3X3Ind(0,1)]*( Mat0[RM3X3Ind(1,0)]*Mat0[RM3X3Ind(2,2)] - Mat0[RM3X3Ind(1,2)]*Mat0[RM3X3Ind(2,0)] ) +
   Mat0[RM3X3Ind(0,2)]*( Mat0[RM3X3Ind(1,0)]*Mat0[RM3X3Ind(2,1)] - Mat0[RM3X3Ind(2,0)]*Mat0[RM3X3Ind(1,1)] ) ;
-  
+
   if(sqrt(det*det)>0.0)
   {
     inverted[RM3X3Ind(0,0)] =        Mat0[RM3X3Ind(1,1)]*Mat0[RM3X3Ind(2,2)] - Mat0[RM3X3Ind(1,2)]*Mat0[RM3X3Ind(2,1)];
     inverted[RM3X3Ind(0,1)] = -1.0*( Mat0[RM3X3Ind(0,1)]*Mat0[RM3X3Ind(2,2)] - Mat0[RM3X3Ind(2,1)]*Mat0[RM3X3Ind(0,2)]);
     inverted[RM3X3Ind(0,2)] =        Mat0[RM3X3Ind(0,1)]*Mat0[RM3X3Ind(1,2)] - Mat0[RM3X3Ind(0,2)]*Mat0[RM3X3Ind(1,1)];
-    
+
     inverted[RM3X3Ind(1,0)] = -1.0*( Mat0[RM3X3Ind(1,0)]*Mat0[RM3X3Ind(2,2)] - Mat0[RM3X3Ind(1,2)]*Mat0[RM3X3Ind(2,0)] );
     inverted[RM3X3Ind(1,1)] =        Mat0[RM3X3Ind(0,0)]*Mat0[RM3X3Ind(2,2)] - Mat0[RM3X3Ind(0,2)]*Mat0[RM3X3Ind(2,0)];
     inverted[RM3X3Ind(1,2)] = -1.0*( Mat0[RM3X3Ind(0,0)]*Mat0[RM3X3Ind(1,2)] - Mat0[RM3X3Ind(0,2)]*Mat0[RM3X3Ind(1,0)]);
-    
+
     inverted[RM3X3Ind(2,0)] =        Mat0[RM3X3Ind(1,0)]*Mat0[RM3X3Ind(2,1)] - Mat0[RM3X3Ind(2,0)]*Mat0[RM3X3Ind(1,1)];
     inverted[RM3X3Ind(2,1)] = -1.0*( Mat0[RM3X3Ind(0,0)]*Mat0[RM3X3Ind(2,1)] - Mat0[RM3X3Ind(2,0)]*Mat0[RM3X3Ind(0,1)]);
     inverted[RM3X3Ind(2,2)] =        Mat0[RM3X3Ind(1,1)]*Mat0[RM3X3Ind(0,0)] - Mat0[RM3X3Ind(1,0)]*Mat0[RM3X3Ind(0,1)];
-    
+
     std::vector<double>::iterator it;
     for(it=inverted.begin(); it!=inverted.end(); ++it)
     {
@@ -1714,7 +1714,7 @@ INRreader::voxConnectType INRreader::evalLocalConnectivity(const setVoxelType vo
           voxConnected[*it].insert(jind);
           voxConnected[jind].insert(*it);
         }
-        
+
         if(Ixyz.iy>0)
         {
           jind=index((Ixyz.ix-1),(Ixyz.iy-1),Ixyz.iz,Ixyz.iv);
@@ -1742,7 +1742,7 @@ INRreader::voxConnectType INRreader::evalLocalConnectivity(const setVoxelType vo
             }
           }
         }// and on xy, y>0
-        
+
         if(Ixyz.iy<(_info.SHAPE[1]-1))
         {
           jind=index((Ixyz.ix-1),(Ixyz.iy+1),Ixyz.iz,Ixyz.iv);
@@ -1770,7 +1770,7 @@ INRreader::voxConnectType INRreader::evalLocalConnectivity(const setVoxelType vo
             }
           }
         }// and on xy, y<NYDIM
-        
+
         if(Ixyz.iz>0)
         {
           jind=index((Ixyz.ix-1),Ixyz.iy,(Ixyz.iz-1),Ixyz.iv);
@@ -1780,7 +1780,7 @@ INRreader::voxConnectType INRreader::evalLocalConnectivity(const setVoxelType vo
             voxConnected[jind].insert(*it);
           }
         }//and of xz, z>0
-        
+
         if(Ixyz.iz<(_info.SHAPE[2]-1))
         {
           jind=index((Ixyz.ix-1),Ixyz.iy,(Ixyz.iz+1),Ixyz.iv);
@@ -1800,7 +1800,7 @@ INRreader::voxConnectType INRreader::evalLocalConnectivity(const setVoxelType vo
           voxConnected[*it].insert(jind);
           voxConnected[jind].insert(*it);
         }
-        
+
         if(Ixyz.iy>0)
         {
           jind=index((Ixyz.ix+1),(Ixyz.iy-1),Ixyz.iz,Ixyz.iv);
@@ -1828,7 +1828,7 @@ INRreader::voxConnectType INRreader::evalLocalConnectivity(const setVoxelType vo
             }
           }
         }// and on xy, y>0
-        
+
         if(Ixyz.iy<(_info.SHAPE[1]-1))
         {
           jind=index((Ixyz.ix+1),(Ixyz.iy+1),Ixyz.iz,Ixyz.iv);
@@ -1856,7 +1856,7 @@ INRreader::voxConnectType INRreader::evalLocalConnectivity(const setVoxelType vo
             }
           }
         }// and on xy, y<NYDIM
-        
+
         if(Ixyz.iz>0)
         {
           jind=index((Ixyz.ix+1),Ixyz.iy,(Ixyz.iz-1),Ixyz.iv);
@@ -1866,7 +1866,7 @@ INRreader::voxConnectType INRreader::evalLocalConnectivity(const setVoxelType vo
             voxConnected[jind].insert(*it);
           }
         }//and of xz, z>0
-        
+
         if(Ixyz.iz<(_info.SHAPE[2]-1))
         {
           jind=index((Ixyz.ix+1),Ixyz.iy,(Ixyz.iz+1),Ixyz.iv);
@@ -1877,8 +1877,8 @@ INRreader::voxConnectType INRreader::evalLocalConnectivity(const setVoxelType vo
           }
         }//and of xz, z<NZDIM
       }// (end of ix<NXDIM)
-      
-      
+
+
       if(Ixyz.iy>0)
       {
         size_t jind=index(Ixyz.ix,(Ixyz.iy-1),Ixyz.iz,Ixyz.iv);
@@ -1915,7 +1915,7 @@ INRreader::voxConnectType INRreader::evalLocalConnectivity(const setVoxelType vo
           voxConnected[*it].insert(jind);
           voxConnected[jind].insert(*it);
         }
-        
+
         if(Ixyz.iz>0)
         {
           jind=index(Ixyz.ix,(Ixyz.iy+1),(Ixyz.iz-1),Ixyz.iv);
@@ -1925,7 +1925,7 @@ INRreader::voxConnectType INRreader::evalLocalConnectivity(const setVoxelType vo
             voxConnected[jind].insert(*it);
           }
         }//end on iy, iz>0
-        
+
         if(Ixyz.iz<(_info.SHAPE[2]-1))
         {
           jind=index(Ixyz.ix,(Ixyz.iy+1),(Ixyz.iz+1),Ixyz.iv);
@@ -1936,7 +1936,7 @@ INRreader::voxConnectType INRreader::evalLocalConnectivity(const setVoxelType vo
           }
         }//end on iy, iz<NZDIM
       }// end on iy<NYDIM
-      
+
       if(Ixyz.iz>0)
       {
         size_t jind=index(Ixyz.ix,Ixyz.iy,(Ixyz.iz-1),Ixyz.iv);
@@ -1970,8 +1970,8 @@ void INRreader::subdivideRegions(regionSubdivisionType & voxelReg, const voxConn
     typedef regionSubdivisionType::iterator regionSubdivisionTypeIterator;
     typedef setVoxelType::iterator setVoxelTypeIterator;
     typedef setVoxelType::const_iterator setVoxelTypeIteratorConst;
-    
-    
+
+
     voxelToRegionMapType voxelToregionMap;
     regionSetType regionLabels;
     for(regionSubdivisionTypeIterator mapit=voxelReg.begin(); mapit!=voxelReg.end();++mapit)
@@ -1999,7 +1999,7 @@ void INRreader::subdivideRegions(regionSubdivisionType & voxelReg, const voxConn
           {
             connections.insert(*connectiter);
           }
-        } 
+        }
         regionconnect.insert(std::pair<size_t, setVoxelType> (*cRegIt,connections) );
       }
 
@@ -2044,14 +2044,3 @@ void INRreader::subdivideRegions(regionSubdivisionType & voxelReg, const voxConn
       }// end if on size
     }//algo division ends
 }
-
-
-
-
-
-
-
-
-
-
-

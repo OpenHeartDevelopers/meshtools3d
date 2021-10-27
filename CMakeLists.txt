@@ -14,10 +14,10 @@ if("${CMAKE_MAJOR_VERSION}.${CMAKE_MINOR_VERSION}" VERSION_GREATER 2.6)
 endif()
 
 set( CMAKE_ALLOW_LOOSE_LOOP_CONSTRUCTS true )
- 
+
 if ( COMMAND cmake_policy )
 
-  cmake_policy( SET CMP0003 NEW )  
+  cmake_policy( SET CMP0003 NEW )
 
 endif()
 
@@ -27,7 +27,7 @@ find_package( CGAL QUIET COMPONENTS ImageIO  )
 if ( NOT CGAL_FOUND )
 
   message(STATUS "This project requires the CGAL library, and will not be compiled.")
-  return()  
+  return()
 
 endif()
 
@@ -42,16 +42,16 @@ if ( NOT Boost_FOUND )
 
   message(STATUS "This project requires the Boost library, and will not be compiled.")
 
-  return()  
+  return()
 
 endif()
 
-find_package( TBB QUIET ) 
+find_package( TBB QUIET )
 
-if( TBB_FOUND ) 
-  include(${TBB_USE_FILE}) 
-  list(APPEND CGAL_3RD_PARTY_LIBRARIES ${TBB_LIBRARIES}) 
-endif() 
+if( TBB_FOUND )
+  include(${TBB_USE_FILE})
+  list(APPEND CGAL_3RD_PARTY_LIBRARIES ${TBB_LIBRARIES})
+endif()
 
 
 # include for local directory
@@ -61,11 +61,14 @@ endif()
 
 # Creating entries for target: meshtools3d
 # ############################
+set(MESHTOOLS3D_INCLUDES "./m3d/include")
 
-add_executable( meshtools3d  GetPot.cpp main.cpp INRreader.cpp Mesh.cpp Chrono.cpp ThicknessEvaluation.cpp  LaplaceSolver.cpp  mgmres.cpp VtkWriter.cpp )
+add_subdirectory(m3d/src)
+include_directories(${MESHTOOLS3D_INCLUDES})
 
-add_to_cached_list( CGAL_EXECUTABLE_TARGETS meshtools3d )
+add_executable(meshtools3d applications/main.cpp)
+
+add_to_cached_list(CGAL_EXECUTABLE_TARGETS meshtools3d)
 
 # Link the executable to CGAL and third-party libraries
-target_link_libraries(meshtools3d   ${CGAL_LIBRARIES} ${CGAL_3RD_PARTY_LIBRARIES} )
-
+target_link_libraries(meshtools3d m3d ${CGAL_LIBRARIES} ${CGAL_3RD_PARTY_LIBRARIES})

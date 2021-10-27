@@ -10,7 +10,7 @@
 #include<boost/filesystem.hpp>
 #endif
 
-#include "VtkWriter.hpp"
+#include "../include/VtkWriter.hpp"
 
 
 VtkWriter::VtkWriter( bool binary)
@@ -57,7 +57,7 @@ VtkWriter::~VtkWriter()
 
 void VtkWriter::openFileForOutput()
 {
-  
+
   if(_meshSetted)
   {
     std::string FileName= M_dir + "/" + M_prefix+ ".vtk";
@@ -83,7 +83,7 @@ void VtkWriter::openFileForOutput()
         std::cerr<<"ERROR: directory "<< M_dir<<" not created"<<std::endl;
         exit(1);
     }
-#endif    
+#endif
     std::cout<<"Opening File "<<FileName<<std::endl;
     if (M_is_binary)
     {
@@ -154,7 +154,7 @@ void VtkWriter::writeVariable(const unkVecType &  dvar, std::string nameVar, Typ
   if(!_headvarWritten)
   {
     M_write_var_head( outputVTKFile );
-    _headvarWritten = true;  
+    _headvarWritten = true;
   }
   if(varType==Scalar)
   {
@@ -220,7 +220,7 @@ void VtkWriter::M_write_geo( std::ofstream & VTKFile )
       }
     }
   }//end loop on points
-  
+
   if(M_is_binary)
   {
     VTKFile<<std::endl;
@@ -440,4 +440,3 @@ void VtkWriter::M_write_variables(std::ofstream & VTKFile)
 
 
 */
-

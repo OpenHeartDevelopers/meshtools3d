@@ -15,11 +15,11 @@
 
 //using namespace std;
 
-# include "mgmres.hpp"
+# include "../include/mgmres.hpp"
 
 //****************************************************************************80
 
-void atx_cr ( long int n, long int nz_num, long int ia[], long int ja[], double a[], double x[], 
+void atx_cr ( long int n, long int nz_num, long int ia[], long int ja[], double a[], double x[],
   double w[] )
 
 //****************************************************************************80
@@ -42,12 +42,12 @@ void atx_cr ( long int n, long int nz_num, long int ia[], long int ja[], double 
 //    For this version of MGMRES, the row and column indices are assumed
 //    to use the C/C++ convention, in which indexing begins at 0.
 //
-//    If your index vectors IA and JA are set up so that indexing is based 
+//    If your index vectors IA and JA are set up so that indexing is based
 //    at 1, then each use of those vectors should be shifted down by 1.
 //
 //  Licensing:
 //
-//    This code is distributed under the GNU LGPL license. 
+//    This code is distributed under the GNU LGPL license.
 //
 //  Modified:
 //
@@ -117,7 +117,7 @@ void atx_cr ( long int n, long int nz_num, long int ia[], long int ja[], double 
 }
 //****************************************************************************80
 
-void atx_st ( long int n, long int nz_num, long int ia[], long int ja[], double a[], double x[], 
+void atx_st ( long int n, long int nz_num, long int ia[], long int ja[], double a[], double x[],
   double w[] )
 
 //****************************************************************************80
@@ -138,7 +138,7 @@ void atx_st ( long int n, long int nz_num, long int ia[], long int ja[], double 
 //
 //  Licensing:
 //
-//    This code is distributed under the GNU LGPL license. 
+//    This code is distributed under the GNU LGPL license.
 //
 //  Modified:
 //
@@ -230,12 +230,12 @@ void ax_cr ( const long int & n, const long int & nz_num, const long int * ia, c
 //    For this version of MGMRES, the row and column indices are assumed
 //    to use the C/C++ convention, in which indexing begins at 0.
 //
-//    If your index vectors IA and JA are set up so that indexing is based 
+//    If your index vectors IA and JA are set up so that indexing is based
 //    at 1, then each use of those vectors should be shifted down by 1.
 //
 //  Licensing:
 //
-//    This code is distributed under the GNU LGPL license. 
+//    This code is distributed under the GNU LGPL license.
 //
 //  Modified:
 //
@@ -312,7 +312,7 @@ void ax_cr ( const long int & n, const long int & nz_num, const long int * ia, c
     }
   }
   return;
-#endif  
+#endif
 }
 //****************************************************************************80
 
@@ -337,7 +337,7 @@ void ax_st ( long int n, long int nz_num, long int ia[], long int ja[], double a
 //
 //  Licensing:
 //
-//    This code is distributed under the GNU LGPL license. 
+//    This code is distributed under the GNU LGPL license.
 //
 //  Modified:
 //
@@ -431,7 +431,7 @@ void diagonal_pointer_cr ( const long int & n, const long int & nz_num, const lo
 //
 //  Licensing:
 //
-//    This code is distributed under the GNU LGPL license. 
+//    This code is distributed under the GNU LGPL license.
 //
 //  Modified:
 //
@@ -475,14 +475,14 @@ void diagonal_pointer_cr ( const long int & n, const long int & nz_num, const lo
 
     for ( j = j1; j < j2; j++ )
     {
-      if ( ja[j] == i ) 
+      if ( ja[j] == i )
       {
         ua[i] = j;
         break;
       }
     }
   }
-#endif  
+#endif
 }
 //****************************************************************************80
 
@@ -505,7 +505,7 @@ void ilu_cr ( const long int & n, const long int & nz_num, const long int * ia, 
 //
 //  Licensing:
 //
-//    This code is distributed under the GNU LGPL license. 
+//    This code is distributed under the GNU LGPL license.
 //
 //  Modified:
 //
@@ -548,31 +548,31 @@ void ilu_cr ( const long int & n, const long int & nz_num, const long int * ia, 
 #ifdef USE_TBB_PARALLEL
   vectorCopy<double>(a, l,  nz_num);
 #else
-  for ( k = 0; k < nz_num; k++ ) 
+  for ( k = 0; k < nz_num; k++ )
   {
     l[k] = a[k];
   }
 #endif
-  for ( i = 0; i < n; i++ ) 
+  for ( i = 0; i < n; i++ )
   {
 //
 //  IW points to the nonzero entries in row I.
 //
-#ifdef USE_TBB_PARALLEL    
+#ifdef USE_TBB_PARALLEL
   initializeVector<long int>(iw, -1, n);
-#else    
+#else
     for ( j = 0; j < n; j++ )
     {
       iw[j] = -1;
     }
 #endif
-    for ( k = ia[i]; k <= ia[i+1] - 1; k++ ) 
+    for ( k = ia[i]; k <= ia[i+1] - 1; k++ )
     {
       iw[ja[k]] = k;
     }
 
     j = ia[i];
-    do 
+    do
     {
       jrow = ja[j];
       if ( i <= jrow )
@@ -581,10 +581,10 @@ void ilu_cr ( const long int & n, const long int & nz_num, const long int * ia, 
       }
       tl = l[j] * l[ua[jrow]];
       l[j] = tl;
-      for ( jj = ua[jrow] + 1; jj <= ia[jrow+1] - 1; jj++ ) 
+      for ( jj = ua[jrow] + 1; jj <= ia[jrow+1] - 1; jj++ )
       {
         jw = iw[ja[jj]];
-        if ( jw != -1 ) 
+        if ( jw != -1 )
         {
           l[jw] = l[jw] - tl * l[jj];
         }
@@ -594,7 +594,7 @@ void ilu_cr ( const long int & n, const long int & nz_num, const long int * ia, 
 
     ua[i] = j;
 
-    if ( jrow != i ) 
+    if ( jrow != i )
     {
       std::cout << "\n";
       std::cout << "ILU_CR - Fatal error!\n";
@@ -604,7 +604,7 @@ void ilu_cr ( const long int & n, const long int & nz_num, const long int * ia, 
       exit ( 1 );
     }
 
-    if ( l[j] == 0.0 ) 
+    if ( l[j] == 0.0 )
     {
       std::cout << "\n";
       std::cout << "ILU_CR - Fatal error!\n";
@@ -616,7 +616,7 @@ void ilu_cr ( const long int & n, const long int & nz_num, const long int * ia, 
     l[j] = 1.0 / l[j];
   }
 
-  for ( k = 0; k < n; k++ ) 
+  for ( k = 0; k < n; k++ )
   {
     l[ua[k]] = 1.0 / l[ua[k]];
   }
@@ -650,7 +650,7 @@ void lus_cr ( const long int & n, const long int & nz_num, const long int *ia, c
 //
 //  Licensing:
 //
-//    This code is distributed under the GNU LGPL license. 
+//    This code is distributed under the GNU LGPL license.
 //
 //  Modified:
 //
@@ -695,7 +695,7 @@ void lus_cr ( const long int & n, const long int & nz_num, const long int *ia, c
   {
     w[i] = r[i];
   }
-#endif  
+#endif
 //
 //  Solve L * w = w where L is unit lower triangular.
 //
@@ -709,9 +709,9 @@ void lus_cr ( const long int & n, const long int & nz_num, const long int *ia, c
 //
 //  Solve U * w = w, where U is upper triangular.
 //
-  for ( i = n - 1; 0 <= i; i-- ) 
+  for ( i = n - 1; 0 <= i; i-- )
   {
-    for ( j = ua[i] + 1; j < ia[i+1]; j++ ) 
+    for ( j = ua[i] + 1; j < ia[i+1]; j++ )
     {
       w[i] = w[i] - l[j] * w[ja[j]];
     }
@@ -727,7 +727,7 @@ void lus_cr ( const long int & n, const long int & nz_num, const long int *ia, c
   {
     z[i] = w[i];
   }
-#endif  
+#endif
   delete [] w;
 
   return;
@@ -763,7 +763,7 @@ void mgmres_st ( long int n, long int nz_num, long int ia[], long int ja[], doub
 //
 //  Licensing:
 //
-//    This code is distributed under the GNU LGPL license. 
+//    This code is distributed under the GNU LGPL license.
 //
 //  Modified:
 //
@@ -878,12 +878,12 @@ void mgmres_st ( long int n, long int nz_num, long int ia[], long int ja[], doub
 
     rho = sqrt ( r8vec_dot ( n, r, r ) );
 
-    if ( verbose ) 
+    if ( verbose )
     {
       std::cout << "  ITR = " << itr << "  Residual = " << rho << "\n";
     }
 
-    if ( itr == 1 ) 
+    if ( itr == 1 )
     {
       rho_tol = rho * tol_rel;
     }
@@ -901,7 +901,7 @@ void mgmres_st ( long int n, long int nz_num, long int ia[], long int ja[], doub
 
     for ( i = 0; i < mr+1; i++ )
     {
-      for ( j = 0; j < mr; j++ ) 
+      for ( j = 0; j < mr; j++ )
       {
         h[i+j*(mr+1)] = 0.0;
       }
@@ -918,7 +918,7 @@ void mgmres_st ( long int n, long int nz_num, long int ia[], long int ja[], doub
       for ( j = 1; j <= k; j++ )
       {
         h[(j-1)+(k-1)*(mr+1)] = r8vec_dot ( n, v+k*n, v+(j-1)*n );
-        for ( i = 0; i < n; i++ ) 
+        for ( i = 0; i < n; i++ )
         {
           v[i+k*n] = v[i+k*n] - h[(j-1)+(k-1)*(mr+1)] * v[i+(j-1)*n];
         }
@@ -942,7 +942,7 @@ void mgmres_st ( long int n, long int nz_num, long int ia[], long int ja[], doub
 
       if ( h[k+(k-1)*(mr+1)] != 0.0 )
       {
-        for ( i = 0; i < n; i++ ) 
+        for ( i = 0; i < n; i++ )
         {
           v[i+k*n] = v[i+k*n] / h[k+(k-1)*(mr+1)];
         }
@@ -954,20 +954,20 @@ void mgmres_st ( long int n, long int nz_num, long int ia[], long int ja[], doub
         {
           y[i-1] = h[(i-1)+(k-1)*(mr+1)];
         }
-        for ( j = 1; j <= k - 1; j++ ) 
+        for ( j = 1; j <= k - 1; j++ )
         {
           mult_givens ( c[j-1], s[j-1], j-1, y );
         }
-        for ( i = 1; i <= k+1; i++ ) 
+        for ( i = 1; i <= k+1; i++ )
         {
           h[i-1+(k-1)*(mr+1)] = y[i-1];
         }
       }
-      mu = sqrt ( pow ( h[(k-1)+(k-1)*(mr+1)], 2 ) 
+      mu = sqrt ( pow ( h[(k-1)+(k-1)*(mr+1)], 2 )
                 + pow ( h[ k   +(k-1)*(mr+1)], 2 ) );
       c[k-1] =  h[(k-1)+(k-1)*(mr+1)] / mu;
       s[k-1] = -h[ k   +(k-1)*(mr+1)] / mu;
-      h[(k-1)+(k-1)*(mr+1)] = c[k-1] * h[(k-1)+(k-1)*(mr+1)] 
+      h[(k-1)+(k-1)*(mr+1)] = c[k-1] * h[(k-1)+(k-1)*(mr+1)]
                             - s[k-1] * h[ k   +(k-1)*(mr+1)];
       h[k+(k-1)*(mr+1)] = 0;
       mult_givens ( c[k-1], s[k-1], k-1, g );
@@ -993,7 +993,7 @@ void mgmres_st ( long int n, long int nz_num, long int ia[], long int ja[], doub
     for ( i = k; 1 <= i; i-- )
     {
       y[i-1] = g[i-1];
-      for ( j = i+1; j <= k+1; j++ ) 
+      for ( j = i+1; j <= k+1; j++ )
       {
         y[i-1] = y[i-1] - h[(i-1)+(j-1)*(mr+1)] * y[j-1];
       }
@@ -1008,7 +1008,7 @@ void mgmres_st ( long int n, long int nz_num, long int ia[], long int ja[], doub
       }
     }
 
-    if ( rho <= rho_tol && rho <= tol_abs ) 
+    if ( rho <= rho_tol && rho <= tol_abs )
     {
       break;
     }
@@ -1044,7 +1044,7 @@ void mult_givens ( const double & c, const double & s, const long int & k, doubl
 //
 //  Licensing:
 //
-//    This code is distributed under the GNU LGPL license. 
+//    This code is distributed under the GNU LGPL license.
 //
 //  Modified:
 //
@@ -1103,9 +1103,9 @@ void mult_givens ( const double & c, const double & s, const long int & k, doubl
 }
 //****************************************************************************80
 
-void pmgmres_ilu_cr ( const long int & n, const long int & nz_num, 
-                      const long int * ia,  long int * ja,  double *a,   double * x, const double *rhs, 
-                      const long int & itr_max, const long int & mr, const double & tol_abs, 
+void pmgmres_ilu_cr ( const long int & n, const long int & nz_num,
+                      const long int * ia,  long int * ja,  double *a,   double * x, const double *rhs,
+                      const long int & itr_max, const long int & mr, const double & tol_abs,
                       const double & tol_rel, short int verbose )
 
 
@@ -1141,7 +1141,7 @@ void pmgmres_ilu_cr ( const long int & n, const long int & nz_num,
 //
 //  Licensing:
 //
-//    This code is distributed under the GNU LGPL license. 
+//    This code is distributed under the GNU LGPL license.
 //
 //  Modified:
 //
@@ -1269,15 +1269,15 @@ void pmgmres_ilu_cr ( const long int & n, const long int & nz_num,
       std::cout << "  Number of unknowns = " << n << "\n";
   }
 
-  for ( itr = 0; itr < itr_max; itr++ ) 
+  for ( itr = 0; itr < itr_max; itr++ )
   {
     ax_cr ( n, nz_num, ia, ja, a, x, r );
 
-    
-#ifdef USE_TBB_PARALLEL    
+
+#ifdef USE_TBB_PARALLEL
     vxmvVectorUpdating<double>(r, rhs,n);
 #else
-    for ( i = 0; i < n; i++ ) 
+    for ( i = 0; i < n; i++ )
     {
       r[i] = rhs[i] - r[i];
     }
@@ -1295,24 +1295,24 @@ void pmgmres_ilu_cr ( const long int & n, const long int & nz_num,
     {
       rho_tol = rho * tol_rel;
     }
-#ifdef USE_TBB_PARALLEL    
+#ifdef USE_TBB_PARALLEL
     double invrho=1.0/rho;
     yaxsFunc<double>(r, v, invrho,n);
 #else
-    for ( i = 0; i < n; i++ ) 
+    for ( i = 0; i < n; i++ )
     {
       v[0*n+i] = r[i] / rho;
     }
 #endif
     g[0] = rho;
-    for ( i = 1; i < mr + 1; i++ ) 
+    for ( i = 1; i < mr + 1; i++ )
     {
       g[i] = 0.0;
     }
 
-    for ( i = 0; i < mr + 1; i++ ) 
+    for ( i = 0; i < mr + 1; i++ )
     {
-      for ( j = 0; j < mr; j++ ) 
+      for ( j = 0; j < mr; j++ )
       {
         h[i*(mr)+j] = 0.0;
       }
@@ -1322,29 +1322,29 @@ void pmgmres_ilu_cr ( const long int & n, const long int & nz_num,
     {
       k_copy = k;
 
-      ax_cr ( n, nz_num, ia, ja, a, v+k*n, v+(k+1)*n ); 
+      ax_cr ( n, nz_num, ia, ja, a, v+k*n, v+(k+1)*n );
 
       lus_cr ( n, nz_num, ia, ja, l, ua, v+(k+1)*n, v+(k+1)*n );
 
       av = sqrt ( r8vec_dot ( n, v+(k+1)*n, v+(k+1)*n ) );
 
-      for ( j = 0; j <= k; j++ ) 
+      for ( j = 0; j <= k; j++ )
       {
         h[j*mr+k] = r8vec_dot ( n, v+(k+1)*n, v+j*n );
-        for ( i = 0; i < n; i++ ) 
+        for ( i = 0; i < n; i++ )
         {
           v[(k+1)*n+i] = v[(k+1)*n+i] - h[j*mr+k] * v[j*n+i];
         }
       }
       h[(k+1)*mr+k] = sqrt ( r8vec_dot ( n, v+(k+1)*n, v+(k+1)*n ) );
 
-      if ( ( av + delta * h[(k+1)*mr+k]) == av ) 
+      if ( ( av + delta * h[(k+1)*mr+k]) == av )
       {
         for ( j = 0; j < k + 1; j++ )
         {
           htmp = r8vec_dot ( n, v+(k+1)*n, v+j*n );
           h[j*mr+k] = h[j*mr+k] + htmp;
-          for ( i = 0; i < n; i++ ) 
+          for ( i = 0; i < n; i++ )
           {
             v[(k+1)*n+i] = v[(k+1)*n+i] - htmp * v[j*n+i];
           }
@@ -1357,16 +1357,16 @@ void pmgmres_ilu_cr ( const long int & n, const long int & nz_num,
         for ( i = 0; i < n; i++ )
         {
           v[(k+1)*n+i] = v[(k+1)*n+i] / h[(k+1)*mr+k];
-        } 
+        }
       }
 
-      if ( 0 < k )  
+      if ( 0 < k )
       {
-        for ( i = 0; i < k + 2; i++ ) 
+        for ( i = 0; i < k + 2; i++ )
         {
           y[i] = h[i*mr+k];
         }
-        for ( j = 0; j < k; j++ ) 
+        for ( j = 0; j < k; j++ )
         {
           mult_givens ( c[j], s[j], j, y );
         }
@@ -1403,13 +1403,13 @@ void pmgmres_ilu_cr ( const long int & n, const long int & nz_num,
     for ( i = k - 1; 0 <= i; i-- )
     {
       y[i] = g[i];
-      for ( j = i + 1; j < k + 1; j++ ) 
+      for ( j = i + 1; j < k + 1; j++ )
       {
         y[i] = y[i] - h[i*mr+j] * y[j];
       }
       y[i] = y[i] / h[i*mr+i];
     }
-    
+
 #ifdef USE_TBB_PARALLEL
     xxvyFunc(x, y, v, k, n);
 #else
@@ -1459,7 +1459,7 @@ double r8vec_dot ( const long int & n, const double * a1, const double * a2 )
 //
 //  Licensing:
 //
-//    This code is distributed under the GNU LGPL license. 
+//    This code is distributed under the GNU LGPL license.
 //
 //  Modified:
 //
@@ -1518,7 +1518,7 @@ double *r8vec_uniform_01 ( const long int & n, long int *seed )
 //
 //  Licensing:
 //
-//    This code is distributed under the GNU LGPL license. 
+//    This code is distributed under the GNU LGPL license.
 //
 //  Modified:
 //
@@ -1624,7 +1624,7 @@ void rearrange_cr ( const long int & n, const long int & nz_num, const long int 
 //
 //  Licensing:
 //
-//    This code is distributed under the GNU LGPL license. 
+//    This code is distributed under the GNU LGPL license.
 //
 //  Modified:
 //
@@ -1668,11 +1668,11 @@ void rearrange_cr ( const long int & n, const long int & nz_num, const long int 
     is = j2 - j1;
     rearrange_cr_row(j1,j2,ja,a);
 
-    /*for ( k = 1; k < is; k++ ) 
+    /*for ( k = 1; k < is; k++ )
     {
-      for ( j = j1; j < j2 - k; j++ ) 
+      for ( j = j1; j < j2 - k; j++ )
       {
-        if ( ja[j+1] < ja[j] ) 
+        if ( ja[j+1] < ja[j] )
         {
           itemp = ja[j+1];
           ja[j+1] =  ja[j];
@@ -1696,11 +1696,11 @@ void rearrange_cr_row ( const long int & j1,const long int & j2, long int * ja, 
     long int itemp=0;
     double dtemp=0.0;
 
-    for ( k = 1; k < is; k++ ) 
+    for ( k = 1; k < is; k++ )
     {
-      for ( j = j1; j < j2 - k; j++ ) 
+      for ( j = j1; j < j2 - k; j++ )
       {
-        if ( ja[j+1] < ja[j] ) 
+        if ( ja[j+1] < ja[j] )
         {
           itemp = ja[j+1];
           ja[j+1] =  ja[j];
@@ -1732,7 +1732,7 @@ void timestamp ( )
 //
 //  Licensing:
 //
-//    This code is distributed under the GNU LGPL license. 
+//    This code is distributed under the GNU LGPL license.
 //
 //  Modified:
 //
