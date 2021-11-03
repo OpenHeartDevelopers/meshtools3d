@@ -41,13 +41,20 @@ int main(int argc,char **argv)
 
   if( command_line.search(2, "-h","--help") || (argc==1) )
   {
-      std::cout<<"MeshTools3D\nUsage: ";
+      std::cout<<"MeshTools3D\nUsage (segmentation to mesh): \n\t";
       std::cout<<"./meshtools3d -f <data_filename> -seg_dir <segmentation_dir> -seg_name <segmentation_name> -out_dir <output_dir> -out_name <output_name>"<<std::endl;
+      std::cout<<"\nUsage (input mesh): \n\t";
+      std::cout<<"./meshtools3d -f <data_filename> --read_the_mesh -mesh_dir <mesh_directory> -mesh_name <mesh_name> -out_dir <output_dir> -out_name <output_name>"<<std::endl;
       std::cout<<"\t data_filename is the file name where parameters are"<<std::endl;
       std::cout<<"\t segmentation_dir, segmentation_name are the directory and the name of the input segmentation"<<std::endl;
+      std::cout<<"\t mesh_directory, mesh_name are the directory and the name of the input segmentation"<<std::endl;
       std::cout<<"\t output_dir, output_name are the output directory and the output suffix"<<std::endl;
+      std::cout << "OTHER OPTIONS:" << std::endl;
+      std::cout << "\t--read_the_mesh,           -meshr:         Used to read mesh as input " << std::endl;
+      std::cout << "\t--thickness-algorithm <N>, -thickalgo <N>: N=1 or 2, to select algorithm" << std::endl;
+      std::cout << "\t--verbose,                 -v:             Shows more messages" << std::endl;
       std::cout<<"NOTE:"<<std::endl;
-      std::cout<<"\t If -seg_dir, -seg_name, -out_dir, -out_name are optional aruments,\n\t they overwrite those specified in the data file (used, for example, to use meshtools3d within a script)"<<std::endl;
+      std::cout<<"\t The flags -seg_dir, -seg_name, -mesh_dir, -mesh_name, -out_dir, -out_name are optional aruments,\n\t they overwrite those specified in the data file (used, for example, to use meshtools3d within a script)"<<std::endl;
       exit(0);
   }
 
