@@ -55,7 +55,7 @@ int main(int argc,char **argv)
   std::string seg_dir            = param_file("segmentation/seg_dir",".");
   std::string seg_name           = param_file("segmentation/seg_name","image.inr");
   bool mesh_from_segmentation    = param_file("segmentation/mesh_from_segmentation",true);
-  bool boundary_relabeling       = param_file("segmentation/boundary_relabeling",false);
+  bool boundary_relabeling       = param_file("segmentation/boundary_relabeling",true);
   bool readTheMesh               = param_file("meshing/readTheMesh",false);
 
   std::string mesh_dir           = param_file("meshing/mesh_dir","./");
@@ -401,7 +401,7 @@ int main(int argc,char **argv)
   }
   else
   {
-      std::cout<<"no boundary re-labelin for his mesh"<<std::endl<<std::flush;
+      std::cout<<"no boundary re-labeling for his mesh"<<std::endl<<std::flush;
   }
 
 
