@@ -62,6 +62,7 @@ int main(int argc,char **argv)
   std::string seg_dir            = param_file("segmentation/seg_dir",".");
   std::string seg_name           = param_file("segmentation/seg_name","image.inr");
   bool mesh_from_segmentation    = param_file("segmentation/mesh_from_segmentation",true);
+  bool boundary_relabeling       = param_file("segmentation/boundary_relabeling",true);
   bool readTheMesh               = param_file("meshing/readTheMesh",false);
 
   std::string mesh_dir           = param_file("meshing/mesh_dir","./");
@@ -408,13 +409,22 @@ int main(int argc,char **argv)
       CarpMesh.meshRescaling(rescaling); //rescale the whole mesh; not on output. So output of rescaling is 1 now
   }// end mesh is not read
 
-  std::cout<<"boundary re-labeling..."<<std::flush;
-  chrono2.start();
-  CarpMesh.evalBoundaryLabels(debug_output,out_dir,debug_frequency);
-  chrono2.stop();
-  std::cout<<" done in "<<chrono2<<std::endl;
-  chrono2.reset();
-  CarpMesh.writeBoundaryLabels(out_dir, out_name);
+  if(boundary_relabeling)
+  {
+      std::cout<<"boundary re-labeling..."<<std::flush;
+      chrono2.start();
+      CarpMesh.evalBoundaryLabels(debug_output,out_dir,debug_frequency);
+      chrono2.stop();
+      std::cout<<" done in "<<chrono2<<std::endl;
+      chrono2.reset();
+      CarpMesh.writeBoundaryLabels(out_dir, out_name);      
+  }
+  else
+  {
+      std::cout<<"no boundary re-labeling for his mesh"<<std::endl<<std::flush;
+  }
+
+
   if((out_carp) && (!readTheMesh))
   {
       std::string cfileoutName=out_dir+"/"+out_name;
