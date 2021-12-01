@@ -151,7 +151,7 @@ private:
 
     // -- get a specific element in the string vector
     //    (return 0 if not present)
-    const std::string*  get_element(size_t Idx) const;
+    const std::string*  get_element(unsigned Idx) const;
 
 
     // -- data memebers
