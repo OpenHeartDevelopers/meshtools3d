@@ -67,8 +67,12 @@ add_subdirectory(m3d/src)
 include_directories(${MESHTOOLS3D_INCLUDES})
 
 add_executable(meshtools3d applications/main.cpp)
+add_executable(laplace_solver applications/laplace_solver.cpp)
 
 add_to_cached_list(CGAL_EXECUTABLE_TARGETS meshtools3d)
 
-# Link the executable to CGAL and third-party libraries
+# Link the executables to CGAL and third-party libraries
 target_link_libraries(meshtools3d m3d ${CGAL_LIBRARIES} ${CGAL_3RD_PARTY_LIBRARIES})
+
+# laplace_solver has no CGAL dependency (pure m3d library)
+target_link_libraries(laplace_solver m3d ${CGAL_3RD_PARTY_LIBRARIES})
