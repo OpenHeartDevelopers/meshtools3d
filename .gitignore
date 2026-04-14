@@ -52,3 +52,8 @@ Release/*
 
 *.vcxproj*
 *.sln*
+
+
+CLAUDE.m3 
+.claude/
+.claude/** 
