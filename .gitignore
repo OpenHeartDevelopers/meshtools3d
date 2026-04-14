@@ -54,6 +54,6 @@ Release/*
 *.sln*
 
 
-CLAUDE.m3 
 .claude/
 .claude/** 
+CLAUDE.md
