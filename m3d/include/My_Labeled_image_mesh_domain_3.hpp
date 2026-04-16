@@ -19,6 +19,7 @@
 #include <CGAL/Random.h>
 #include <CGAL/Labeled_mesh_domain_3.h>
 #include <CGAL/Bbox_3.h>
+#include <CGAL/Mesh_3/config.h>
 #include "MyImageWrapper.hpp"
 #include "INRreader.hpp"
 
@@ -34,10 +35,10 @@ template<class BGT,
          class Wrapper = MyImageWrapper<BGT, Image_word_type, Subdomain_index> >
 
 class My_Labeled_image_mesh_domain_3
-: public Labeled_mesh_domain_3<Wrapper, BGT>
+: public Labeled_mesh_domain_3<BGT>
 {
 public:
-  typedef Labeled_mesh_domain_3<Wrapper, BGT> Base;
+  typedef Labeled_mesh_domain_3<BGT> Base;
 
   typedef typename Base::Sphere_3 Sphere_3;
   typedef typename Base::FT FT;
@@ -46,16 +47,18 @@ public:
 
   /// Constructor
   My_Labeled_image_mesh_domain_3(const INRreader& image,
-                              const FT& error_bound = FT(1e-3),
-                              CGAL::Random* p_rng = NULL)
-    :Base(Wrapper(image),compute_bounding_box(image), error_bound, p_rng)
+                              const FT& error_bound = FT(1e-3))
+    :Base(Wrapper(image),
+          compute_bounding_box(image),
+          CGAL::parameters::relative_error_bound(error_bound))
   {}
 
   My_Labeled_image_mesh_domain_3(const INRreader& image,
                               const CGAL::Bbox_3& bbox,
-                              const FT& error_bound = FT(1e-3),
-                              CGAL::Random* p_rng = NULL)
-    :Base(Wrapper(image), bbox, error_bound, p_rng)
+                              const FT& error_bound = FT(1e-3))
+    :Base(Wrapper(image),
+          bbox,
+          CGAL::parameters::relative_error_bound(error_bound))
   {}
 
   /// Destructor

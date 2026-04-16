@@ -22,7 +22,7 @@
 
 #include<set>
 #ifdef CGAL_LINKED_WITH_TBB
-#include <tbb/task_scheduler_init.h>
+#include <tbb/global_control.h>
 #endif
 
 
@@ -122,7 +122,7 @@ int main(int argc,char **argv)
   } else {
     std::cout << "nb of threads is: " << numThreads << std::endl;
   }
-  tbb::task_scheduler_init init(numThreads);
+  tbb::global_control gc(tbb::global_control::max_allowed_parallelism, numThreads);
   nthr=NULL;
 #endif
 
@@ -160,15 +160,15 @@ int main(int argc,char **argv)
           CGAL::Image_3 image1;
           if(image1.read(imageName.c_str()))
           {
-              Mesh_domain domain(image1);
+              Mesh_domain domain = Mesh_domain::create_labeled_image_mesh_domain(image1);
               Facet_criteria facet_criteria(fangle, fsize, fapprox);
               Cell_criteria cell_criteria(cR_E_ratio, csize);
               Mesh_criteria criteria(facet_criteria, cell_criteria);
               std::cout<<"MESHING...";
               chrono.start();
               c3t3 = CGAL::make_mesh_3<C3t3>(domain, criteria,
-                                               CGAL::parameters::lloyd(), CGAL::parameters::odt(),
-                                               CGAL::parameters::perturb(), CGAL::parameters::exude());
+                                               CGAL::parameters::lloyd<bool>(), CGAL::parameters::odt<bool>(),
+                                               CGAL::parameters::perturb<bool>(), CGAL::parameters::exude<bool>());
               chrono.stop();
               std::cout<<" done in "<<chrono<<std::endl;
               chrono.reset();
@@ -260,8 +260,8 @@ int main(int argc,char **argv)
           std::cout<<"MESHING...";
           chrono.start();
           C3t3_manualseg c3t3= CGAL::make_mesh_3<C3t3_manualseg>(domain, criteria,
-                                              CGAL::parameters::lloyd(), CGAL::parameters::odt(),
-                                              CGAL::parameters::perturb(), CGAL::parameters::exude());
+                                              CGAL::parameters::lloyd<bool>(), CGAL::parameters::odt<bool>(),
+                                              CGAL::parameters::perturb<bool>(), CGAL::parameters::exude<bool>());
           chrono.stop();
           std::cout<<" done in "<<chrono<<std::endl;
           chrono.reset();

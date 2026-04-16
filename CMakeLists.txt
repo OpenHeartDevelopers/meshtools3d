@@ -1,78 +1,44 @@
-# Created by the script cgal_create_CMakeLists
-# This is the CMake script for compiling a set of CGAL applications.
+cmake_minimum_required(VERSION 3.14)
+project(meshtools3d LANGUAGES CXX)
 
-project( meshtools3d )
-
-
-cmake_minimum_required(VERSION 2.6.2)
-if("${CMAKE_MAJOR_VERSION}.${CMAKE_MINOR_VERSION}" VERSION_GREATER 2.6)
-  if("${CMAKE_MAJOR_VERSION}.${CMAKE_MINOR_VERSION}.${CMAKE_PATCH_VERSION}" VERSION_GREATER 2.8.3)
-    cmake_policy(VERSION 2.8.4)
-  else()
-    cmake_policy(VERSION 2.6)
-  endif()
+if(POLICY CMP0167)
+  cmake_policy(SET CMP0167 NEW)
 endif()
 
-set( CMAKE_ALLOW_LOOSE_LOOP_CONSTRUCTS true )
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_EXTENSIONS OFF)
 
-if ( COMMAND cmake_policy )
-
-  cmake_policy( SET CMP0003 NEW )
-
+# Relocatable-install rpath: binary looks for bundled libs in ../lib next to itself.
+set(CMAKE_BUILD_WITH_INSTALL_RPATH ON)
+set(CMAKE_INSTALL_RPATH_USE_LINK_PATH OFF)
+if(APPLE)
+  set(CMAKE_MACOSX_RPATH ON)
+  set(CMAKE_INSTALL_RPATH "@loader_path/../lib")
+else()
+  set(CMAKE_INSTALL_RPATH "$ORIGIN/../lib")
 endif()
 
-# CGAL and its components
-find_package( CGAL QUIET COMPONENTS ImageIO  )
+find_package(CGAL REQUIRED COMPONENTS ImageIO)
+find_package(Boost REQUIRED)
+find_package(TBB QUIET)
 
-if ( NOT CGAL_FOUND )
-
-  message(STATUS "This project requires the CGAL library, and will not be compiled.")
-  return()
-
-endif()
-
-# include helper file
-include( ${CGAL_USE_FILE} )
-
-
-# Boost and its components
-find_package( Boost REQUIRED )
-
-if ( NOT Boost_FOUND )
-
-  message(STATUS "This project requires the Boost library, and will not be compiled.")
-
-  return()
-
-endif()
-
-find_package( TBB QUIET )
-
-if( TBB_FOUND )
-  include(${TBB_USE_FILE})
-  list(APPEND CGAL_3RD_PARTY_LIBRARIES ${TBB_LIBRARIES})
-endif()
-
-
-# include for local directory
-
-# include for local package
-
-
-# Creating entries for target: meshtools3d
-# ############################
 set(MESHTOOLS3D_INCLUDES "./m3d/include")
 
 add_subdirectory(m3d/src)
 include_directories(${MESHTOOLS3D_INCLUDES})
 
 add_executable(meshtools3d applications/main.cpp)
+target_link_libraries(meshtools3d PRIVATE m3d CGAL::CGAL CGAL::CGAL_ImageIO)
+
 add_executable(laplace_solver applications/laplace_solver.cpp)
+target_link_libraries(laplace_solver PRIVATE m3d)
 
-add_to_cached_list(CGAL_EXECUTABLE_TARGETS meshtools3d)
+if(TBB_FOUND)
+  target_link_libraries(meshtools3d PRIVATE TBB::tbb TBB::tbbmalloc)
+  target_compile_definitions(meshtools3d PRIVATE CGAL_LINKED_WITH_TBB)
+  target_link_libraries(laplace_solver PRIVATE TBB::tbb TBB::tbbmalloc)
+endif()
 
-# Link the executables to CGAL and third-party libraries
-target_link_libraries(meshtools3d m3d ${CGAL_LIBRARIES} ${CGAL_3RD_PARTY_LIBRARIES})
-
-# laplace_solver has no CGAL dependency (pure m3d library)
-target_link_libraries(laplace_solver m3d ${CGAL_3RD_PARTY_LIBRARIES})
+install(TARGETS meshtools3d laplace_solver
+        RUNTIME DESTINATION bin)
