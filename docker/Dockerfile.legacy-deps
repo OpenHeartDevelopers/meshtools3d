@@ -1,0 +1,135 @@
+FROM ubuntu:20.04
+
+LABEL maintainer="Jose Alonso Solis-Lemus <j.solis-lemus@imperial.ac.uk>"
+LABEL description="Optimized Legacy CGAL 4.14.3 build dependencies for MeshTools3D"
+
+ENV DEBIAN_FRONTEND=noninteractive
+
+# =============================================================================
+# 1. SYSTEM DEPENDENCIES & OS-LEVEL PACKAGES
+# =============================================================================
+# Practice: Combine apt-get update, install, and cleanup into a single layer.
+# We are installing libboost-all-dev here instead of building it from source.
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential \
+    wget \
+    ca-certificates \
+    m4 \
+    python3 \
+    libssl-dev \
+    libboost-all-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+# =============================================================================
+# 2. SOURCE URLS
+# =============================================================================
+ARG ZLIB_URL="https://github.com/madler/zlib/releases/download/v1.2.13/zlib-1.2.13.tar.gz"
+ARG GMP_URL="https://gmplib.org/download/gmp/gmp-6.2.1.tar.xz" 
+ARG MPFR_URL="https://www.mpfr.org/mpfr-4.1.0/mpfr-4.1.0.tar.xz"
+ARG CMAKE_URL="https://cmake.org/files/v3.16/cmake-3.16.9-Linux-x86_64.tar.gz"
+ARG EIGEN_URL="https://gitlab.com/libeigen/eigen/-/archive/3.3.9/eigen-3.3.9.tar.gz"
+ARG BOOST_URL="https://sourceforge.net/projects/boost/files/boost/1.75.0/boost_1_75_0.tar.gz/download"
+ARG TBB_URL="https://github.com/uxlfoundation/oneTBB/releases/download/v2020.3/tbb-2020.3-lin.tgz"
+ARG CGAL_URL="https://github.com/CGAL/cgal/releases/download/releases%2FCGAL-4.14.3/CGAL-4.14.3.tar.xz"
+
+# =============================================================================
+# 3. GLOBAL ENVIRONMENT VARIABLES (The "Anti-Path-Hell" Setup)
+# =============================================================================
+# Practice: Define library prefixes globally so subsequent builds (and your 
+# final container) know exactly where things are.
+ENV GMP_PREFIX=/installs/gmp-6.2.1
+ENV MPFR_PREFIX=/installs/mpfr-4.1.0
+ENV TBBROOT=/installs/tbb-2020.3
+ENV CGAL_DIR=/installs/cgal-4.14.3/lib/cmake/CGAL
+
+# TBB Linux binaries typically put libs in /lib/intel64/gcc4.8
+ENV LD_LIBRARY_PATH="${GMP_PREFIX}/lib:${MPFR_PREFIX}/lib:${TBBROOT}/lib/intel64/gcc4.8"
+# Put our custom CMake directly into the system PATH
+ENV PATH="/installs/cmake-3.16.9/bin:${PATH}"
+
+# =============================================================================
+# 4. LIBRARY BUILDS & INSTALLATIONS
+# =============================================================================
+
+# --- zlib 1.2.13 ---
+# Practice: Use correct tar flag (-xzf for .tar.gz) and clean up /tmp in same layer
+RUN mkdir -p /installs/zlib-src && \
+    wget "$ZLIB_URL" -O /tmp/zlib.tar.gz && \
+    tar -xzf /tmp/zlib.tar.gz -C /installs/zlib-src --strip-components=1 && \
+    cd /installs/zlib-src && \
+    ./configure --prefix=/installs/zlib-1.2.13 && \
+    make -j$(nproc) && make install && \
+    cd / && rm -rf /installs/zlib-src /tmp/zlib.tar.gz
+
+# --- GMP 6.2.1 ---
+# Practice: Use correct tar flag (-xJf for .tar.xz)
+RUN mkdir -p /installs/gmp-src && \
+    wget "$GMP_URL" -O /tmp/gmp.tar.xz && \
+    tar -xJf /tmp/gmp.tar.xz -C /installs/gmp-src --strip-components=1 && \
+    cd /installs/gmp-src && \
+    ./configure --prefix=${GMP_PREFIX} --enable-cxx && \
+    make -j$(nproc) && make install && \
+    cd / && rm -rf /installs/gmp-src /tmp/gmp.tar.xz
+
+# --- MPFR 4.1.0 (depends on GMP) ---
+# Practice: Fixed output file extension to match actual .tar.xz format
+RUN mkdir -p /installs/mpfr-src && \
+    wget "$MPFR_URL" -O /tmp/mpfr.tar.xz && \
+    tar -xJf /tmp/mpfr.tar.xz -C /installs/mpfr-src --strip-components=1 && \
+    cd /installs/mpfr-src && \
+    ./configure --prefix=${MPFR_PREFIX} --with-gmp=${GMP_PREFIX} && \
+    make -j$(nproc) && make install && \
+    cd / && rm -rf /installs/mpfr-src /tmp/mpfr.tar.xz
+
+# --- CMake 3.16.9 (Pre-compiled Binary) ---
+# Since we updated the PATH environment variable above, 'cmake' is now globally available
+RUN mkdir -p /installs/cmake-3.16.9  && \
+    wget "$CMAKE_URL" -O /tmp/cmake.tar.gz && \
+    tar -xzf /tmp/cmake.tar.gz -C /installs/cmake-3.16.9 --strip-components=1 && \
+    rm /tmp/cmake.tar.gz
+
+# --- Eigen 3.3.9 (headers only) ---
+RUN mkdir -p /installs/eigen-3.3.9 && \
+    wget "$EIGEN_URL" -O /tmp/eigen.tar.gz && \
+    tar -xzf /tmp/eigen.tar.gz -C /installs/eigen-3.3.9 --strip-components=1 && \
+    rm /tmp/eigen.tar.gz
+
+# --- Boost 1.75.0 (Source Build - COMMENTED OUT) ---
+# We are relying on libboost-all-dev from Ubuntu's apt repository above.
+# If you absolutely need 1.75.0 features in the future, uncomment this block
+# and remove 'libboost-all-dev' from the apt-get command.
+# RUN mkdir -p /installs/boost-src && \
+#     wgetL "$BOOST_URL" -O /tmp/boost.tar.gz && \
+#     tar -xzf /tmp/boost.tar.gz -C /installs/boost-src --strip-components=1 && \
+#     cd /installs/boost-src && \
+#     ./bootstrap.sh --prefix=/installs/boost-1.75.0 && \
+#     ./b2 install -j$(nproc) variant=release threading=multi link=shared && \
+#     cd / && rm -rf /installs/boost-src /tmp/boost.tar.gz
+# ENV BOOST_ROOT=/installs/boost-1.75.0
+
+# --- TBB 2020.3 (Using Pre-compiled Binaries) ---
+RUN mkdir -p /installs/tbb-2020.3 && \
+    wget "$TBB_URL" -O /tmp/tbb.tar.gz && \
+    tar -xzf /tmp/tbb.tar.gz -C /installs/tbb-2020.3 --strip-components=1 && \
+    rm /tmp/tbb.tar.gz
+
+# --- CGAL 4.14.3 (depends on GMP, MPFR, System Boost, Eigen, TBB) ---
+# Practice: Use 'cmake' directly (from ENV PATH) and explicitly link TBB
+RUN mkdir -p /installs/cgal-src /installs/cgal-4.14.3-build && \
+    wget "$CGAL_URL" -O /tmp/cgal.tar.xz && \
+    tar -xJf /tmp/cgal.tar.xz -C /installs/cgal-src --strip-components=1 && \
+    cd /installs/cgal-4.14.3-build && \
+    cmake \
+    -DCMAKE_BUILD_TYPE=Release \
+    -DCMAKE_INSTALL_PREFIX=/installs/cgal-4.14.3 \
+    -DGMP_INCLUDE_DIR=${GMP_PREFIX}/include \
+    -DGMP_LIBRARIES=${GMP_PREFIX}/lib/libgmp.so \
+    -DMPFR_INCLUDE_DIR=${MPFR_PREFIX}/include \
+    -DMPFR_LIBRARIES=${MPFR_PREFIX}/lib/libmpfr.so \
+    -DEIGEN3_INCLUDE_DIR=/installs/eigen-3.3.9 \
+    -DZLIB_ROOT=/installs/zlib-1.2.13 \
+    -DTBB_ROOT=${TBBROOT} \
+    -DTBB_ARCH_PLATFORM=intel64/gcc4.8 \
+    /installs/cgal-src && \
+    make -j$(nproc) && make install && \
+    cd / && rm -rf /installs/cgal-src /installs/cgal-4.14.3-build /tmp/cgal.tar.xz
