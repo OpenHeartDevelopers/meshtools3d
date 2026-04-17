@@ -3,6 +3,7 @@ set(MESHTOOLS3D_INCLUDES
   "../include/Chrono.hpp"
   "../include/GetPot.hpp"
   "../include/INRreader.hpp"
+  "../include/LaplacePipeline.hpp"
   "../include/LaplaceSolver.hpp"
   "../include/Mesh.hpp"
   "../include/mgmres.hpp"
@@ -16,6 +17,7 @@ set(MESHTOOLS3D_SRCS
   Chrono.cpp
   GetPot.cpp
   INRreader.cpp
+  LaplacePipeline.cpp
   LaplaceSolver.cpp
   Mesh.cpp
   mgmres.cpp

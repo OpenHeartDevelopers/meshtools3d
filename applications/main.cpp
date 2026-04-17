@@ -8,9 +8,8 @@
 #include <cmath>
 #include <cfloat>
 #include "Chrono.hpp"
+#include "LaplacePipeline.hpp"
 #include "Mesh.hpp"
-#include "LaplaceSolver.hpp"
-#include "ThicknessEvaluation.hpp"
 #include "VtkWriter.hpp"
 #include "INRreader.hpp"
 #include "GetPot.hpp"
@@ -23,7 +22,7 @@
 
 #include<set>
 #ifdef CGAL_LINKED_WITH_TBB
-#include <tbb/task_scheduler_init.h>
+#include <tbb/global_control.h>
 #endif
 
 
@@ -123,7 +122,7 @@ int main(int argc,char **argv)
   } else {
     std::cout << "nb of threads is: " << numThreads << std::endl;
   }
-  tbb::task_scheduler_init init(numThreads);
+  tbb::global_control gc(tbb::global_control::max_allowed_parallelism, numThreads);
   nthr=NULL;
 #endif
 
@@ -161,15 +160,15 @@ int main(int argc,char **argv)
           CGAL::Image_3 image1;
           if(image1.read(imageName.c_str()))
           {
-              Mesh_domain domain(image1);
+              Mesh_domain domain = Mesh_domain::create_labeled_image_mesh_domain(image1);
               Facet_criteria facet_criteria(fangle, fsize, fapprox);
               Cell_criteria cell_criteria(cR_E_ratio, csize);
               Mesh_criteria criteria(facet_criteria, cell_criteria);
               std::cout<<"MESHING...";
               chrono.start();
               c3t3 = CGAL::make_mesh_3<C3t3>(domain, criteria,
-                                               CGAL::parameters::lloyd(), CGAL::parameters::odt(),
-                                               CGAL::parameters::perturb(), CGAL::parameters::exude());
+                                               CGAL::parameters::lloyd<bool>(), CGAL::parameters::odt<bool>(),
+                                               CGAL::parameters::perturb<bool>(), CGAL::parameters::exude<bool>());
               chrono.stop();
               std::cout<<" done in "<<chrono<<std::endl;
               chrono.reset();
@@ -261,8 +260,8 @@ int main(int argc,char **argv)
           std::cout<<"MESHING...";
           chrono.start();
           C3t3_manualseg c3t3= CGAL::make_mesh_3<C3t3_manualseg>(domain, criteria,
-                                              CGAL::parameters::lloyd(), CGAL::parameters::odt(),
-                                              CGAL::parameters::perturb(), CGAL::parameters::exude());
+                                              CGAL::parameters::lloyd<bool>(), CGAL::parameters::odt<bool>(),
+                                              CGAL::parameters::perturb<bool>(), CGAL::parameters::exude<bool>());
           chrono.stop();
           std::cout<<" done in "<<chrono<<std::endl;
           chrono.reset();
@@ -431,88 +430,64 @@ int main(int argc,char **argv)
       CarpMesh.writeCarpMesh(cfileoutName,out_carp_binary);
   }
 
-
-  VtkWriter writerVTK(& CarpMesh, out_vtk_binary);
-  if(out_vtk)
+  // Write region_labels to VTK only when thickness is not being evaluated.
+  // When eval_thickness is true the Laplace pipeline manages all VTK output.
+  if(out_vtk && !eval_thickness)
   {
+    VtkWriter writerVTK(&CarpMesh, out_vtk_binary);
     writerVTK.setOutputDir(out_dir);
     writerVTK.setPrefixName(out_name);
     writerVTK.openFileForOutput();
     std::vector<double> meshLabels = CarpMesh.copyLabelVectorForVTKOutput();
-    writerVTK.writeVariable(meshLabels, "region_labels",VtkWriter::Scalar);
-    meshLabels.clear();
+    writerVTK.writeVariable(meshLabels, "region_labels", VtkWriter::Scalar);
+    writerVTK.CloseFile();
   }
 
-  //here I free some variables
+  // Build BC config from auto-detected endo/epi node sets before freeing them.
+  LaplaceBCConfig bc;
+  bc.swap_regions = swapregions;
+  if(swapregions)
+  {
+      bc.one_bc_sets.push_back(CarpMesh.Endocardium());
+      bc.zero_bc_sets.push_back(CarpMesh.Epicardium());
+  }
+  else
+  {
+      bc.zero_bc_sets.push_back(CarpMesh.Endocardium());
+      bc.one_bc_sets.push_back(CarpMesh.Epicardium());
+  }
+
+  // Free heavy boundary data; _Endo and _Epi are preserved.
   CarpMesh.unsetBoundaryLabels();
 
   if(eval_thickness)
   {
+    LaplaceParams params;
+    params.abs_toll    = param_file("laplacesolver/abs_toll",    1e-6);
+    params.rel_toll    = param_file("laplacesolver/rel_toll",    1e-6);
+    params.itr_max     = param_file("laplacesolver/itr_max",     500);
+    params.dimKrilovSp = param_file("laplacesolver/dimKrilovSp", 150);
+    params.verbose     = param_file("laplacesolver/verbose",     0);
 
-    ThicknessEvaluation ThicknessCompute(param_file, &CarpMesh );
-    bool usr_algorithm = command_line.search(2, "-thickalgo", "--thickness-algorithm");
-    if(usr_algorithm)
+    int algo = param_file("others/thickalgo", 1);
+    if(command_line.search(2, "-thickalgo", "--thickness-algorithm"))
     {
-        int test_chr = command_line.follow(1, 2, "-thickalgo", "--thickness-algorithm");
-        std::cout << "Algorithm: " << test_chr << '\n';
-        ThicknessCompute.set_algorithm(test_chr);
+        algo = command_line.follow(1, 2, "-thickalgo", "--thickness-algorithm");
+        std::cout << "Thickness algorithm (CLI override): " << algo << '\n';
     }
 
-    if(swapregions)
-    {
-        // to assign the thickness at the epicardium, swap the values of the potential
-        ThicknessCompute.setBCValue(CarpMesh.Endocardium(), 1.0);
-        ThicknessCompute.setBCValue(CarpMesh.Epicardium(), 0.0);
-    }
-    else
-    {
-          ThicknessCompute.setBCValue(CarpMesh.Endocardium(), 0.0);
-          ThicknessCompute.setBCValue(CarpMesh.Epicardium(), 1.0);
-    }
+    OutputConfig out_cfg;
+    out_cfg.out_dir             = out_dir;
+    out_cfg.out_name            = out_name;
+    out_cfg.eval_thickness      = true;
+    out_cfg.thickness_algorithm = algo;
+    out_cfg.out_vtk             = out_vtk;
+    out_cfg.out_vtk_binary      = out_vtk_binary;
+    out_cfg.out_potential       = out_potential;
 
-    ThicknessCompute.solve();
-    if(ThicknessCompute.algorithm()!=static_cast<unsigned char>(2)  )
-    {
-      CarpMesh.initializeConnectivities();
-    }
-
-    ThicknessCompute.evalThickness();
-    std::string cfileoutName=out_dir+"/"+out_name;
-    ThicknessCompute.writeElementGradient(cfileoutName);
-    CarpMesh.writeTetraCentroids(cfileoutName);
-    CarpMesh.writeTris(cfileoutName);
-    if(out_potential)
-    {
-      if(out_vtk)
-      {
-        writerVTK.writeVariable(ThicknessCompute.sol(), "potential_func",VtkWriter::Scalar);
-      }
-      else
-      {
-        if(out_carp || !out_vtk)
-        {
-          ThicknessCompute.writeSolution(out_dir+"/"+out_name);
-        }
-      }
-    }
-
-    if(out_vtk)
-    {
-      writerVTK.writeVariable(ThicknessCompute.thickness(), "Thickness",VtkWriter::Scalar);
-    }
-
-   if(out_carp || !out_vtk)
-   {
-      ThicknessCompute.writeThickness(out_dir+"/"+out_name);
-   }
-  }// end if on eval thickness
-
-  if(out_vtk)
-  {
-    writerVTK.CloseFile();
+    runLaplacePipeline(CarpMesh, bc, params, out_cfg);
   }
 
   return 0;
-
 
 }

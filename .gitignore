@@ -53,5 +53,7 @@ Release/*
 *.vcxproj*
 *.sln*
 
-.claude/**
+
+.claude/
+.claude/** 
 CLAUDE.md

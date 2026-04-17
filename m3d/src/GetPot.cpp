@@ -1246,8 +1246,7 @@ GetPot::DBE_expand(const std::string expr)
 	StringVector          A   = DBE_get_expr_list(expr.substr(1), 2);
 	const GetPot::variable* Var = DBE_get_variable(A[0]);
 	// error
-	if( Var->name == "" )
-	{
+	if( Var->name == "" ) {
 	    // make a copy of the string if an error occured
 	    // (since the error variable is a static variable inside get_variable())
 	    return std::string(Var->original);
@@ -1259,33 +1258,27 @@ GetPot::DBE_expand(const std::string expr)
 	if (x == 1e37 || x < 0 || x >= Var->value.size() )
 	    return "<<1st index out of range>>";
 
-	if ( A.size() > 2)
-	{
+	if ( A.size() > 2) {
 	    double y = __convert_to_type(A[2], 1e37);
-	    size_t begin = size_t(x+0.5);
-	    size_t end = 0;
-	    if ( y != 1e37 && y > 0 && y <= Var->value.size() && y > x)
-	    {
+	    int    begin = int(x+0.5);
+	    int    end = 0;
+	    if ( y != 1e37 && y > 0 && y <= Var->value.size() && y > x) {
 	      end = size_t(y+1.5);
 	    }
-	    else if( y == -1 )
-	    {
+	    else if( y == -1 ) {
           end = Var->value.size();
 	    }
 	    else
-	    {
-	        return "<<2nd index out of range>>";
-	    }
+		return "<<2nd index out of range>>";
+
 	    std::string result = *(Var->get_element(begin));
-	    for(size_t i = begin+1; i < end; i++)
-	    {
+	    for(size_t i = begin+1; i < end; i++) {
 	        result += std::string(" ") + *(Var->get_element(i));
 	    }
 
 	    return result;
 	}
-	else
-	{
+	else {
 	    return *(Var->get_element(size_t(x+0.5)));
 	}
 
@@ -1600,14 +1593,11 @@ GetPot::variable::variable(const char* Name, const char* Value)
     take(Value);
 }
 
-inline const std::string* GetPot::variable::get_element(size_t Idx) const
-{
-    if( Idx >= value.size() )
-    {
+inline const std::string* GetPot::variable::get_element(unsigned Idx) const {
+    if( Idx >= value.size() ) {
         return 0;
     }
-    else
-    {
+    else {
         return &(value[Idx]);
     }
 }
