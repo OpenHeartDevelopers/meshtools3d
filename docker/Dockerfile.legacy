@@ -1,0 +1,33 @@
+FROM cemrg-m3d-legacy-dependencies:latest
+
+LABEL maintainer="Jose Alonso Solis-Lemus <j.solis-lemus@imperial.ac.uk>"
+LABEL description="MeshTools3D executables (CGAL 4.14.3 legacy build)"
+
+# Group everything in a build directory
+WORKDIR /build
+COPY . /build/meshtools3d
+
+# 1. Use 'cmake' directly (it's in the PATH now).
+# 2. Use the ENV variables we set in the base image.
+# 3. We removed BOOST_ROOT because Boost is a system package now.
+RUN mkdir -p /installs/meshtools3D_build && \
+    cd /installs/meshtools3D_build && \
+    cmake \
+    -DCMAKE_BUILD_TYPE=Release \
+    -DCGAL_DIR=${CGAL_DIR} \
+    -DGMP_INCLUDE_DIR=${GMP_PREFIX}/include \
+    -DGMP_LIBRARIES=${GMP_PREFIX}/lib/libgmp.so \
+    -DMPFR_INCLUDE_DIR=${MPFR_PREFIX}/include \
+    -DMPFR_LIBRARIES=${MPFR_PREFIX}/lib/libmpfr.so \
+    -DTBB_ROOT=${TBBROOT} \
+    -DTBB_ARCH_PLATFORM=intel64/gcc4.8 \
+    /build/meshtools3d && \
+    make -j$(nproc)
+
+# Copy the wrapper script
+COPY ./dockerM3D.sh /installs/meshtools3D_build/dockerM3D.sh
+RUN chmod +x /installs/meshtools3D_build/dockerM3D.sh
+
+# Set up the execution environment
+ENTRYPOINT ["/installs/meshtools3D_build/dockerM3D.sh"]
+WORKDIR /data
