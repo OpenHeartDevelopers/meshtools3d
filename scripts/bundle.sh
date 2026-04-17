@@ -1,28 +1,28 @@
 #!/usr/bin/env bash
-# bundle.sh — turn an installed meshtools3d tree into a relocatable bundle.
+# bundle.sh — turn a meshtools3d build directory into a relocatable bundle.
 #
-# Given a prefix with bin/meshtools3d already installed (via cmake --install),
-# walk the binary's dynamic dependencies, copy non-system libraries into
-# <prefix>/lib, and rewrite install-names / rpaths so the binary runs on
+# Given a build directory where cmake was run (binaries live at the root),
+# walk each binary's dynamic dependencies, copy non-system libraries into
+# <build-dir>/lib, and rewrite install-names / rpaths so the binary runs on
 # another machine with only system libc + libstdc++/libc++ available.
 #
-# Usage: scripts/bundle.sh <install-prefix>
+# Usage: scripts/bundle.sh <build-dir>
 #
 # Platforms: macOS (otool + install_name_tool) and Linux (ldd + patchelf).
 
 set -euo pipefail
 
 if [[ $# -ne 1 ]]; then
-  echo "usage: $0 <install-prefix>" >&2
+  echo "usage: $0 <build-dir>" >&2
   exit 2
 fi
 
-PREFIX="$1"
-BIN_DIR="$PREFIX/bin"
-LIB_DIR="$PREFIX/lib"
+BUILD_DIR="$1"
+BIN_DIR="$BUILD_DIR"
+LIB_DIR="$BUILD_DIR/lib"
 
-if [[ ! -d "$BIN_DIR" ]]; then
-  echo "error: $BIN_DIR does not exist; run 'cmake --install' first" >&2
+if [[ ! -d "$BUILD_DIR" ]]; then
+  echo "error: $BUILD_DIR does not exist" >&2
   exit 1
 fi
 
@@ -137,12 +137,11 @@ done
 
 echo
 echo "bundle complete. layout:"
-echo "  $BIN_DIR"
-ls -1 "$BIN_DIR" | sed 's/^/    /'
+echo "  $BIN_DIR/{meshtools3d,laplace_solver}"
 echo "  $LIB_DIR"
-ls -1 "$LIB_DIR" | sed 's/^/    /'
+ls -1 "$LIB_DIR" 2>/dev/null | sed 's/^/    /' || echo "    (no bundled shared libs)"
 echo
 case "$OS" in
-  Darwin) echo "verify with: otool -L $BIN_DIR/meshtools3d" ;;
-  Linux)  echo "verify with: ldd   $BIN_DIR/meshtools3d" ;;
+  Darwin) echo "verify with: otool -L $BUILD_DIR/meshtools3d" ;;
+  Linux)  echo "verify with: ldd   $BUILD_DIR/meshtools3d" ;;
 esac
