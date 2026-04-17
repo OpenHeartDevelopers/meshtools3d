@@ -1,4 +1,4 @@
-#include"Chrono.hpp"
+#include"../include/Chrono.hpp"
 #include <iostream>
 #include <time.h>
 #include<string>
@@ -19,16 +19,16 @@ std::ostream& operator << (std::ostream& c,const Chrono& cht)
       hours=t_diff/3600;
       t_diff=t_diff-hours*3600;
     }
-    
+
     if(t_diff>=60)
     {
       minutes=t_diff/60;
       t_diff=t_diff-minutes*60;
     }
     seconds=t_diff;
-  
+
   }
-  c<<hours<<":"<<std::setw(2)<<std::right<<std::setfill('0')<<minutes<<":"<<std::setw(2)<<std::right<<std::setfill('0')<<seconds;	
+  c<<hours<<":"<<std::setw(2)<<std::right<<std::setfill('0')<<minutes<<":"<<std::setw(2)<<std::right<<std::setfill('0')<<seconds;
   return c;
 };
 
@@ -57,7 +57,7 @@ void Chrono::start()
   {
     std::cout<<"CHRONO: WARNING: NO START SINCE COUNTER WAS PREVIOUSLY STARTED"<<std::endl;
   }
-  
+
 }
 void Chrono::stop()
 {
@@ -94,7 +94,7 @@ void Chrono::printElapsedTime()
       hours=t_diff/3600;
       t_diff=t_diff-hours*3600;
     }
-    
+
     if(t_diff>=60)
     {
       minutes=t_diff/60;
@@ -102,8 +102,6 @@ void Chrono::printElapsedTime()
     }
     seconds=t_diff;
     std::cout<<hours<<":"<<std::setw(2)<<std::right<<std::setfill('0')<<minutes<<":"<<std::setw(2)<<std::right<<std::setfill('0')<<seconds;
-  
+
   }
 }
-
-

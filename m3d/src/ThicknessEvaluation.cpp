@@ -1,7 +1,7 @@
-#include "ThicknessEvaluation.hpp"
+#include "../include/ThicknessEvaluation.hpp"
 #include<iostream>
-#include "Chrono.hpp"
-#include "mgmres.hpp"
+#include "../include/Chrono.hpp"
+#include "../include/mgmres.hpp"
 #include<cmath>
 
 #ifndef MAX_PATH_LEN
@@ -40,7 +40,7 @@ ThicknessEvaluation::ThicknessEvaluation(const GetPot & dfile, const Mesh * _mes
 :LaplaceSolver(dfile, _mesh)
 {
   _algorithm = dfile("others/thickalgo",1);
-  _swapregions= dfile("others/swapregions",false); 
+  _swapregions= dfile("others/swapregions",false);
   _thickness.clear();
 }
 
@@ -53,7 +53,7 @@ void ThicknessEvaluation::evalThicknessMethodMartin()
 {
     typedef std::set<size_t> facetype;
     typedef std::map<short int, size_t> boundaryFaceInTetraType;
-  
+
     int interactions=0;
     int problems=0;
     std::vector<double> path(_ptrmesh->nTri(),0);
@@ -100,7 +100,7 @@ void ThicknessEvaluation::evalThicknessMethodMartin()
             }
         }
 
-        // Set-ups list to store the 4 nodes in each element        	
+        // Set-ups list to store the 4 nodes in each element
         facetype elemNodes;
         facetype::iterator i2;
 
@@ -122,11 +122,11 @@ void ThicknessEvaluation::evalThicknessMethodMartin()
         // Defines initial element we're in
         size_t element = surfaceElem;
         size_t oldElement = element;
-    
+
         // Define initial direction as vector gradient direction
         std::vector<double> mu = ElementTetraGradient(element);
         std::vector<double> mu_new=mu;
-    
+
         // Defines some counters and flags
         bool inTissue = true;
         int newCounter = 0;
@@ -135,7 +135,7 @@ void ThicknessEvaluation::evalThicknessMethodMartin()
         while(inTissue)
         {
             // Counts total interactions
-            interactions++;				
+            interactions++;
             // Checks path to see if it's too long
             if(path[thisIllumTri] > MAX_PATH_LEN)
             {
@@ -149,7 +149,7 @@ void ThicknessEvaluation::evalThicknessMethodMartin()
             // this part is not used after (if needed better to re-implement with affine transfo)
             bool notInElement=!(isInElement(x_coord ,element));
             newCounter++;
-    
+
             if(newCounter > MAX_ITER_THICK)
             {
                 inTissue = false;
@@ -160,15 +160,15 @@ void ThicknessEvaluation::evalThicknessMethodMartin()
                 // Initial directional cosines set from normal of triangle (calculating dot-product of each axis with normal)
                 mu = ElementTetraGradient(element);
             }
-            else 
+            else
             {
                 mu = mu_new;
             }
 
             // Updates starting position of step
             x_coord_s = x_coord;
-            wrongSurface = false;			
-      
+            wrongSurface = false;
+
             //////////////////////////////////////////////////////////
             // Check for intersection with faces of current element //
             //////////////////////////////////////////////////////////
@@ -176,12 +176,12 @@ void ThicknessEvaluation::evalThicknessMethodMartin()
             // Defines things to define closest face
             double aMin = 1000000.0;
             short int intFace = -1;
-      
+
             // Creates a set with all nodes defining element
             elemNodes.clear();
             for(unsigned char iVertex=0;iVertex<4;iVertex++)
             {
-                elemNodes.insert(elems[element].vertex[iVertex]);      
+                elemNodes.insert(elems[element].vertex[iVertex]);
             }
 
             std::vector<double> Nmin(3,0);
@@ -193,7 +193,7 @@ void ThicknessEvaluation::evalThicknessMethodMartin()
                 elemNodes.erase(elems[element].vertex[iVertex]);
                 // Defines each of 3 remaining nodes which now define the triangle face
                 std::vector<size_t> triNodes(3,0);
-                unsigned char p = 0; 
+                unsigned char p = 0;
                 for(i2=elemNodes.begin();i2!=elemNodes.end();i2++)
                 {
                     triNodes[p] = *i2;
@@ -246,7 +246,7 @@ void ThicknessEvaluation::evalThicknessMethodMartin()
                         {
                             v[hCoord] = v[hCoord]/magV;
                             //x=x+delta*v
-                            x_coord[hCoord] =x_coord[hCoord] + delta*v[hCoord];	
+                            x_coord[hCoord] =x_coord[hCoord] + delta*v[hCoord];
                         }
                         a_n = normalDistanceOfPointToPlane(geoQuant.N,coords[triNodes[0]],x_coord);
                         a   = distanceOfPointToPlane(geoQuant.N,coords[triNodes[0]],x_coord, mu);
@@ -263,7 +263,7 @@ void ThicknessEvaluation::evalThicknessMethodMartin()
                 // Puts the erased node back
                 elemNodes.insert(elems[element].vertex[iVertex]);
             }// end for loop on iVertex
-				
+
             if(intFace != -1)
             {
                 //lastintface = intFace;
@@ -276,13 +276,13 @@ void ThicknessEvaluation::evalThicknessMethodMartin()
                 {
                     faceRem.insert(*i2);
                 }
-                path[thisIllumTri] += aMin;	
+                path[thisIllumTri] += aMin;
 
                 // Checks to see if this closest intersecting face is also a boundary face
                 // This is for interior boundaries
                 const boundaryFaceInTetraType & ElementBTris = elemBoundaryTris[element];
                 boundaryFaceInTetraType::const_iterator iterBoundaryOnFace = ElementBTris.find(intFace);
-					
+
                 if(iterBoundaryOnFace != ElementBTris.end() )
                 {
                     // Checks to see if this is part of the ground electrode
@@ -304,7 +304,7 @@ void ThicknessEvaluation::evalThicknessMethodMartin()
                         for(unsigned char hCoord=0; hCoord<3; hCoord++)
                         {
                             v[hCoord]       = v[hCoord]/magV;
-                            x_coord[hCoord] = x_coord[hCoord]+ delta*v[hCoord];	
+                            x_coord[hCoord] = x_coord[hCoord]+ delta*v[hCoord];
                         }
 
                         // Calculate the normal to the current gradient and the face normal
@@ -314,7 +314,7 @@ void ThicknessEvaluation::evalThicknessMethodMartin()
                         N1[0] = (u[1]*Nmin[2] - u[2]*Nmin[1]);
                         N1[1] = (u[2]*Nmin[0] - u[0]*Nmin[2]);
                         N1[2] = (u[0]*Nmin[1] - u[1]*Nmin[0]);
-							
+
                         // Calculate the normal to the face normal and this normal to get the vector parallel to the face
                         w[0] = (N1[1]*Nmin[2] - N1[2]*Nmin[1]);
                         w[1] = (N1[2]*Nmin[0] - N1[0]*Nmin[2]);
@@ -324,7 +324,7 @@ void ThicknessEvaluation::evalThicknessMethodMartin()
                         {
                             w[hCoord] = w[hCoord]/magW;
                         }
-              
+
                         // Check using the dot product that this new vector is in the same direction as the previous gradient
                         double dot3 = w[0]*u[0] + w[1]*u[1] + w[2]*u[2];
                         if(dot3 < 0)
@@ -341,16 +341,16 @@ void ThicknessEvaluation::evalThicknessMethodMartin()
                 // We also update our 'current element' as the one we're moving into as we cross this boundary
                 const boundaryFaceInTetraType & faceToFaceMap = faceToFace[element];
                 boundaryFaceInTetraType::const_iterator itfaceToFaceMap = faceToFaceMap.find(intFace);
-          
+
                 // Only if we haven't passed through a boundary
                 if(itfaceToFaceMap != faceToFaceMap.end())
                 {
                     size_t newElement = itfaceToFaceMap->second;
                     oldElement = element;
-                    element = newElement;	
+                    element = newElement;
                     mu_new = ElementTetraGradient(newElement);
                     if( (Nmin[0]*mu_new[0] + Nmin[1]*mu_new[1] + Nmin[2]*mu_new[2]) >= 0)
-                    {	
+                    {
                         adjustMu = true;
                         std::vector<double> mu_old = ElementTetraGradient(oldElement);
                         mu_new = ElementTetraGradient(newElement);
@@ -358,7 +358,7 @@ void ThicknessEvaluation::evalThicknessMethodMartin()
                         {
                             mu_new[hCoord] = 0.5*(mu_new[hCoord] + mu_old[hCoord]);
                         }
-							  
+
                         if((Nmin[0]*mu_new[0] + Nmin[1]*mu_new[1] + Nmin[2]*mu_new[2]) >= 0)
                         {
                             element = oldElement;
@@ -371,7 +371,7 @@ void ThicknessEvaluation::evalThicknessMethodMartin()
                     // Move-up to face of element and update position
                     //x = x_s +aMin*mu
                     x_coord=waxpy(mu, x_coord_s, aMin);
-						
+
                     ////////////////////////////////////////////////////////////////
                     // THE NEXT LINES ARE USELESS SINCE delta=0.0; I COMMENT THEM //
                     ////////////////////////////////////////////////////////////////
@@ -385,7 +385,7 @@ void ThicknessEvaluation::evalThicknessMethodMartin()
                         double delta = 0.0;
                         //x = x + (delta/vMag)*v;
                         x_coord= waxpy(v, x_coord,delta/vMag);
-                   */	
+                   */
                 }// end if (itfaceToFaceMap != faceToFaceMap.end())
             }// end if on intface!=-1
         }//end while on inTissue
@@ -397,7 +397,7 @@ void ThicknessEvaluation::evalThicknessMethodMartin()
     double propProb = double(problems)/double(interactions);
     std::cout << "Total number of problems = " << problems << " ( or " << propProb << " ) "<<std::endl;
 
-    // I commented the following instructions since elemData is not used thereafter  
+    // I commented the following instructions since elemData is not used thereafter
     /*
     std::vector<double> elemData(_ptrmesh->nTet(),0);
     for(facetype::iterator it=illumTris->begin();it!=illumTris->end();it++)
@@ -407,12 +407,12 @@ void ThicknessEvaluation::evalThicknessMethodMartin()
 	    elemData[elem_n]=path[tri_n];
     }
     */
-  
-    // Maps data over to node list keeping track of how many surface triangles are associated with each node 
+
+    // Maps data over to node list keeping track of how many surface triangles are associated with each node
     _thickness.clear();
     _thickness.resize(_ptrmesh->nPt(),0);
     std::vector<int> surfPlotterCounter(_ptrmesh->nPt(),0);
-  
+
     for(facetype::iterator it=illumTris->begin();it!=illumTris->end();it++)
     {
         size_t tri_n=*it;
@@ -422,7 +422,7 @@ void ThicknessEvaluation::evalThicknessMethodMartin()
             _thickness[node_n] += path[tri_n];
             surfPlotterCounter[node_n]++;
         }
-    } 
+    }
 
     for(size_t iPt=0;iPt<_thickness.size();iPt++)
     {
@@ -448,18 +448,18 @@ void ThicknessEvaluation::evalThickness()
     }
     case 2:
     {
-      evalThicknessAlternativeMethod();    
+      evalThicknessAlternativeMethod();
       break;
     }
     default:
     {
       std::cerr<<"ERROR: UNKNOWN ALGORITHM!"<<std::endl;
       exit(1);
-    
+
     }
-  }  
-  
-  
+  }
+
+
 
 }
 
@@ -510,7 +510,7 @@ bool ThicknessEvaluation::isInElement(const std::vector<double> & xc ,const size
   	if(qA > 3 || qB > 3)
   	{
   				notInElement = true;
-  	}	
+  	}
   }
   return(!notInElement);
 }
@@ -528,20 +528,20 @@ GrahmOperatorOutput ThicknessEvaluation::GrahmOperations( const Point & p0, cons
   {
 		p0p1[jCoord] = p0.coord[jCoord] - p1.coord[jCoord];
 		p0p2[jCoord] = p0.coord[jCoord] - p2.coord[jCoord];
-		p0pxc[jCoord] = x_c[jCoord] - p0.coord[jCoord]; 
+		p0pxc[jCoord] = x_c[jCoord] - p0.coord[jCoord];
   }
   // Calculates normal by cross-product
   N[0] = (p0p1[1]*p0p2[2] - p0p1[2]*p0p2[1]);
   N[1] = (p0p1[2]*p0p2[0] - p0p1[0]*p0p2[2]);
   N[2] = (p0p1[0]*p0p2[1] - p0p1[1]*p0p2[0]);
-	
+
   // Normalises
   double NMag = sqrt(N[0]*N[0] + N[1]*N[1] + N[2]*N[2]);
   for(unsigned char jCoord=0;jCoord<3;jCoord++)
   {
       N[jCoord] = N[jCoord]/NMag;
   }
-		
+
   // Calculates constant for plane equation
   double d = -(N[0]*p0.coord[0] + N[1]*p0.coord[1] + N[2]*p0.coord[2]);
 
@@ -566,7 +566,7 @@ GrahmOperatorOutput ThicknessEvaluation::GrahmOperations( const Point & p0, cons
 	  projPt[jCoord] = p0.coord[jCoord]+(p0pxc[jCoord]-dist*N[jCoord]);
 	}
 	result.projPt=projPt;
-	
+
 	return(result);
 }
 
@@ -604,10 +604,10 @@ double ThicknessEvaluation::normalDistanceOfPointToPlane(const std::vector<doubl
 double ThicknessEvaluation::pointDistances( const Point & p0, const Point & p1)
 {
   double distance=0.0;
-  
+
   for(short int icoord=0; icoord<3; icoord++)
   {
-    double dh=(p1.coord[icoord]-p0.coord[icoord]); 
+    double dh=(p1.coord[icoord]-p0.coord[icoord]);
     distance = distance+dh*dh;
   }
   distance=sqrt(distance);
@@ -616,7 +616,7 @@ double ThicknessEvaluation::pointDistances( const Point & p0, const Point & p1)
 
 std::vector<double> ThicknessEvaluation::waxpy(const std::vector<double> & x, const std::vector<double> & y, double  alpha)
 {
-  
+
   // implements w=ax+y
   size_t vecsize=x.size();
 #ifndef NDEBUG
@@ -641,17 +641,17 @@ void ThicknessEvaluation::evalThicknessAlternativeMethod()
 {
 /*****************************************************
    from endo (phi=1) to ephi (phi=0)
-   follow the steepest descent (minimum value, since 
-   dphi<0 from endo to epi). also, minimum distance 
+   follow the steepest descent (minimum value, since
+   dphi<0 from endo to epi). also, minimum distance
    is considered in case dphi tends to increase
    points are colored in such a way they are not touched
    twice
-*******************************************************/  
-  
+*******************************************************/
+
   const std::vector<Tetrahedron> & elems = _ptrmesh->Tet();
   const std::vector<Triangle> & tris = _ptrmesh->Tri();
   const std::vector<Point> & coords = _ptrmesh->Pt();
-  
+
 
   const std::set<long int> * endoSet=NULL;
   const std::set<long int> * epiSet=NULL;
@@ -669,7 +669,7 @@ void ThicknessEvaluation::evalThicknessAlternativeMethod()
   _thickness.clear();
   _thickness.resize(_ptrmesh->nPt(),0);
 
-  
+
   typedef std::set<size_t> pointSet;
   std::vector<pointSet> connectivity;
   connectivity.resize(_ptrmesh->nPt());
@@ -685,21 +685,21 @@ void ThicknessEvaluation::evalThicknessAlternativeMethod()
       }
     }
   }
-  
+
   Chrono chrono;
   chrono.start();
-  
+
   std::cout << "****************************************************"<<std::endl;
   std::cout << "* Computing wall thickness... (Cesare's Algorithm) *"<<std::endl;
   std::cout << "****************************************************"<<std::endl;
-  
+
 
   for(std::set<long int>::iterator iendo=endoSet->begin(); iendo != endoSet->end(); ++iendo)
   {
     size_t pstart=static_cast<size_t>(*iendo);
     bool search=true;
     int internalCounter=0;
-    
+
     size_t pend=pstart;
     std::vector<bool> color(_ptrmesh->nPt(),false);
     color[pstart]=true;
@@ -727,10 +727,10 @@ void ThicknessEvaluation::evalThicknessAlternativeMethod()
          std::cerr<<"Warning: dead corner"<<std::endl;
          break;
       }
-      
+
       //distances,dphi;
-      
-      std::multimap<double,size_t>::iterator phiIter = dphi.begin(), 
+
+      std::multimap<double,size_t>::iterator phiIter = dphi.begin(),
                                              distIter = distances.begin();
       if((phiIter->first)>=0) //case 1) not on a descent dir: choose the nearest point and go ahead
       {
@@ -741,15 +741,15 @@ void ThicknessEvaluation::evalThicknessAlternativeMethod()
         pend=phiIter->second;
       }
       color[phiIter->second]=true;  // so this point will not be reached again
-      
-      
+
+
       if(epiSet->find(static_cast<size_t>(pend)) != epiSet->end())
       {
         search=false;
         break;
       }
-      
-      
+
+
       internalCounter++;
       if(internalCounter>MAX_ITER_THICK)
       {
@@ -758,7 +758,7 @@ void ThicknessEvaluation::evalThicknessAlternativeMethod()
         break;
       }
     } //end of while on search
-  
+
     const Point & p0= coords[pstart];
     const Point & p1= coords[pend];
     _thickness[*iendo] = pointDistances(p1,p0);
@@ -767,14 +767,6 @@ void ThicknessEvaluation::evalThicknessAlternativeMethod()
   std::cout << "Done in "<<chrono<<std::endl;
   endoSet=NULL;
   epiSet=NULL;
-  
-  
+
+
 }
-
-
-
-
-
-
-
-

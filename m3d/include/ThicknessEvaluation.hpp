@@ -39,10 +39,11 @@ public  LaplaceSolver
     void writeThickness(std::string filename);
     inline const std::vector<double> & thickness() const {return _thickness;};
     inline const unsigned char & algorithm() const {return _algorithm;};
-    
+    inline void set_algorithm(unsigned char algo){_algorithm = algo;};
+    inline void set_swapregions(bool swap){_swapregions = swap;};
 
 
-  
+
   private:
     void evalThicknessMethodMartin();
     void evalThicknessAlternativeMethod();

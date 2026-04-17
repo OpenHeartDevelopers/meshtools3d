@@ -8,9 +8,8 @@
 #include <cmath>
 #include <cfloat>
 #include "Chrono.hpp"
+#include "LaplacePipeline.hpp"
 #include "Mesh.hpp"
-#include "LaplaceSolver.hpp"
-#include "ThicknessEvaluation.hpp"
 #include "VtkWriter.hpp"
 #include "INRreader.hpp"
 #include "GetPot.hpp"
@@ -23,7 +22,7 @@
 
 #include<set>
 #ifdef CGAL_LINKED_WITH_TBB
-#include <tbb/task_scheduler_init.h>
+#include <tbb/global_control.h>
 #endif
 
 
@@ -33,25 +32,32 @@ int main(int argc,char **argv)
   GetPot command_line(argc,argv);
 	std::string data_file_name = command_line.follow("data", 2,  "-f","--file");
 	GetPot param_file(data_file_name.c_str());
-	if( command_line.search(2, "-i","--info") ) 
+	if( command_line.search(2, "-i","--info") )
 	{
 		param_file.print();
 		exit(0);
 	}
-  
-  if( command_line.search(2, "-h","--help") || (argc==1) ) 
+
+  if( command_line.search(2, "-h","--help") || (argc==1) )
   {
-      std::cout<<"MeshTools3D\nUsage: ";
+      std::cout<<"MeshTools3D\nUsage (segmentation to mesh): \n\t";
       std::cout<<"./meshtools3d -f <data_filename> -seg_dir <segmentation_dir> -seg_name <segmentation_name> -out_dir <output_dir> -out_name <output_name>"<<std::endl;
+      std::cout<<"\nUsage (input mesh): \n\t";
+      std::cout<<"./meshtools3d -f <data_filename> --read_the_mesh -mesh_dir <mesh_directory> -mesh_name <mesh_name> -out_dir <output_dir> -out_name <output_name>"<<std::endl;
       std::cout<<"\t data_filename is the file name where parameters are"<<std::endl;
       std::cout<<"\t segmentation_dir, segmentation_name are the directory and the name of the input segmentation"<<std::endl;
+      std::cout<<"\t mesh_directory, mesh_name are the directory and the name of the input segmentation"<<std::endl;
       std::cout<<"\t output_dir, output_name are the output directory and the output suffix"<<std::endl;
+      std::cout << "OTHER OPTIONS:" << std::endl;
+      std::cout << "\t--read_the_mesh,           -meshr:         Used to read mesh as input " << std::endl;
+      std::cout << "\t--thickness-algorithm <N>, -thickalgo <N>: N=1 or 2, to select algorithm" << std::endl;
+      std::cout << "\t--verbose,                 -v:             Shows more messages" << std::endl;
       std::cout<<"NOTE:"<<std::endl;
-      std::cout<<"\t If -seg_dir, -seg_name, -out_dir, -out_name are optional aruments,\n\t they overwrite those specified in the data file (used, for example, to use meshtools3d within a script)"<<std::endl;
+      std::cout<<"\t The flags -seg_dir, -seg_name, -mesh_dir, -mesh_name, -out_dir, -out_name are optional aruments,\n\t they overwrite those specified in the data file (used, for example, to use meshtools3d within a script)"<<std::endl;
       exit(0);
   }
-  
-  
+
+  std::cout << "Reading parameter file..." << '\n';
   std::string seg_dir            = param_file("segmentation/seg_dir",".");
   std::string seg_name           = param_file("segmentation/seg_name","image.inr");
   bool mesh_from_segmentation    = param_file("segmentation/mesh_from_segmentation",true);
@@ -68,27 +74,37 @@ int main(int argc,char **argv)
   CellNumericalType cR_E_ratio  = param_file("meshing/cell_rad_edge_ratio",2.0);
   CellNumericalType csize       = param_file("meshing/cell_size",1.0);
 
-  std::string out_dir        = param_file("output/outdir","."); 
-  std::string out_name       = param_file("output/name","imgmesh"); 
-  bool eval_thickness        = param_file("others/eval_thickness",false); 
-  bool swapregions           = param_file("others/swapregions",false); 
+  std::string out_dir        = param_file("output/outdir",".");
+  std::string out_name       = param_file("output/name","imgmesh");
+  bool eval_thickness        = param_file("others/eval_thickness",false);
+  bool swapregions           = param_file("others/swapregions",false);
   bool out_medit             = param_file("output/out_medit",false);
-  bool out_carp              = param_file("output/out_carp",false);  
+  bool out_carp              = param_file("output/out_carp",false);
   bool out_carp_binary       = param_file("output/out_carp_binary",false);
   bool out_vtk               = param_file("output/out_vtk",false);
   bool out_vtk_binary        = param_file("output/out_vtk_binary",false);
   bool out_potential         = param_file("output/out_potential",false);
   bool debug_output          = param_file("output/debug_output",false);
   size_t debug_frequency     = param_file("output/debug_frequency",100000);
-  
+
   double rescaling           = param_file("meshing/rescaleFactor",1.0);
 
+  std::cout << "Checking for command line flags..." << '\n';
   seg_dir  = command_line.follow(seg_dir, 2,  "-seg_dir","--segmentation_directory");
   seg_name = command_line.follow(seg_name, 2,  "-seg_name","--segmentation_name");
+
+  mesh_dir  = command_line.follow(mesh_dir, 2,  "-mesh_dir","--mesh_directory");
+  mesh_name = command_line.follow(mesh_name, 2,  "-mesh_name","--mesh_basename");
+
+  if(!readTheMesh)
+  { // check for read mesh command line flag
+      readTheMesh = command_line.search(2, "-meshr", "--read_the_mesh");
+  }
 
   out_dir  = command_line.follow(out_dir, 2,  "-out_dir","--output_directory");
   out_name = command_line.follow(out_name, 2,  "-out_name","--output_name");
 
+  bool verbose = command_line.search(2, "-v","--verbose");
 
 #ifdef CGAL_LINKED_WITH_TBB
   int numThreads = 1;
@@ -102,10 +118,11 @@ int main(int argc,char **argv)
               << numThreads
               << " (default)"
               << std::endl;
+    std::cout << "run\n\texport TBB_NUM_THREADS=<N>\nto use more cores" << '\n';
   } else {
     std::cout << "nb of threads is: " << numThreads << std::endl;
   }
-  tbb::task_scheduler_init init(numThreads);
+  tbb::global_control gc(tbb::global_control::max_allowed_parallelism, numThreads);
   nthr=NULL;
 #endif
 
@@ -130,27 +147,28 @@ int main(int argc,char **argv)
       exit(1);
   }
 
-#endif  
+#endif
   Chrono chrono;
   //If mesh is read, no need to generate it
   if(!readTheMesh)
-  {      
+  {
       std::string imageName=seg_dir+"/"+seg_name;
+      std::cout << "Reading image in path: " << imageName << '\n';
       if(mesh_from_segmentation)   // CGAL reads segmentation with labels and mesh it
       {
           C3t3 c3t3;
           CGAL::Image_3 image1;
           if(image1.read(imageName.c_str()))
           {
-              Mesh_domain domain(image1);
-              Facet_criteria facet_criteria(fangle, fsize, fapprox); 
+              Mesh_domain domain = Mesh_domain::create_labeled_image_mesh_domain(image1);
+              Facet_criteria facet_criteria(fangle, fsize, fapprox);
               Cell_criteria cell_criteria(cR_E_ratio, csize);
               Mesh_criteria criteria(facet_criteria, cell_criteria);
               std::cout<<"MESHING...";
               chrono.start();
-              c3t3 = CGAL::make_mesh_3<C3t3>(domain, criteria, 
-                                               CGAL::parameters::lloyd(), CGAL::parameters::odt(), 
-                                               CGAL::parameters::perturb(), CGAL::parameters::exude());
+              c3t3 = CGAL::make_mesh_3<C3t3>(domain, criteria,
+                                               CGAL::parameters::lloyd<bool>(), CGAL::parameters::odt<bool>(),
+                                               CGAL::parameters::perturb<bool>(), CGAL::parameters::exude<bool>());
               chrono.stop();
               std::cout<<" done in "<<chrono<<std::endl;
               chrono.reset();
@@ -167,10 +185,10 @@ int main(int argc,char **argv)
               c3t3.output_to_medit(medit_file);
               medit_file.close();
           }
-          //get the triangulation; 
+          //get the triangulation;
           // Here I need a reference, otherwise when I go to take the tetra vertex
           // these will be not consistent (most of them 0)
-          const Tr & triang= c3t3.triangulation();  
+          const Tr & triang= c3t3.triangulation();
           size_t nbPt=static_cast<size_t>(triang.number_of_vertices());
           size_t nbTet=static_cast<size_t>(c3t3.number_of_cells_in_complex());
           if(nbPt<3 ||nbTet<1)
@@ -236,14 +254,14 @@ int main(int argc,char **argv)
       {
           Segmentation.readSegmentation(imageName);
           Mesh_domain_manualseg domain(Segmentation);
-          Facet_criteria_manualseg facet_criteria(fangle, fsize, fapprox); 
+          Facet_criteria_manualseg facet_criteria(fangle, fsize, fapprox);
           Cell_criteria_manualseg  cell_criteria(cR_E_ratio, csize);
           Mesh_criteria_manualseg  criteria(facet_criteria, cell_criteria);
           std::cout<<"MESHING...";
           chrono.start();
-          C3t3_manualseg c3t3= CGAL::make_mesh_3<C3t3_manualseg>(domain, criteria, 
-                                              CGAL::parameters::lloyd(), CGAL::parameters::odt(), 
-                                              CGAL::parameters::perturb(), CGAL::parameters::exude());
+          C3t3_manualseg c3t3= CGAL::make_mesh_3<C3t3_manualseg>(domain, criteria,
+                                              CGAL::parameters::lloyd<bool>(), CGAL::parameters::odt<bool>(),
+                                              CGAL::parameters::perturb<bool>(), CGAL::parameters::exude<bool>());
           chrono.stop();
           std::cout<<" done in "<<chrono<<std::endl;
           chrono.reset();
@@ -254,13 +272,13 @@ int main(int argc,char **argv)
               c3t3.output_to_medit(medit_file);
               medit_file.close();
           }
-          //get the triangulation; 
+          //get the triangulation;
           // Here I need a reference, otherwise when I go to take the tetra vertex
           // these will be not consistent (most of them 0)
-          //get the triangulation; 
+          //get the triangulation;
           // Here I need a reference, otherwise when I go to take the tetra vertex
           // these will be not consistent (most of them 0)
-          const Tr_manualseg & triang= c3t3.triangulation();  
+          const Tr_manualseg & triang= c3t3.triangulation();
           size_t nbPt=static_cast<size_t>(triang.number_of_vertices());
           size_t nbTet=static_cast<size_t>(c3t3.number_of_cells_in_complex());
           if(nbPt<3 ||nbTet<1)
@@ -327,15 +345,16 @@ int main(int argc,char **argv)
   else
   {
           std::string meshFile=mesh_dir+"/"+mesh_name;
+          std::cout << "Reading mesh file: " << meshFile << '\n';
           chrono.start();
           CarpMesh.readFromFile(meshFile);
           chrono.stop();
           std::cout<<" mesh read in "<<chrono<<std::endl;
           chrono.reset();
-  }  
+  }
 
-  
-  // if mesh is read, it still has its boundary and so on (boundary extracted from reading); also, no need of rescaling 
+
+  // if mesh is read, it still has its boundary and so on (boundary extracted from reading); also, no need of rescaling
   Chrono chrono2;
   if(!readTheMesh)
   {
@@ -360,8 +379,8 @@ int main(int argc,char **argv)
       chrono2.reset();
 
       if(!mesh_from_segmentation)
-      { 
-        // HERE GOES RELABELING 
+      {
+        // HERE GOES RELABELING
         // NB: AT this point algorthm expects that tria are defined
         // and that have the same label of the tetra they belongs to
         // If you are here, all of your tetra have a label = 1, since
@@ -411,81 +430,64 @@ int main(int argc,char **argv)
       CarpMesh.writeCarpMesh(cfileoutName,out_carp_binary);
   }
 
-  
-  VtkWriter writerVTK(& CarpMesh, out_vtk_binary);
-  if(out_vtk)
+  // Write region_labels to VTK only when thickness is not being evaluated.
+  // When eval_thickness is true the Laplace pipeline manages all VTK output.
+  if(out_vtk && !eval_thickness)
   {
+    VtkWriter writerVTK(&CarpMesh, out_vtk_binary);
     writerVTK.setOutputDir(out_dir);
     writerVTK.setPrefixName(out_name);
     writerVTK.openFileForOutput();
     std::vector<double> meshLabels = CarpMesh.copyLabelVectorForVTKOutput();
-    writerVTK.writeVariable(meshLabels, "region_labels",VtkWriter::Scalar);
-    meshLabels.clear();
-  }
-
-  //here I free some variables
-  CarpMesh.unsetBoundaryLabels();
-  
-  if(eval_thickness)
-  {
-    
-    ThicknessEvaluation ThicknessCompute(param_file, &CarpMesh );
-    
-    if(swapregions)
-    {
-        // to assign the thickness at the epicardium, swap the values of the potential
-        ThicknessCompute.setBCValue(CarpMesh.Endocardium(), 1.0);  
-        ThicknessCompute.setBCValue(CarpMesh.Epicardium(), 0.0);  
-    }
-    else
-    {
-          ThicknessCompute.setBCValue(CarpMesh.Endocardium(), 0.0);  
-          ThicknessCompute.setBCValue(CarpMesh.Epicardium(), 1.0);  
-    }
-    
-    ThicknessCompute.solve();
-    if(ThicknessCompute.algorithm()!=static_cast<unsigned char>(2)  )
-    {
-      CarpMesh.initializeConnectivities();
-    }
-    
-    ThicknessCompute.evalThickness();
-    std::string cfileoutName=out_dir+"/"+out_name;
-    ThicknessCompute.writeElementGradient(cfileoutName);
-    CarpMesh.writeTetraCentroids(cfileoutName);
-    CarpMesh.writeTris(cfileoutName);
-    if(out_potential)
-    {
-      if(out_vtk)
-      {
-        writerVTK.writeVariable(ThicknessCompute.sol(), "potential_func",VtkWriter::Scalar);
-      }
-      else
-      {
-        if(out_carp || !out_vtk) 
-        {
-          ThicknessCompute.writeSolution(out_dir+"/"+out_name);
-        }
-      }
-    }
-    
-    if(out_vtk)
-    {
-      writerVTK.writeVariable(ThicknessCompute.thickness(), "Thickness",VtkWriter::Scalar);
-    }
-   
-   if(out_carp || !out_vtk) 
-   {
-      ThicknessCompute.writeThickness(out_dir+"/"+out_name);
-   }
-  }// end if on eval thickness
-  
-  if(out_vtk)
-  {
+    writerVTK.writeVariable(meshLabels, "region_labels", VtkWriter::Scalar);
     writerVTK.CloseFile();
   }
-  
+
+  // Build BC config from auto-detected endo/epi node sets before freeing them.
+  LaplaceBCConfig bc;
+  bc.swap_regions = swapregions;
+  if(swapregions)
+  {
+      bc.one_bc_sets.push_back(CarpMesh.Endocardium());
+      bc.zero_bc_sets.push_back(CarpMesh.Epicardium());
+  }
+  else
+  {
+      bc.zero_bc_sets.push_back(CarpMesh.Endocardium());
+      bc.one_bc_sets.push_back(CarpMesh.Epicardium());
+  }
+
+  // Free heavy boundary data; _Endo and _Epi are preserved.
+  CarpMesh.unsetBoundaryLabels();
+
+  if(eval_thickness)
+  {
+    LaplaceParams params;
+    params.abs_toll    = param_file("laplacesolver/abs_toll",    1e-6);
+    params.rel_toll    = param_file("laplacesolver/rel_toll",    1e-6);
+    params.itr_max     = param_file("laplacesolver/itr_max",     500);
+    params.dimKrilovSp = param_file("laplacesolver/dimKrilovSp", 150);
+    params.verbose     = param_file("laplacesolver/verbose",     0);
+
+    int algo = param_file("others/thickalgo", 1);
+    if(command_line.search(2, "-thickalgo", "--thickness-algorithm"))
+    {
+        algo = command_line.follow(1, 2, "-thickalgo", "--thickness-algorithm");
+        std::cout << "Thickness algorithm (CLI override): " << algo << '\n';
+    }
+
+    OutputConfig out_cfg;
+    out_cfg.out_dir             = out_dir;
+    out_cfg.out_name            = out_name;
+    out_cfg.eval_thickness      = true;
+    out_cfg.thickness_algorithm = algo;
+    out_cfg.out_vtk             = out_vtk;
+    out_cfg.out_vtk_binary      = out_vtk_binary;
+    out_cfg.out_potential       = out_potential;
+
+    runLaplacePipeline(CarpMesh, bc, params, out_cfg);
+  }
+
   return 0;
-  
-  
+
 }

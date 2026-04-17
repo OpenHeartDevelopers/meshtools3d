@@ -33,7 +33,7 @@
 #include <fstream>
 #include <iostream>
 
-#include "GetPot.hpp"
+#include "../include/GetPot.hpp"
 
 
 #define victorate(TYPE, VARIABLE, ITERATOR) \
@@ -511,9 +511,9 @@ GetPot::next(const std::string & Default)
     cursor++;
 
     if( cursor >= argv.size() )
-    { 
-        cursor = argv.size(); 
-        return Default; 
+    {
+        cursor = argv.size();
+        return Default;
     }
 
     //const std::string Remain = __get_remaining_string(argv[cursor], prefix);
@@ -1262,20 +1262,26 @@ GetPot::DBE_expand(const std::string expr)
 	    double y = __convert_to_type(A[2], 1e37);
 	    int    begin = int(x+0.5);
 	    int    end = 0;
-	    if ( y != 1e37 && y > 0 && y <= Var->value.size() && y > x)
-		end = int(y+1.5);
-	    else if( y == -1 )
-		end = Var->value.size();
+	    if ( y != 1e37 && y > 0 && y <= Var->value.size() && y > x) {
+	      end = size_t(y+1.5);
+	    }
+	    else if( y == -1 ) {
+          end = Var->value.size();
+	    }
 	    else
 		return "<<2nd index out of range>>";
 
 	    std::string result = *(Var->get_element(begin));
-	    for(int i = begin+1; i < end; i++)
-		result += std::string(" ") + *(Var->get_element(i));
+	    for(size_t i = begin+1; i < end; i++) {
+	        result += std::string(" ") + *(Var->get_element(i));
+	    }
+
 	    return result;
 	}
-	else
-	    return *(Var->get_element(int(x+0.5)));
+	else {
+	    return *(Var->get_element(size_t(x+0.5)));
+	}
+
     }
 
     const StringVector    A = DBE_get_expr_list(expr, 1);
@@ -1587,9 +1593,14 @@ GetPot::variable::variable(const char* Name, const char* Value)
     take(Value);
 }
 
-inline const std::string*
-GetPot::variable::get_element(unsigned Idx) const
-{ if( Idx >= value.size() ) return 0; else return &(value[Idx]); }
+inline const std::string* GetPot::variable::get_element(size_t Idx) const {
+    if( Idx >= value.size() ) {
+        return 0;
+    }
+    else {
+        return &(value[Idx]);
+    }
+}
 
 inline void
 GetPot::variable::Swap(variable& Other)
