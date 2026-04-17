@@ -1593,7 +1593,7 @@ GetPot::variable::variable(const char* Name, const char* Value)
     take(Value);
 }
 
-inline const std::string* GetPot::variable::get_element(size_t Idx) const {
+inline const std::string* GetPot::variable::get_element(unsigned Idx) const {
     if( Idx >= value.size() ) {
         return 0;
     }
