@@ -42,6 +42,22 @@ Finish the orchestrator cleanup started in Phase 2a.
 **Unblocks:** Phase 3 (Python wrapper benefits from a cleaner, more predictable
 parameter surface).
 
+### Phase 2c: 
+> To be considered as an option. Not decided!
+  - Change numeric fields in MeshingParams from FaceNumericalType/CellNumericalType to double
+  - Move the struct from CGALDataType.hpp to m3d/include/ alongside LaplaceParams
+  - main.cpp passes double values to CGAL criteria constructors directly (they accept double)
+
+The only risk is if a future CGAL version makes the criteria constructors finicky about 
+double vs. their own FT — unlikely but worth noting.                                                       
+<!--                                                                                              
+  So the revised phase order would be:                                                       
+                                                               
+  Phase 2b   NEXT    Meshing-side refactor (MeshingParams in CGALDataType.hpp, template helper, TBB helper)                                                                                          
+  Phase 2c           Move MeshingParams to m3d/ (double fields, CGAL-free)                   
+  Phase 3            Python wrapper                                                          
+  Phase 5            CI/CD -->
+
 ### Phase 3 — Python wrapper
 Replace the user's repeated ad-hoc parameter-file scripts with a proper Python API.
 
