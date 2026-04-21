@@ -59,30 +59,29 @@ void runLaplacePipeline(Mesh& mesh,
         mesh.writeTris(outBase);
     }
 
-    const bool write_vtk_vars = out.out_vtk &&
-                                 (out.out_potential || out.eval_thickness);
-
     VtkWriter writerVTK(&mesh, out.out_vtk_binary);
-    if (write_vtk_vars) {
+    if (out.out_vtk) {
         writerVTK.setOutputDir(out.out_dir);
         writerVTK.setPrefixName(out.out_name);
         writerVTK.openFileForOutput();
+        std::vector<double> meshLabels = mesh.copyLabelVectorForVTKOutput();
+        writerVTK.writeVariable(meshLabels, "region_labels", VtkWriter::Scalar);
     }
 
     if (out.out_potential) {
-        if (write_vtk_vars)
+        if (out.out_vtk)
             writerVTK.writeVariable(solver.sol(), "potential_func", VtkWriter::Scalar);
         else
             solver.writeSolution(outBase);
     }
 
     if (out.eval_thickness) {
-        if (write_vtk_vars)
+        if (out.out_vtk)
             writerVTK.writeVariable(solver.thickness(), "Thickness", VtkWriter::Scalar);
         else
             solver.writeThickness(outBase);
     }
 
-    if (write_vtk_vars)
+    if (out.out_vtk)
         writerVTK.CloseFile();
 }

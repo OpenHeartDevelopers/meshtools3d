@@ -57,6 +57,15 @@ typedef CGAL::Mesh_cell_criteria_3<Tr_manualseg> Cell_criteria_manualseg;
 
 typedef C3t3_manualseg::Cells_in_complex_iterator Cell_iterator_manualseg;
 
+struct MeshingParams {
+    FaceNumericalType facet_angle         = 30;
+    FaceNumericalType facet_size          = 0.8;
+    FaceNumericalType facet_distance      = 4;
+    CellNumericalType cell_rad_edge_ratio = 2.0;
+    CellNumericalType cell_size           = 1.0;
+    double            rescale_factor      = 1.0;
+};
+
 
 
 

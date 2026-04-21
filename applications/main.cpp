@@ -23,8 +23,44 @@
 #include<set>
 #ifdef CGAL_LINKED_WITH_TBB
 #include <tbb/global_control.h>
+#include <memory>
 #endif
 
+
+#ifdef CGAL_LINKED_WITH_TBB
+static std::unique_ptr<tbb::global_control> configureTbbThreads()
+{
+    int numThreads = 1;
+    char* nthr = getenv("TBB_NUM_THREADS");
+    if (nthr != NULL)
+        numThreads = atoi(nthr);
+    if ((nthr == NULL) || (numThreads == 0)) {
+        numThreads = 1;
+        std::cout << "TBB_NUM_THREADS not set; nb of threads is: "
+                  << numThreads
+                  << " (default)"
+                  << std::endl;
+        std::cout << "run\n\texport TBB_NUM_THREADS=<N>\nto use more cores" << '\n';
+    } else {
+        std::cout << "nb of threads is: " << numThreads << std::endl;
+    }
+    return std::make_unique<tbb::global_control>(
+        tbb::global_control::max_allowed_parallelism, numThreads);
+}
+#endif
+
+
+static MeshingParams loadMeshingParams(const GetPot& param_file)
+{
+    MeshingParams p;
+    p.facet_angle         = param_file("meshing/facet_angle",         30);
+    p.facet_size          = param_file("meshing/facet_size",          0.8);
+    p.facet_distance      = param_file("meshing/facet_distance",      4);
+    p.cell_rad_edge_ratio = param_file("meshing/cell_rad_edge_ratio", 2.0);
+    p.cell_size           = param_file("meshing/cell_size",           1.0);
+    p.rescale_factor      = param_file("meshing/rescaleFactor",       1.0);
+    return p;
+}
 
 // Snapshot the exact inputs that produced this run: a verbatim copy of the
 // source data file plus a re-runnable shell script containing argv. Together
@@ -101,11 +137,7 @@ int main(int argc,char **argv)
   std::string mesh_name          = param_file("meshing/mesh_name","mesh");
 
 
-  FaceNumericalType fangle      = param_file("meshing/facet_angle",30);
-  FaceNumericalType fsize       = param_file("meshing/facet_size",0.8);
-  FaceNumericalType fapprox     = param_file("meshing/facet_distance",4);
-  CellNumericalType cR_E_ratio  = param_file("meshing/cell_rad_edge_ratio",2.0);
-  CellNumericalType csize       = param_file("meshing/cell_size",1.0);
+  MeshingParams meshingParams   = loadMeshingParams(param_file);
 
   std::string out_dir        = param_file("output/outdir",".");
   std::string out_name       = param_file("output/name","imgmesh");
@@ -120,7 +152,6 @@ int main(int argc,char **argv)
   bool debug_output          = param_file("output/debug_output",false);
   size_t debug_frequency     = param_file("output/debug_frequency",100000);
 
-  double rescaling           = param_file("meshing/rescaleFactor",1.0);
 
   std::cout << "Checking for command line flags..." << '\n';
   seg_dir  = command_line.follow(seg_dir, 2,  "-seg_dir","--segmentation_directory");
@@ -140,23 +171,7 @@ int main(int argc,char **argv)
   bool verbose = command_line.search(2, "-v","--verbose");
 
 #ifdef CGAL_LINKED_WITH_TBB
-  int numThreads = 1;
-  char * nthr=NULL;
-  nthr = getenv("TBB_NUM_THREADS");
-  if (nthr != NULL)
-    numThreads = atoi(nthr);
-  if ((nthr == NULL) || (numThreads == 0)) {
-    numThreads = 1;
-    std::cout << "TBB_NUM_THREADS not set; nb of threads is: "
-              << numThreads
-              << " (default)"
-              << std::endl;
-    std::cout << "run\n\texport TBB_NUM_THREADS=<N>\nto use more cores" << '\n';
-  } else {
-    std::cout << "nb of threads is: " << numThreads << std::endl;
-  }
-  tbb::global_control gc(tbb::global_control::max_allowed_parallelism, numThreads);
-  nthr=NULL;
+  auto tbbControl = configureTbbThreads();
 #endif
 
   Mesh CarpMesh;
@@ -197,8 +212,8 @@ int main(int argc,char **argv)
           if(image1.read(imageName.c_str()))
           {
               Mesh_domain domain = Mesh_domain::create_labeled_image_mesh_domain(image1);
-              Facet_criteria facet_criteria(fangle, fsize, fapprox);
-              Cell_criteria cell_criteria(cR_E_ratio, csize);
+              Facet_criteria facet_criteria(meshingParams.facet_angle, meshingParams.facet_size, meshingParams.facet_distance);
+              Cell_criteria cell_criteria(meshingParams.cell_rad_edge_ratio, meshingParams.cell_size);
               Mesh_criteria criteria(facet_criteria, cell_criteria);
               std::cout<<"MESHING...";
               chrono.start();
@@ -290,8 +305,8 @@ int main(int argc,char **argv)
       {
           Segmentation.readSegmentation(imageName);
           Mesh_domain_manualseg domain(Segmentation);
-          Facet_criteria_manualseg facet_criteria(fangle, fsize, fapprox);
-          Cell_criteria_manualseg  cell_criteria(cR_E_ratio, csize);
+          Facet_criteria_manualseg facet_criteria(meshingParams.facet_angle, meshingParams.facet_size, meshingParams.facet_distance);
+          Cell_criteria_manualseg  cell_criteria(meshingParams.cell_rad_edge_ratio, meshingParams.cell_size);
           Mesh_criteria_manualseg  criteria(facet_criteria, cell_criteria);
           std::cout<<"MESHING...";
           chrono.start();
@@ -441,7 +456,7 @@ int main(int argc,char **argv)
         chrono2.stop();
         std::cout<<" done in "<<chrono2<<std::endl;
       }
-      CarpMesh.meshRescaling(rescaling); //rescale the whole mesh; not on output. So output of rescaling is 1 now
+      CarpMesh.meshRescaling(meshingParams.rescale_factor); //rescale the whole mesh; not on output. So output of rescaling is 1 now
   }// end mesh is not read
 
   if(boundary_relabeling)
