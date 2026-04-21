@@ -53,10 +53,17 @@ cmake -DCGAL_DIR=$(brew --prefix cgal)/lib/cmake/CGAL ..
 
 ### 1. Install dependencies
 
+Get CGAL from github: 
+
 ```bash
-sudo apt-get update && sudo apt-get install -y \
-    build-essential cmake \
-    libcgal-dev libboost-all-dev libtbb-dev zlib1g-dev
+mkdir -p ~/installs 
+wget -q https://github.com/CGAL/cgal/releases/download/v6.1.1/CGAL-6.1.1-library.tar.xz -O ~/installs/CGAL-6.1.1-library.tar.xz
+cd ~/installs 
+tar -xvf CGAL-6.1.1-library.tar.xz 
+```
+
+```bash
+sudo apt-get update && sudo apt-get install -y build-essential cmake libboost-all-dev libtbb-dev zlib1g-dev
 ```
 
 ### 2. Build
@@ -64,9 +71,10 @@ sudo apt-get update && sudo apt-get install -y \
 ```bash
 git clone <repo-url> meshtools3d && cd meshtools3d
 mkdir build && cd build
-cmake ..
-make -j$(nproc)
+ccmake ..
 ```
+
+Then point the `CGAL_DIR` to the folder you extracted from before. 
 
 ---
 
