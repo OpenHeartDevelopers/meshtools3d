@@ -1,0 +1,93 @@
+name: Release
+
+on:
+  release:
+    types: [published]
+
+jobs:
+  build:
+    name: ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-22.04
+          - os: macos-latest
+          - os: windows-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      # ── Linux dependencies ─────────────────────────────────────────────────
+      - name: Install deps (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libgmp-dev libmpfr-dev libboost-dev \
+            libtbb-dev zlib1g-dev libeigen3-dev
+
+      # ── macOS dependencies ─────────────────────────────────────────────────
+      - name: Install deps (macOS)
+        if: runner.os == 'macOS'
+        run: brew install gmp mpfr boost tbb eigen
+
+      # ── CGAL 6.1.1 from tarball (Linux + macOS) ───────────────────────────
+      - name: Cache CGAL 6.1.1
+        if: runner.os != 'Windows'
+        id: cache-cgal
+        uses: actions/cache@v4
+        with:
+          path: CGAL-6.1.1
+          key: cgal-6.1.1
+
+      - name: Download CGAL 6.1.1
+        if: runner.os != 'Windows' && steps.cache-cgal.outputs.cache-hit != 'true'
+        shell: bash
+        run: |
+          curl -L -o cgal.tar.xz \
+            https://github.com/CGAL/cgal/releases/download/v6.1.1/CGAL-6.1.1.tar.xz
+          tar -xJf cgal.tar.xz
+          rm cgal.tar.xz
+
+      # ── Windows dependencies via vcpkg ─────────────────────────────────────
+      # Uses the vcpkg instance pre-installed on the runner.
+      # CGAL from vcpkg may be a later 6.x patch; Windows is best-effort.
+      - name: Install deps (Windows)
+        if: runner.os == 'Windows'
+        run: vcpkg install cgal tbb zlib --triplet x64-windows
+
+      # ── Configure ─────────────────────────────────────────────────────────
+      - name: Configure (Linux/macOS)
+        if: runner.os != 'Windows'
+        shell: bash
+        run: |
+          cmake -B build \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DCGAL_DIR="${{ github.workspace }}/CGAL-6.1.1"
+
+      - name: Configure (Windows)
+        if: runner.os == 'Windows'
+        run: |
+          cmake -B build `
+            -DCMAKE_BUILD_TYPE=Release `
+            -A x64 `
+            -DCMAKE_TOOLCHAIN_FILE="$env:VCPKG_INSTALLATION_ROOT/scripts/buildsystems/vcpkg.cmake"
+
+      # ── Build ──────────────────────────────────────────────────────────────
+      - name: Build
+        run: cmake --build build --config Release --parallel
+
+      # ── Package ────────────────────────────────────────────────────────────
+      - name: Package
+        shell: bash
+        run: cpack --config build/CPackConfig.cmake -C Release -B build
+
+      # ── Upload to GitHub Release ───────────────────────────────────────────
+      - name: Upload artifacts
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            build/meshtools3d-*.tar.gz
+            build/meshtools3d-*.zip

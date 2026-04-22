@@ -1,5 +1,5 @@
-cmake_minimum_required(VERSION 3.14)
-project(meshtools3d LANGUAGES CXX)
+cmake_minimum_required(VERSION 3.21)
+project(meshtools3d VERSION 2.0.0 LANGUAGES CXX)
 
 if(POLICY CMP0167)
   cmake_policy(SET CMP0167 NEW)
@@ -40,5 +40,48 @@ if(TBB_FOUND)
   target_link_libraries(laplace_solver PRIVATE TBB::tbb TBB::tbbmalloc)
 endif()
 
-install(TARGETS meshtools3d laplace_solver
-        RUNTIME DESTINATION bin)
+# ── Install + dependency bundling ─────────────────────────────────────────────
+# macOS: bundle Homebrew libs (not in /usr/lib or /System/Library) into lib/.
+# Windows: bundle vcpkg DLLs alongside the executables in bin/.
+# Linux: GMP, MPFR, TBB are system packages — not bundled, documented as deps.
+if(APPLE)
+  install(TARGETS meshtools3d laplace_solver
+          RUNTIME_DEPENDENCY_SET _m3d_deps
+          RUNTIME DESTINATION bin)
+  install(RUNTIME_DEPENDENCY_SET _m3d_deps
+          PRE_EXCLUDE_REGEXES  "^/usr/lib" "^/System/Library"
+          POST_EXCLUDE_REGEXES "^/usr/lib" "^/System/Library"
+          DESTINATION lib)
+elseif(WIN32)
+  install(TARGETS meshtools3d laplace_solver
+          RUNTIME_DEPENDENCY_SET _m3d_deps
+          RUNTIME DESTINATION bin)
+  install(RUNTIME_DEPENDENCY_SET _m3d_deps
+          PRE_EXCLUDE_REGEXES  "api-ms-win-.*" "ext-ms-.*"
+          POST_EXCLUDE_REGEXES ".*[Ss]ystem32[/\\\\].*\\.dll"
+          DESTINATION bin)
+else()
+  install(TARGETS meshtools3d laplace_solver
+          RUNTIME DESTINATION bin)
+endif()
+
+# ── CPack ─────────────────────────────────────────────────────────────────────
+string(TOLOWER "${CMAKE_SYSTEM_NAME}"      _cpack_sys)
+string(TOLOWER "${CMAKE_SYSTEM_PROCESSOR}" _cpack_arch)
+string(REPLACE "darwin"  "macos"  _cpack_sys  "${_cpack_sys}")
+string(REPLACE "aarch64" "arm64"  _cpack_arch "${_cpack_arch}")
+string(REPLACE "amd64"   "x86_64" _cpack_arch "${_cpack_arch}")
+
+set(CPACK_PACKAGE_NAME             "meshtools3d")
+set(CPACK_PACKAGE_VERSION          "${PROJECT_VERSION}")
+set(CPACK_PACKAGE_VENDOR           "CEMRG")
+set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "3D mesh generation tools for cardiac volumetric models")
+set(CPACK_PACKAGE_FILE_NAME
+    "${CPACK_PACKAGE_NAME}-${CPACK_PACKAGE_VERSION}-${_cpack_sys}-${_cpack_arch}")
+set(CPACK_STRIP_FILES TRUE)
+if(WIN32)
+  set(CPACK_GENERATOR "ZIP")
+else()
+  set(CPACK_GENERATOR "TGZ")
+endif()
+include(CPack)
