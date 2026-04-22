@@ -481,15 +481,18 @@ int main(int argc,char **argv)
       CarpMesh.writeCarpMesh(cfileoutName,out_carp_binary);
   }
 
-  // Write region_labels to VTK only when thickness is not being evaluated.
-  // When eval_thickness is true the Laplace pipeline manages all VTK output.
+  // Capture region_labels before unsetBoundaryLabels() clears pointRegions.
+  std::vector<double> meshLabels;
+  if(out_vtk)
+      meshLabels = CarpMesh.copyLabelVectorForVTKOutput();
+
+  // When thickness is not evaluated, write the VTK here (region_labels only).
   if(out_vtk && !eval_thickness)
   {
     VtkWriter writerVTK(&CarpMesh, out_vtk_binary);
     writerVTK.setOutputDir(out_dir);
     writerVTK.setPrefixName(out_name);
     writerVTK.openFileForOutput();
-    std::vector<double> meshLabels = CarpMesh.copyLabelVectorForVTKOutput();
     writerVTK.writeVariable(meshLabels, "region_labels", VtkWriter::Scalar);
     writerVTK.CloseFile();
   }
@@ -535,6 +538,7 @@ int main(int argc,char **argv)
     out_cfg.out_vtk             = out_vtk;
     out_cfg.out_vtk_binary      = out_vtk_binary;
     out_cfg.out_potential       = out_potential;
+    out_cfg.region_labels       = std::move(meshLabels);
 
     runLaplacePipeline(CarpMesh, bc, params, out_cfg);
   }

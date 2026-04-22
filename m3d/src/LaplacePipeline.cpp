@@ -64,8 +64,7 @@ void runLaplacePipeline(Mesh& mesh,
         writerVTK.setOutputDir(out.out_dir);
         writerVTK.setPrefixName(out.out_name);
         writerVTK.openFileForOutput();
-        std::vector<double> meshLabels = mesh.copyLabelVectorForVTKOutput();
-        writerVTK.writeVariable(meshLabels, "region_labels", VtkWriter::Scalar);
+        writerVTK.writeVariable(out.region_labels, "region_labels", VtkWriter::Scalar);
     }
 
     if (out.out_potential) {

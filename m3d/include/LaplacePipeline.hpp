@@ -42,6 +42,7 @@ struct OutputConfig {
     bool out_vtk             = false;
     bool out_vtk_binary      = false;
     bool out_potential       = false;
+    std::vector<double> region_labels;  // captured before unsetBoundaryLabels()
 };
 
 // Read a VTX file (count header + one node index per line) into a node set.
