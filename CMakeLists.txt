@@ -111,7 +111,11 @@ string(REPLACE "aarch64" "arm64"  _cpack_arch "${_cpack_arch}")
 string(REPLACE "amd64"   "x86_64" _cpack_arch "${_cpack_arch}")
 
 set(CPACK_PACKAGE_NAME             "meshtools3d")
-set(CPACK_PACKAGE_VERSION          "${PROJECT_VERSION}")
+# CI overrides this with -DCPACK_PACKAGE_VERSION=<tag> so the tarball filename
+# tracks the release tag; local builds fall back to PROJECT_VERSION.
+if(NOT DEFINED CPACK_PACKAGE_VERSION)
+  set(CPACK_PACKAGE_VERSION "${PROJECT_VERSION}")
+endif()
 set(CPACK_PACKAGE_VENDOR           "CEMRG")
 set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "3D mesh generation tools for cardiac volumetric models")
 set(CPACK_PACKAGE_FILE_NAME

@@ -5,7 +5,21 @@ on:
     types: [published]
 
 jobs:
+  vars:
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.set.outputs.version }}
+      tag:     ${{ steps.set.outputs.tag }}
+    steps:
+      - id: set
+        run: |
+          TAG="${GITHUB_REF_NAME}"
+          VERSION="${TAG#v}"
+          echo "tag=${TAG}"         >> "$GITHUB_OUTPUT"
+          echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
+
   build:
+    needs: vars
     name: ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
     strategy:
@@ -65,7 +79,8 @@ jobs:
         run: |
           cmake -B build \
             -DCMAKE_BUILD_TYPE=Release \
-            -DCGAL_DIR="${{ github.workspace }}/CGAL-6.1.1"
+            -DCGAL_DIR="${{ github.workspace }}/CGAL-6.1.1" \
+            -DCPACK_PACKAGE_VERSION="${{ needs.vars.outputs.version }}"
 
       - name: Configure (Windows)
         if: runner.os == 'Windows'
@@ -73,7 +88,8 @@ jobs:
           cmake -B build `
             -DCMAKE_BUILD_TYPE=Release `
             -A x64 `
-            -DCMAKE_TOOLCHAIN_FILE="$env:VCPKG_INSTALLATION_ROOT/scripts/buildsystems/vcpkg.cmake"
+            -DCMAKE_TOOLCHAIN_FILE="$env:VCPKG_INSTALLATION_ROOT/scripts/buildsystems/vcpkg.cmake" `
+            -DCPACK_PACKAGE_VERSION="${{ needs.vars.outputs.version }}"
 
       # ── Build ──────────────────────────────────────────────────────────────
       - name: Build
