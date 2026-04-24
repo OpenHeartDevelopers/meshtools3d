@@ -25,38 +25,36 @@ once the phases are complete.
   `Dockerfile.legacy` and `docs/install_legacy.md`
 - **Status:** merged to `master` via `feature/cgal_upgrade`
 
+### Phase 2b — Meshing-side refactor of `main.cpp`
+- `MeshingParams` struct extracted, loaded via `loadMeshingParams()`
+- TBB setup isolated into `configureTbbThreads()` helper
+- Post-meshing boilerplate templated in `m3d/include/MeshingPipeline.hpp`
+  (`writeMeditFile`, `validateTriangulation`, `populateCarpMeshFromC3t3`)
+- Labeled vs. manual-segmentation branches collapsed via traits bundles
+  (`LabeledMeshingTraits`, `ManualSegMeshingTraits`) and a single
+  `runCGALMeshing<Traits>()` template
+- Run reproducibility: `snapshotRunInputs()` writes `_params.data` + `_invocation.sh`
+- **Status:** on `development`, not yet merged to `master`
+
+### Phase 5a — Release CI + packaging
+- `.github/workflows/release.yml`: Linux/macOS/Windows build matrix, CGAL 6.1.1,
+  triggered on `release: published`
+- `CMakeLists.txt`: CPack, install rpath, Homebrew dylib bundling (macOS),
+  vcpkg DLL bundling (Windows), system-lib deps documented for Linux
+- **Status:** on `development`, not yet exercised (no tag cut yet)
+
 ---
 
 ## Remaining Phases
 
-### Phase 2b — Meshing-side refactor of `main.cpp`
-Finish the orchestrator cleanup started in Phase 2a.
-
-- Extract a `MeshingParams` struct analogous to `LaplaceParams`
-- Factor the two meshing-mode blocks (labeled vs. manual-segmentation) into a single
-  helper that dispatches on `mesh_from_segmentation`
-- Clean up TBB setup into its own helper (currently inline `#ifdef` block)
-- Goal: `main.cpp` becomes a thin driver of library calls, mirroring what Phase 2a
-  did for the Laplace path
-
-**Unblocks:** Phase 3 (Python wrapper benefits from a cleaner, more predictable
-parameter surface).
-
-### Phase 2c: 
+### Phase 2c — Move `MeshingParams` out of CGAL
 > To be considered as an option. Not decided!
-  - Change numeric fields in MeshingParams from FaceNumericalType/CellNumericalType to double
-  - Move the struct from CGALDataType.hpp to m3d/include/ alongside LaplaceParams
-  - main.cpp passes double values to CGAL criteria constructors directly (they accept double)
+- Change numeric fields from `FaceNumericalType`/`CellNumericalType` to `double`
+- Move the struct from `CGALDataType.hpp` to `m3d/include/` alongside `LaplaceParams`
+- `main.cpp` passes `double` values to CGAL criteria constructors directly (they accept double)
 
-The only risk is if a future CGAL version makes the criteria constructors finicky about 
-double vs. their own FT — unlikely but worth noting.                                                       
-<!--                                                                                              
-  So the revised phase order would be:                                                       
-                                                               
-  Phase 2b   NEXT    Meshing-side refactor (MeshingParams in CGALDataType.hpp, template helper, TBB helper)                                                                                          
-  Phase 2c           Move MeshingParams to m3d/ (double fields, CGAL-free)                   
-  Phase 3            Python wrapper                                                          
-  Phase 5            CI/CD -->
+The only risk is if a future CGAL version makes the criteria constructors finicky about
+`double` vs. their own `FT` — unlikely but worth noting.
 
 ### Phase 3 — Python wrapper
 Replace the user's repeated ad-hoc parameter-file scripts with a proper Python API.
@@ -67,15 +65,24 @@ Replace the user's repeated ad-hoc parameter-file scripts with a proper Python A
 - Packaging: pip-installable, separate repo or `python/` subdirectory TBD
 - Integration with the broader pycemrg suite where it makes sense
 
-**Depends on:** Phase 2b (cleaner parameter contract).
+**Depends on:** Phase 2b (done — parameter contract is stable).
+**Blocks:** `v2.0.0` release tag — no merge to `master` until the parameter-file
+builder is in place.
 
-### Phase 5 — GitHub Actions CI/CD
-Now unblocked by Phase 4.
+### Phase 5b — CI smoke test + Docker publish
+Extensions to Phase 5a, deferred until a small fixture exists.
 
-- Build matrix: Linux (Ubuntu 22.04, 24.04), macOS (arm64, x86_64), optionally Windows
-- Release artifacts: pre-built binaries attached to GitHub Releases
-- CI job: build + run `examples/sphereCoarse4Thickness` as a smoke test
+- Smoke test job: build + run `examples/sphereCoarse4Thickness` (or a smaller
+  fixture) and assert non-empty outputs
 - Publish updated Docker image on push to `master`
+
+### Phase 6 — Push/PR CI (Linux-only)
+`.github/workflows/ci.yml`: Linux build on push to `development`/`master` and on
+PRs to either. Reuses the `release.yml` dependency install steps.
+
+- Build-only, no packaging — fail-fast signal for refactors
+- Open-source-friendly: external PRs get an automatic green/red check
+- Future hook: wire in the Phase 5b smoke test once the fixture is ready
 
 ---
 
@@ -110,8 +117,11 @@ phase work is complete.
 ```
 Phase 1+2a  DONE  Laplace pipeline extraction + laplace_solver app
 Phase 4     DONE  CGAL 4.x to 6.x upgrade
-Phase 2b    NEXT  Meshing-side refactor of main.cpp
-Phase 3           Python wrapper
-Phase 5           CI/CD + release binaries
+Phase 2b    DONE  Meshing-side refactor (on development)
+Phase 5a    DONE  Release CI + CPack packaging (on development, no tag yet)
+Phase 6     NEXT  Push/PR CI, Linux-only
+Phase 3           Python wrapper (blocks v2.0.0 tag)
+Phase 2c          Optional: MeshingParams → m3d/, double fields
+Phase 5b          CI smoke test + Docker publish on master
 Backlog           Feature items from README TODOs
 ```

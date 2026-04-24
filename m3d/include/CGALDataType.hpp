@@ -1,3 +1,5 @@
+#pragma once
+
 #include <CGAL/Exact_predicates_inexact_constructions_kernel.h>
 #include <CGAL/Mesh_triangulation_3.h>
 #include <CGAL/Mesh_complex_3_in_triangulation_3.h>
@@ -64,6 +66,25 @@ struct MeshingParams {
     CellNumericalType cell_rad_edge_ratio = 2.0;
     CellNumericalType cell_size           = 1.0;
     double            rescale_factor      = 1.0;
+};
+
+// Traits bundles for the templated meshing dispatcher in MeshingPipeline.hpp.
+// Each traits struct groups the CGAL types that vary between the labeled-image
+// branch and the manual-segmentation branch of main.cpp.
+struct LabeledMeshingTraits {
+    using Domain        = Mesh_domain;
+    using C3t3          = ::C3t3;
+    using FacetCriteria = Facet_criteria;
+    using CellCriteria  = Cell_criteria;
+    using MeshCriteria  = Mesh_criteria;
+};
+
+struct ManualSegMeshingTraits {
+    using Domain        = Mesh_domain_manualseg;
+    using C3t3          = C3t3_manualseg;
+    using FacetCriteria = Facet_criteria_manualseg;
+    using CellCriteria  = Cell_criteria_manualseg;
+    using MeshCriteria  = Mesh_criteria_manualseg;
 };
 
 

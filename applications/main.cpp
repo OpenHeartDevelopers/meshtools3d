@@ -190,7 +190,7 @@ int main(int argc,char **argv)
 #else
   std::string command="mkdir -p "+out_dir;
   int ierr=system(command.c_str());
-  if(!ierr==0)
+  if (ierr != 0)
   {
       std::cerr<<"Problem in creating the directory "<<out_dir<<std::endl;
       exit(1);
@@ -208,53 +208,23 @@ int main(int argc,char **argv)
       std::cout << "Reading image in path: " << imageName << '\n';
       if(mesh_from_segmentation)   // CGAL reads segmentation with labels and mesh it
       {
-          C3t3 c3t3;
           CGAL::Image_3 image1;
-          if(image1.read(imageName.c_str()))
+          if(!image1.read(imageName.c_str()))
           {
-              Mesh_domain domain = Mesh_domain::create_labeled_image_mesh_domain(image1);
-              Facet_criteria facet_criteria(meshingParams.facet_angle, meshingParams.facet_size, meshingParams.facet_distance);
-              Cell_criteria cell_criteria(meshingParams.cell_rad_edge_ratio, meshingParams.cell_size);
-              Mesh_criteria criteria(facet_criteria, cell_criteria);
-              std::cout<<"MESHING...";
-              chrono.start();
-              c3t3 = CGAL::make_mesh_3<C3t3>(domain, criteria,
-                                               CGAL::parameters::lloyd<bool>(), CGAL::parameters::odt<bool>(),
-                                               CGAL::parameters::perturb<bool>(), CGAL::parameters::exude<bool>());
-              chrono.stop();
-              std::cout<<" done in "<<chrono<<std::endl;
-              chrono.reset();
+              std::cerr<<"ERROR: IMAGE NOT READ"<<std::endl;
+              exit(1);
           }
-          else
-          {
-                std::cerr<<"ERROR: IMAGE NOT READ"<<std::endl;
-                exit(1);
-          }
-          if(out_medit)
-              writeMeditFile(c3t3, out_dir, out_name);
-          validateTriangulation(c3t3, out_dir, out_name, out_medit);
-          populateCarpMeshFromC3t3(c3t3, CarpMesh,
+          Mesh_domain domain = Mesh_domain::create_labeled_image_mesh_domain(image1);
+          runCGALMeshing<LabeledMeshingTraits>(domain, meshingParams, CarpMesh,
+              out_dir, out_name, out_medit,
               [](auto itc){ return static_cast<int>(itc->subdomain_index()); });
       } // Segmentation is read by INRreader; mesh domain implemented through a function wrapper with no labels
       else
       {
           Segmentation.readSegmentation(imageName);
           Mesh_domain_manualseg domain(Segmentation);
-          Facet_criteria_manualseg facet_criteria(meshingParams.facet_angle, meshingParams.facet_size, meshingParams.facet_distance);
-          Cell_criteria_manualseg  cell_criteria(meshingParams.cell_rad_edge_ratio, meshingParams.cell_size);
-          Mesh_criteria_manualseg  criteria(facet_criteria, cell_criteria);
-          std::cout<<"MESHING...";
-          chrono.start();
-          C3t3_manualseg c3t3= CGAL::make_mesh_3<C3t3_manualseg>(domain, criteria,
-                                              CGAL::parameters::lloyd<bool>(), CGAL::parameters::odt<bool>(),
-                                              CGAL::parameters::perturb<bool>(), CGAL::parameters::exude<bool>());
-          chrono.stop();
-          std::cout<<" done in "<<chrono<<std::endl;
-          chrono.reset();
-          if(out_medit)
-              writeMeditFile(c3t3, out_dir, out_name);
-          validateTriangulation(c3t3, out_dir, out_name, out_medit);
-          populateCarpMeshFromC3t3(c3t3, CarpMesh,
+          runCGALMeshing<ManualSegMeshingTraits>(domain, meshingParams, CarpMesh,
+              out_dir, out_name, out_medit,
               [](auto){ return 1; }); // single myocardium domain; surface labels re-derived below
       }
   } //end if on not read mesh

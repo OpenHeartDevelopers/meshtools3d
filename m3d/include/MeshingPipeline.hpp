@@ -14,6 +14,8 @@
 #include <map>
 #include <string>
 #include "Mesh.hpp"
+#include "Chrono.hpp"
+#include "CGALDataType.hpp"
 
 // Write c3t3 to <out_dir>/<out_name>.mesh in Medit format.
 template<typename C3t3>
@@ -99,6 +101,38 @@ void populateCarpMeshFromC3t3(const C3t3& c3t3, Mesh& carpMesh, RegionLabelFn ge
         carpMesh.Tet(icount).regionLabel = getLabel(itc);
         ++icount;
     }
+}
+
+// Build criteria, run CGAL::make_mesh_3, write Medit, validate, and populate the
+// CARP mesh. Templated over a Traits bundle (see CGALDataType.hpp) so the labeled
+// and manual-segmentation branches of main.cpp share one body.
+template<typename Traits, typename LabelFn>
+void runCGALMeshing(typename Traits::Domain& domain,
+                    const MeshingParams& p,
+                    Mesh& carpMesh,
+                    const std::string& out_dir,
+                    const std::string& out_name,
+                    bool out_medit,
+                    LabelFn getLabel)
+{
+    typename Traits::FacetCriteria facet_criteria(p.facet_angle, p.facet_size, p.facet_distance);
+    typename Traits::CellCriteria  cell_criteria(p.cell_rad_edge_ratio, p.cell_size);
+    typename Traits::MeshCriteria  criteria(facet_criteria, cell_criteria);
+
+    std::cout << "MESHING...";
+    Chrono chrono;
+    chrono.start();
+    typename Traits::C3t3 c3t3 = CGAL::make_mesh_3<typename Traits::C3t3>(
+        domain, criteria,
+        CGAL::parameters::lloyd<bool>(), CGAL::parameters::odt<bool>(),
+        CGAL::parameters::perturb<bool>(), CGAL::parameters::exude<bool>());
+    chrono.stop();
+    std::cout << " done in " << chrono << std::endl;
+
+    if (out_medit)
+        writeMeditFile(c3t3, out_dir, out_name);
+    validateTriangulation(c3t3, out_dir, out_name, out_medit);
+    populateCarpMeshFromC3t3(c3t3, carpMesh, getLabel);
 }
 
 #endif // MESHINGPIPELINE_HPP
