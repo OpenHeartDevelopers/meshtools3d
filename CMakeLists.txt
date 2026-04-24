@@ -52,6 +52,44 @@ if(APPLE)
           PRE_EXCLUDE_REGEXES  "^/usr/lib" "^/System/Library"
           POST_EXCLUDE_REGEXES "^/usr/lib" "^/System/Library"
           DESTINATION lib)
+  # RUNTIME_DEPENDENCY_SET copies dylibs with their original LC_LOAD_DYLIB entries,
+  # which encode absolute Homebrew paths. Rewrite every non-system dep to a
+  # @loader_path-relative path so the package is self-contained.
+  install(CODE [[
+    set(_base "$ENV{DESTDIR}${CMAKE_INSTALL_PREFIX}")
+    file(GLOB _bins "${_base}/bin/meshtools3d" "${_base}/bin/laplace_solver")
+    file(GLOB _libs "${_base}/lib/*.dylib")
+
+    foreach(_file IN LISTS _bins _libs)
+      cmake_path(GET _file PARENT_PATH _dir)
+      cmake_path(GET _dir FILENAME _dirname)
+
+      execute_process(COMMAND chmod u+w "${_file}")
+      execute_process(COMMAND otool -L "${_file}" OUTPUT_VARIABLE _otool_out)
+      string(REGEX MATCHALL "\t/[^\t\n (]+" _deps "${_otool_out}")
+
+      foreach(_dep IN LISTS _deps)
+        string(STRIP "${_dep}" _dep)
+        if(_dep MATCHES "^/usr/lib|^/System/Library")
+          continue()
+        endif()
+        cmake_path(GET _dep FILENAME _dep_name)
+        if(NOT EXISTS "${_base}/lib/${_dep_name}")
+          continue()
+        endif()
+        if(_dirname STREQUAL "bin")
+          execute_process(COMMAND install_name_tool -change "${_dep}" "@loader_path/../lib/${_dep_name}" "${_file}")
+        else()
+          execute_process(COMMAND install_name_tool -change "${_dep}" "@loader_path/${_dep_name}" "${_file}")
+        endif()
+      endforeach()
+
+      if(_dirname STREQUAL "lib" AND NOT IS_SYMLINK "${_file}")
+        cmake_path(GET _file FILENAME _file_name)
+        execute_process(COMMAND install_name_tool -id "@loader_path/${_file_name}" "${_file}")
+      endif()
+    endforeach()
+  ]])
 elseif(WIN32)
   install(TARGETS meshtools3d laplace_solver
           RUNTIME_DEPENDENCY_SET _m3d_deps
