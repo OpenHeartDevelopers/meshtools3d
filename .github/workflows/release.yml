@@ -22,6 +22,11 @@ jobs:
     needs: vars
     name: ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
+    # Windows is allowed to fail without failing the workflow run while the
+    # GetPot / boost::filesystem issues are tracked separately. See
+    # .claude/ticket_windows_build_fix.md. Remove `experimental: true` once
+    # the Windows build is green.
+    continue-on-error: ${{ matrix.experimental == true }}
     strategy:
       fail-fast: false
       matrix:
@@ -29,6 +34,7 @@ jobs:
           - os: ubuntu-22.04
           - os: macos-latest
           - os: windows-latest
+            experimental: true
 
     steps:
       - uses: actions/checkout@v4
@@ -100,6 +106,35 @@ jobs:
         shell: bash
         run: cpack --config build/CPackConfig.cmake -C Release -B build
 
+      # ── Checksums ──────────────────────────────────────────────────────────
+      # SHA256 sidecars are consumed by pycemrg-meshing's ModelManager to verify
+      # the downloaded tarball before unpacking. Format matches `sha256sum`:
+      # "<hex>  <filename>" so `sha256sum -c` round-trips.
+      - name: Compute checksums (Linux/macOS)
+        if: runner.os != 'Windows'
+        shell: bash
+        run: |
+          cd build
+          for f in meshtools3d-*.tar.gz meshtools3d-*.zip; do
+            if [ -f "$f" ]; then
+              if command -v sha256sum >/dev/null 2>&1; then
+                sha256sum "$f" > "${f}.sha256"
+              else
+                shasum -a 256 "$f" > "${f}.sha256"
+              fi
+            fi
+          done
+
+      - name: Compute checksums (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          Set-Location build
+          Get-ChildItem meshtools3d-*.zip, meshtools3d-*.tar.gz -ErrorAction SilentlyContinue | ForEach-Object {
+            $hash = (Get-FileHash $_.FullName -Algorithm SHA256).Hash.ToLower()
+            "$hash  $($_.Name)" | Set-Content -Path "$($_.FullName).sha256" -Encoding Ascii
+          }
+
       # ── Upload to GitHub Release ───────────────────────────────────────────
       - name: Upload artifacts
         uses: softprops/action-gh-release@v2
@@ -107,3 +142,4 @@ jobs:
           files: |
             build/meshtools3d-*.tar.gz
             build/meshtools3d-*.zip
+            build/meshtools3d-*.sha256

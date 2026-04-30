@@ -34,6 +34,9 @@ target_link_libraries(meshtools3d PRIVATE m3d CGAL::CGAL CGAL::CGAL_ImageIO)
 add_executable(laplace_solver applications/laplace_solver.cpp)
 target_link_libraries(laplace_solver PRIVATE m3d)
 
+# parfile_builder is intentionally stdlib-only — no m3d, no CGAL.
+add_executable(parfile_builder applications/parfile_builder.cpp)
+
 if(TBB_FOUND)
   target_link_libraries(meshtools3d PRIVATE TBB::tbb TBB::tbbmalloc)
   target_compile_definitions(meshtools3d PRIVATE CGAL_LINKED_WITH_TBB)
@@ -45,7 +48,7 @@ endif()
 # Windows: bundle vcpkg DLLs alongside the executables in bin/.
 # Linux: GMP, MPFR, TBB are system packages — not bundled, documented as deps.
 if(APPLE)
-  install(TARGETS meshtools3d laplace_solver
+  install(TARGETS meshtools3d laplace_solver parfile_builder
           RUNTIME_DEPENDENCY_SET _m3d_deps
           RUNTIME DESTINATION bin)
   install(RUNTIME_DEPENDENCY_SET _m3d_deps
@@ -57,7 +60,7 @@ if(APPLE)
   # @loader_path-relative path so the package is self-contained.
   install(CODE [[
     set(_base "$ENV{DESTDIR}${CMAKE_INSTALL_PREFIX}")
-    file(GLOB _bins "${_base}/bin/meshtools3d" "${_base}/bin/laplace_solver")
+    file(GLOB _bins "${_base}/bin/meshtools3d" "${_base}/bin/laplace_solver" "${_base}/bin/parfile_builder")
     file(GLOB _libs "${_base}/lib/*.dylib")
 
     foreach(_file IN LISTS _bins _libs)
@@ -91,7 +94,7 @@ if(APPLE)
     endforeach()
   ]])
 elseif(WIN32)
-  install(TARGETS meshtools3d laplace_solver
+  install(TARGETS meshtools3d laplace_solver parfile_builder
           RUNTIME_DEPENDENCY_SET _m3d_deps
           RUNTIME DESTINATION bin)
   install(RUNTIME_DEPENDENCY_SET _m3d_deps
@@ -99,7 +102,7 @@ elseif(WIN32)
           POST_EXCLUDE_REGEXES ".*[Ss]ystem32[/\\\\].*\\.dll"
           DESTINATION bin)
 else()
-  install(TARGETS meshtools3d laplace_solver
+  install(TARGETS meshtools3d laplace_solver parfile_builder
           RUNTIME DESTINATION bin)
 endif()
 

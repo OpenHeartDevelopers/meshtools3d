@@ -56,18 +56,31 @@ once the phases are complete.
 The only risk is if a future CGAL version makes the criteria constructors finicky about
 `double` vs. their own `FT` — unlikely but worth noting.
 
-### Phase 3 — Python wrapper
-Replace the user's repeated ad-hoc parameter-file scripts with a proper Python API.
+### Phase 3a — C++ `parfile_builder` (in this repo)
+Lean stdlib-only application that emits a complete meshtools3d `.par` file
+with documented defaults. No CGAL, no `m3d/` link.
 
-- Subprocess runner that invokes `meshtools3d` / `laplace_solver`
-- GetPot data-file builder from Python dicts / dataclasses
-- CARP / VTX output parsers (read `.pts`, `.elem`, `.vtx` back into NumPy arrays)
-- Packaging: pip-installable, separate repo or `python/` subdirectory TBD
-- Integration with the broader pycemrg suite where it makes sense
+- New `applications/parfile_builder.cpp`, bundled into the CPack tarballs.
+- CLI: defaults always baked in; `--seg_dir` / `--seg_name` / `--out_dir` /
+  `--out_name` quality-of-life flags; `--set SECTION.KEY=VALUE` for arbitrary
+  overrides; output to stdout by default, `-o PATH` to write a file.
+- Schema source of truth: `m3d_python_params.md` (to be promoted to
+  `docs/parameter_file_schema.md` before v2.0 final).
 
-**Depends on:** Phase 2b (done — parameter contract is stable).
-**Blocks:** `v2.0.0` release tag — no merge to `master` until the parameter-file
-builder is in place.
+**Blocks:** `v2.0.0` release tag — no merge to `master` until the C++
+parfile_builder ships in a release.
+
+### Phase 3b — `pycemrg-meshing` (out of repo)
+Python package wrapping the meshtools3d binaries. Lives in a separate repo;
+imports `pycemrg`; uses `ModelManager` to fetch versioned binaries from the
+GitHub Releases page; vendors the parameter-file writer in Python.
+
+See `.claude/ticket_pycemrg_meshing.md` for the full spec, and
+`.claude/ticket_release_ci_for_model_manager.md` for the SHA256-publishing
+prerequisite on this repo's `release.yml`.
+
+**Out of scope for this repo.** Tracked here because the schema doc, the
+release CI, and the v2.0 binaries are prerequisites.
 
 ### Phase 5b — CI smoke test + Docker publish
 Extensions to Phase 5a, deferred until a small fixture exists.
@@ -83,6 +96,15 @@ PRs to either. Reuses the `release.yml` dependency install steps.
 - Build-only, no packaging — fail-fast signal for refactors
 - Open-source-friendly: external PRs get an automatic green/red check
 - Future hook: wire in the Phase 5b smoke test once the fixture is ready
+
+---
+
+## Deferred to v2.10
+
+- **CARP / VTX → NumPy parsers.** Read `.pts`, `.elem`, `.vtx` back into
+  NumPy arrays from Python. Originally planned as part of Phase 3; deferred
+  out of v2.0 to keep the Python package's first release small. Will land in
+  `pycemrg-meshing v0.2` against meshtools3d v2.10.
 
 ---
 
@@ -119,9 +141,11 @@ Phase 1+2a  DONE  Laplace pipeline extraction + laplace_solver app
 Phase 4     DONE  CGAL 4.x to 6.x upgrade
 Phase 2b    DONE  Meshing-side refactor (on development)
 Phase 5a    DONE  Release CI + CPack packaging (on development, no tag yet)
-Phase 6     NEXT  Push/PR CI, Linux-only
-Phase 3           Python wrapper (blocks v2.0.0 tag)
+Phase 6     DONE  Push/PR CI, Linux-only
+Phase 3a    NEXT  C++ parfile_builder (in repo, blocks v2.0.0 tag)
+Phase 3b          pycemrg-meshing Python package (out of repo, ticketed)
 Phase 2c          Optional: MeshingParams → m3d/, double fields
 Phase 5b          CI smoke test + Docker publish on master
+v2.10             CARP / VTX → NumPy parsers
 Backlog           Feature items from README TODOs
 ```
