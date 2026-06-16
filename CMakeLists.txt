@@ -92,6 +92,19 @@ if(APPLE)
         execute_process(COMMAND install_name_tool -id "@loader_path/${_file_name}" "${_file}")
       endif()
     endforeach()
+
+    # The install_name_tool edits above rewrite Mach-O load commands, which
+    # invalidates each file's code signature. On Apple Silicon, AMFI kills any
+    # process that loads an invalidly-signed binary with SIGKILL ("killed: 9")
+    # before it prints anything. Re-sign ad-hoc — libraries first, then the
+    # executables — so the package launches on a fresh download.
+    # (Runs last, after CPACK_STRIP_FILES has already stripped these files.)
+    foreach(_file IN LISTS _libs _bins)
+      if(IS_SYMLINK "${_file}")
+        continue()
+      endif()
+      execute_process(COMMAND codesign --force --sign - "${_file}")
+    endforeach()
   ]])
 elseif(WIN32)
   install(TARGETS meshtools3d laplace_solver parfile_builder
