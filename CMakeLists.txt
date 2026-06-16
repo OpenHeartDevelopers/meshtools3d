@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.21)
-project(meshtools3d VERSION 2.0.0 LANGUAGES CXX)
+project(meshtools3d VERSION 2.0.1 LANGUAGES CXX)
 
 if(POLICY CMP0167)
   cmake_policy(SET CMP0167 NEW)
@@ -106,6 +106,10 @@ if(APPLE)
       execute_process(COMMAND codesign --force --sign - "${_file}")
     endforeach()
   ]])
+  # Ship the re-signing helper at the bundle root so users who download the
+  # archive via a browser (which adds com.apple.quarantine) can run it with no
+  # arguments to clear quarantine and re-sign. See docs/macos_download_fix.md.
+  install(PROGRAMS scripts/macos-fix-download.sh DESTINATION .)
 elseif(WIN32)
   install(TARGETS meshtools3d laplace_solver parfile_builder
           RUNTIME_DEPENDENCY_SET _m3d_deps

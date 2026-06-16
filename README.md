@@ -35,7 +35,14 @@ tar xzf meshtools3d-<version>-<os>-<arch>.tar.gz
 Each release also publishes a `.sha256` sidecar you can verify with
 `sha256sum -c <file>.sha256`.
 
-If **macOS** blocks an archive downloaded via a browser, try [these instructions](docs/macOS_bug_fix_v2.0-beta.md)
+**macOS:** browser downloads are quarantined and may be killed on launch
+(`zsh: killed`). Run the bundled helper once, passing the extracted folder:
+
+```bash
+meshtools3d-<version>-macos-arm64/macos-fix-download.sh meshtools3d-<version>-macos-arm64
+```
+
+See [docs/macos_download_fix.md](docs/macos_download_fix.md) for details and a manual fallback.
 
 
 ---

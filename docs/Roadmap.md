@@ -66,8 +66,9 @@ blocker. Spec retained at `.claude/ticket_pycemrg_meshing.md`.
   each bundled dylib's code signature; on Apple Silicon AMFI then SIGKILLs the
   process on launch ("killed: 9"). The install step now re-signs all dylibs and
   executables ad-hoc (`codesign --force --sign -`) after the rewrites and after
-  CPack stripping. Workaround for already-published beta artifacts documented in
-  `docs/macOS_bug_fix_v2.0-beta.md`.
+  CPack stripping. First-run setup for browser-downloaded releases (quarantine +
+  re-sign) documented in `docs/macos_download_fix.md`, with a bundled
+  `macos-fix-download.sh` helper shipped at the archive root.
 - **Status:** on `development`, exercised via the `v2.0.0-beta.2` tag.
 
 ### Phase 6 — Push/PR CI (Linux-only)
@@ -81,8 +82,8 @@ blocker. Spec retained at `.claude/ticket_pycemrg_meshing.md`.
   parameter-file schema reference (the `.par` contract shared by `parfile_builder`
   and downstream consumers). `parfile_builder` is the source of truth; the doc
   matches its built-in defaults.
-- Added `docs/macOS_bug_fix_v2.0-beta.md` — first-run workaround for the
-  already-published beta.2 macOS binaries.
+- Added `docs/macos_download_fix.md` — first-run setup for browser-downloaded
+  macOS releases, plus the bundled `scripts/macos-fix-download.sh` helper.
 
 ---
 

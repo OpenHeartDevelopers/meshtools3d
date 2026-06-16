@@ -17,6 +17,12 @@ systems, see [install_legacy.md](install_legacy.md).
 
 ## macOS
 
+> **Using a pre-built release?** Browser-downloaded archives are quarantined by
+> macOS and may be killed on launch (`zsh: killed`). Run the bundled
+> `macos-fix-download.sh` once, passing the extracted folder — see
+> [macos_download_fix.md](macos_download_fix.md). The instructions below are for
+> building from source.
+
 Tested on macOS 13+ (Ventura) with Homebrew. Works on both Apple Silicon and Intel.
 
 ### 1. Install dependencies
