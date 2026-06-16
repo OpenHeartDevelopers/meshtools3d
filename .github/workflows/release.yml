@@ -4,6 +4,14 @@ on:
   release:
     types: [published]
 
+env:
+  # Opt the bundled JS actions (checkout/cache/gh-release) onto Node.js 24 ahead
+  # of the runner default flip, silencing the Node 20 deprecation warnings.
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+  # Enforce Homebrew tap-trust (the upcoming default); we only install core
+  # formulae, so this just quiets the untrusted-tap advisory from the runner image.
+  HOMEBREW_REQUIRE_TAP_TRUST: 1
+
 jobs:
   vars:
     runs-on: ubuntu-latest
