@@ -17,7 +17,7 @@ This functionality determines endo, epi,  mitral valves nodes, etc  on the bound
 Endocardium and Epicardium surfaces are given as output and determined as the regions with the largest number of points (epicardium)
 and the second region with the largest number of points (endocardium) within the extracted ones.
 
-## Installation
+## Build from source
 
 It is assumed that CGAL-4.6 is installed; if not, download it and follows instructions at http://doc.cgal.org/latest/Manual/installation.html.
 Compile requires cmake. Once cmake and CGAL are installed, type:
