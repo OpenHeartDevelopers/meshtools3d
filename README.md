@@ -12,6 +12,10 @@ Some functionality are implemented but not used; in particular:
 * CARP output in binary format (can be used by setting out_carp_binary = 1 inside output section but not tested till now)
 * triangle re-orientation with outward normals (when boudary is extracted)
 
+### INSTALLATION 
+Go to the [Releases](https://github.com/OpenHeartDevelopers/meshtools3d/releases) and get your version. 
+> NOTE: For macOS users, check [this guide](docs/macOS_bug_fix_v2.0-beta.md) for setup
+
 ### Surface region points
 This functionality determines endo, epi,  mitral valves nodes, etc  on the boundary, when these region are constrained by another one.
 Endocardium and Epicardium surfaces are given as output and determined as the regions with the largest number of points (epicardium)
