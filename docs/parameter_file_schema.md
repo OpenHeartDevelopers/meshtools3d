@@ -28,8 +28,10 @@ The file is an INI-style block format read by GetPot: `[section]` headers group
   camelCase.
 - All values are written as strings; numerics are parsed by the C++ side.
 - Section order does not matter, but key names must match exactly.
-- `meshtools3d` does **not** fill in missing keys — emit all five sections with
-  every key.
+- Keys are **optional**: any key omitted from the file falls back to the in-code
+  default listed below (the parser supplies it). Emitting every key keeps a run
+  self-documenting, but it is not required. `parfile_builder` writes the common
+  subset; the additional keys in §2.6 are read by `meshtools3d` when present.
 
 A complete valid file (identical to `parfile_builder` output with defaults):
 
@@ -79,8 +81,9 @@ precedence over the data file (useful inside scripts):
 
 ## 2. Sections and keys
 
-All keys below are **required**. Defaults match `parfile_builder`'s built-in
-schema.
+All keys are **optional** — an omitted key takes the default shown. Defaults in
+§2.1–§2.5 match `parfile_builder`'s built-in schema; §2.6 lists additional keys
+`meshtools3d` reads that `parfile_builder` does not emit.
 
 ### 2.1 `[segmentation]`
 
@@ -137,6 +140,34 @@ Shared with the standalone `laplace_solver` application.
 | `out_vtk` | bool (0/1) | `1` | Write VTK ASCII. |
 | `out_vtk_binary` | bool (0/1) | `0` | Write VTK binary. |
 | `out_potential` | bool (0/1) | `0` | Write Laplace potential field. |
+
+### 2.6 Additional keys read by `meshtools3d`
+
+These keys are honoured by `meshtools3d` but are **not** emitted by
+`parfile_builder`. Add them by hand (or via `--set`) when you need them;
+otherwise the defaults below apply.
+
+#### `[meshing]` — mesh-as-input mode (with `--read_the_mesh`)
+
+| Key | Type | Default | Meaning |
+| --- | --- | --- | --- |
+| `readTheMesh` | bool (0/1) | `0` | Read an existing CARP mesh instead of a segmentation (note camelCase). |
+| `mesh_dir` | path | `./` | Directory of the input mesh (when `readTheMesh = 1`). |
+| `mesh_name` | string | `mesh` | Basename of the input mesh (when `readTheMesh = 1`). |
+
+#### `[others]`
+
+| Key | Type | Default | Meaning |
+| --- | --- | --- | --- |
+| `swapregions` | bool (0/1) | `0` | `0`: thickness on endocardium; `1`: thickness points assigned to epicardium. |
+| `thickalgo` | int (1/2) | `1` | Thickness algorithm: `1` Bishop, `2` Corrado. |
+
+#### `[output]`
+
+| Key | Type | Default | Meaning |
+| --- | --- | --- | --- |
+| `debug_output` | bool (0/1) | `0` | Emit intermediate debug output. |
+| `debug_frequency` | int | `100` | Debug output cadence (when `debug_output = 1`). |
 
 ---
 
@@ -249,8 +280,9 @@ write_par(
 
 When writing your own generator:
 
-1. Emit **all five sections** with **every key** from §2 — `meshtools3d` does
-   not fill in missing keys.
+1. Omitted keys fall back to the in-code defaults in §2, so you only need to
+   emit the keys you intend to change — but writing the full set keeps a run
+   self-documenting.
 2. Preserve case for `rescaleFactor` and `dimKrilovSp`.
 3. Keep tolerance keys spelled `abs_toll` / `rel_toll` (the existing files use
    the `toll` spelling).

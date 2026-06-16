@@ -1,116 +1,151 @@
-# meshtools3d
+# MeshTools3D
 
-This project contains tools for creating 3D atrial mesh using CGAL 4.6 library. The actual code take as input
-a segmentation in .inr file is required. Possible outputs are:
+MeshTools3D generates 3D tetrahedral meshes from `.inr` image segmentations
+using CGAL 6.x, with optional Laplace harmonic extension and wall-thickness
+computation. It is built for cardiac volumetric models but works on any
+labelled `.inr` segmentation.
 
-* INRIA mesh files (.mesh), evaluated directly by CGAL
-* Carp mesh file (.elem and .pts), together with a set of point lists belonging to extracted regions(.vtx files); the output can be rescaled according to carp units
-* vtk files (but without labels)
+The build produces three command-line tools:
 
-Some functionality are implemented but not used; in particular:
+- **`meshtools3d`** — generate a tetrahedral mesh from a segmentation.
+- **`laplace_solver`** — run the harmonic-extension + thickness pipeline on an
+  existing CARP mesh (no CGAL required).
+- **`parfile_builder`** — generate a parameter file with sensible defaults.
 
-* CARP output in binary format (can be used by setting out_carp_binary = 1 inside output section but not tested till now)
-* triangle re-orientation with outward normals (when boudary is extracted)
+Outputs: 
++ CARP (`.elem` / `.pts` + per-region `.vtx`), 
++ VTK, and 
++ INRIA `.mesh` (medit)
 
-### INSTALLATION 
-Go to the [Releases](https://github.com/OpenHeartDevelopers/meshtools3d/releases) and get your version. 
-> NOTE: For macOS users, check [this guide](docs/macOS_bug_fix_v2.0-beta.md) for setup
+See [`docs/parameter_file_schema.md`](docs/parameter_file_schema.md) for the full parameter reference.
 
-### Surface region points
-This functionality determines endo, epi,  mitral valves nodes, etc  on the boundary, when these region are constrained by another one.
-Endocardium and Epicardium surfaces are given as output and determined as the regions with the largest number of points (epicardium)
-and the second region with the largest number of points (endocardium) within the extracted ones.
+---
+
+## Install (pre-built binaries)
+
+Download the archive for your platform from the
+[Releases page](https://github.com/OpenHeartDevelopers/meshtools3d/releases),
+then extract and run:
+
+```bash
+tar xzf meshtools3d-<version>-<os>-<arch>.tar.gz
+./meshtools3d-<version>-<os>-<arch>/bin/meshtools3d --help
+```
+
+Each release also publishes a `.sha256` sidecar you can verify with
+`sha256sum -c <file>.sha256`.
+
+If **macOS** blocks an archive downloaded via a browser, try [these instructions](docs/macOS_bug_fix_v2.0-beta.md)
+
+
+---
+
+## Quick start
+
+**1. Create a parameter file.** Use `parfile_builder` (recommended):
+
+```bash
+parfile_builder -o heart.par --seg_dir /data/case01 --seg_name seg.inr --out_dir /data/case01/mesh
+```
+
+Override any individual key with `--set SECTION.KEY=VALUE`, e.g.
+`--set meshing.facet_size=0.5`. The complete schema (sections, keys, defaults)
+is documented in
+[`docs/parameter_file_schema.md`](docs/parameter_file_schema.md).
+
+**2. Generate the mesh:**
+
+```bash
+meshtools3d -f heart.par
+```
+
+The `-seg_dir`, `-seg_name`, `-out_dir`, and `-out_name` flags override the
+matching values in the parameter file (handy in scripts). Run
+`meshtools3d --help` for the full list, including `--read_the_mesh` (mesh input
+instead of segmentation) and `--thickness-algorithm`.
+
+**3. (Optional) Run the standalone Laplace solver** on an existing CARP mesh:
+
+```bash
+laplace_solver -mesh_dir /data/case01/mesh -mesh_name case01 -out_dir out -out_name case01 --vtk
+```
+
+Each `meshtools3d` run also writes `<out_name>_params.data` and
+`<out_name>_invocation.sh` next to the outputs, so any run can be reproduced
+exactly.
+
+---
+
+## Parallel runs (TBB)
+
+If Intel TBB is available, meshing is parallelised. The thread count defaults to
+**1** (so the tool doesn't grab every core) and is controlled by the
+`TBB_NUM_THREADS` environment variable:
+
+```bash
+export TBB_NUM_THREADS=4
+```
+
+> `TBB_NUM_THREADS` is specific to MeshTools3D — it is not a standard TBB
+> variable.
+
+---
 
 ## Build from source
 
-It is assumed that CGAL-4.6 is installed; if not, download it and follows instructions at http://doc.cgal.org/latest/Manual/installation.html.
-Compile requires cmake. Once cmake and CGAL are installed, type:
+Quick start (Linux / macOS, CGAL 6.x via system packages):
 
-```sh
-cmake -DCGAL_DIR=<path_to_CGAL>
-```
-in the same folder this file is located, specifing the right CGAL path. Then type make.
+```bash
+# Dependencies (macOS):  brew install cmake cgal boost tbb
+# Dependencies (Linux):  apt install cmake libcgal-dev libboost-dev libtbb-dev zlib1g-dev libeigen3-dev
 
-## Run
-
-Copy the `data-template` file to data, and edit the contents as appropriate:
-
-```sh
-cp data-template data
-vim data
+cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
+cmake --build build -j
 ```
 
-The segmentation section tells where input is located, the meshing section sets
-the mesh generation parameters (rescaleFactor conversely is only for output and
-affects only output of vtk and CARP) and the output section sets the output
-directory, name and formats (medit, carp, vtk).
+The three tools land in `build/`. Full dependency details, version requirements,
+and platform notes are in [`docs/install.md`](docs/install.md). To reproduce the
+legacy CGAL 4.x environment for v1.0 results, see
+[`docs/install_legacy.md`](docs/install_legacy.md).
 
-## Parallel run with TBB library
+---
 
-If Intel TBB library is installed, the code is linked with TBB. TBB is a shared memory library, similar to OpenMP but more effcient. In this code the default number of core is setted to 1:
-this to avoid to take all the cores found by the library if no number of core is specified. The implementation of this code will check that the environment variable 'TBB_NUM_THREADS' is
-defined; for using for example 4 cores, on a shell window type:
+## Documentation
 
-```sh
-  export TBB_NUM_THREADS = 4
-```
+- [`docs/install.md`](docs/install.md) — full build instructions (Linux / macOS).
+- [`docs/install_legacy.md`](docs/install_legacy.md) — legacy CGAL 4.x build for
+  reproducing v1.0 results.
+- [`docs/parameter_file_schema.md`](docs/parameter_file_schema.md) — parameter
+  file reference.
+- [`docs/Roadmap.md`](docs/Roadmap.md) — planned work and known gaps.
+- `examples/` — sample inputs (`sphereCoarse`, `sphereCoarse4Thickness`,
+  `sphereMultilabel`, …).
 
-Remark: TBB_NUM_THREADS is NOT a environment variable of TBB; it will affects only meshtools3d code
+A Python wrapper, **`pycemrg-meshing`**, is maintained separately — it authors
+parameter files, fetches released binaries, and runs the tools from Python.
 
-## Notes
-* To disable TBB when compile, comment (with a # at the beginning of each line) the following lines in CMakeLists.txt:
-```sh
-if( TBB_FOUND )
-  include(${TBB_USE_FILE})
-  list(APPEND CGAL_3RD_PARTY_LIBRARIES ${TBB_LIBRARIES})
-endif()
-```
-* To create a debug version of the code, first generate the Makefile with:
-```sh
-cmake -DCMAKE_BUILD_TYPE=Debug -DCGAL_DONT_OVERRIDE_CMAKE_FLAGS=FALSE -DCGAL_DISABLE_ROUNDING_MATH_CHECK=ON
-```
-rounding mat checks have to be disabled if one want to use valgrind (look in https://github.com/openscad/openscad/issues/1340 for a similar problem)
-and overriding of cmake flags has to be allowed
+---
 
-## TO DO
+## Limitations
 
-* check and in case correct binary output for carp meshes
-* implement output for .mesh file also in Mesh class (could be useful?)
-* implement output also for triangles (boundary elements)
+These are tracked in [`docs/Roadmap.md`](docs/Roadmap.md):
 
-## What's new
+- **Windows is best-effort** — the release build may fail (GetPot /
+  `boost::filesystem` issue); Linux and macOS are the supported platforms.
+- CARP **binary** output (`out_carp_binary = 1`) is implemented but untested
+  against a real openCARP consumer.
+- `.mesh` re-emission from an already-loaded `Mesh` object, boundary-triangle
+  surface export, and outward-normal triangle re-orientation are not yet wired
+  up for general use.
 
-12 may 2015
+---
 
-* added a class "Chrono" for time profiling
-* binary output for vtk (with correct endianess)
+## Changelog
 
-21 May 2015
+Per-release notes are on the
+[Releases page](https://github.com/OpenHeartDevelopers/meshtools3d/releases).
 
-* Laplace Solver for evaluating armonic extension
-* Mesh class can evaluate Tetra and Tria centroids
-* Laplace solver can evaluate Tetra Gradients for post-processing
-* vtk visualize also output regions
-* added a routine to write Laplace solution in a VTK file
+## Contributors
 
-22 May 2015
-
-* added some examples
-* added a routine to the thickness in a VTK file
-
-11 Aug 2015
-
-* Added parallel run facilities
-
-27 Oct 2016
-
-* deleted some variables when no longer needed to free memory before the evaluation of the potential
-* implemented a class for read and handle .inr files
-* implemented a search tree to localise boundary triangles within a specified bounding box
-* implemented some CGAL extensions to use wrap the segmentation in a function that tells if a point is within the segmented domain or not
-* created a new mode for mesh switching off segmentation labels during meshing and then labeling triangles only
-* created a new example (sphereMultilabel) for meshing and then re-labeling
-
-Dec 2019
-
-* Created Dockerfile to create a docker image for `meshtools3d` to be used via docker (no compilation required)
+- Cesare Corrado — original author
+- Jose Alonso Solis-Lemus

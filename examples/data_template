@@ -1,0 +1,53 @@
+# -*- getpot -*- (GetPot mode for emacs)
+#-------------------------------------------------
+#   Example parameter file for the meshtools3d utility
+#-------------------------------------------------
+# Every key meshtools3d reads is listed here with its default value.
+# Keys are optional: if one is omitted, the default shown below is used.
+# Keys are case-sensitive (rescaleFactor, dimKrilovSp, readTheMesh).
+#
+# To generate a clean file programmatically, use:  parfile_builder -o my.par
+# Full reference:  docs/parameter_file_schema.md
+
+[segmentation]
+seg_dir                = ./                                # directory holding the segmentation
+seg_name               = seg_final_smooth_corrected.inr   # .inr (or .inr.gz) segmentation file
+mesh_from_segmentation = 1                                # 1: mesh directly from segmentation; 0: mesh unlabelled then relabel
+boundary_relabeling    = 0                                # 1: apply boundary relabelling pass
+
+[meshing]
+# CGAL meshing criteria. facet_size and cell_size are the main resolution knobs.
+facet_angle         = 30      # lower bound on triangle angles (degrees)
+facet_size          = 0.8     # upper bound on facet circumradius  (resolution)
+facet_distance      = 4       # max distance facet <-> surface
+cell_rad_edge_ratio = 2.0     # tetra radius/edge ratio bound
+cell_size           = 0.8     # upper bound on tetra circumradius  (resolution)
+rescaleFactor       = 1000    # scaling applied to CARP / VTK output only
+# --- mesh-as-input mode (used when meshtools3d is run with --read_the_mesh) ---
+readTheMesh         = 0       # 1: read an existing CARP mesh instead of a segmentation
+mesh_dir            = ./      # directory of the input mesh (when readTheMesh = 1)
+mesh_name           = mesh    # basename of the input mesh (when readTheMesh = 1)
+
+[laplacesolver]
+abs_toll        = 1e-6        # absolute solver tolerance (note spelling: toll)
+rel_toll        = 1e-6        # relative solver tolerance
+itr_max         = 700         # max iterations
+dimKrilovSp     = 500         # Krylov subspace dimension
+verbose         = 1           # solver verbosity
+
+[others]
+eval_thickness  = 0           # 1: compute wall thickness (also: VTK carries potential+thickness; 0: region_labels)
+swapregions     = 0           # 0: thickness on endocardium; 1: thickness points on epicardium
+thickalgo       = 1           # 1: Bishop algorithm; 2: Corrado algorithm
+
+[output]
+outdir          = ./myocardium_OUT   # output directory (created if missing)
+name            = heart_mesh         # base name for output files
+out_medit       = 0                  # write MEDIT .mesh
+out_carp        = 1                  # write CARP ASCII (.elem, .pts, .lon)
+out_carp_binary = 0                  # write CARP binary (untested against openCARP)
+out_vtk         = 1                  # write VTK ASCII
+out_vtk_binary  = 0                  # write VTK binary
+out_potential   = 0                  # write Laplace potential field
+debug_output    = 0                  # 1: emit intermediate debug output
+debug_frequency = 100                # debug output cadence (when debug_output = 1)
